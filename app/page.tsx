@@ -23,7 +23,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { ReelTile } from "@/components/reel-tile";
 
 const pillBtn = "h-11 rounded-full px-5 text-[0.9rem]";
 
@@ -33,6 +33,7 @@ const reels = [
     title: "Ship a feature. Announce it like a brand.",
     icon: ZapIcon,
     gradient: "from-zinc-900 via-zinc-700 to-zinc-500",
+    videoUrl: "https://media.wovenlabs.net/week-14/april-2-final-web.mp4",
   },
   {
     label: "Problem / Solution",
@@ -346,19 +347,17 @@ function ReelShowcase() {
   return (
     <section id="work" className="pb-24">
       <div className="mx-auto w-full max-w-6xl px-6">
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-5 md:gap-5">
+        <div className="-mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-[12%] pb-2 md:mx-0 md:grid md:grid-cols-5 md:gap-5 md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {reels.map((reel) => (
-            <AspectRatio
+            <div
               key={reel.label}
-              ratio={9 / 16}
-              className="overflow-hidden rounded-2xl ring-1 ring-foreground/10"
+              className="w-[76%] shrink-0 snap-center md:w-auto md:shrink"
             >
-              <div
-                className={`relative size-full bg-gradient-to-br ${reel.gradient}`}
-              >
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_60%)]" />
-              </div>
-            </AspectRatio>
+              <ReelTile
+                videoUrl={"videoUrl" in reel ? reel.videoUrl : undefined}
+                gradient={reel.gradient}
+              />
+            </div>
           ))}
         </div>
       </div>
