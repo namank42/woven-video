@@ -3,11 +3,6 @@ import Link from "next/link";
 import {
   CheckIcon,
   XIcon,
-  SparklesIcon,
-  ZapIcon,
-  LayersIcon,
-  UserRoundIcon,
-  MegaphoneIcon,
   ClockIcon,
   BoxIcon,
   ShapesIcon,
@@ -29,34 +24,24 @@ const pillBtn = "h-11 rounded-full px-5 text-[0.9rem]";
 
 const reels = [
   {
-    label: "Feature Launch",
-    title: "Ship a feature. Announce it like a brand.",
-    icon: ZapIcon,
+    label: "AI presenter",
     gradient: "from-zinc-900 via-zinc-700 to-zinc-500",
     videoUrl: "https://media.wovenlabs.net/week-14/april-2-final-web.mp4",
   },
   {
-    label: "Problem / Solution",
-    title: "A pain point, then the product.",
-    icon: LayersIcon,
+    label: "Product launch",
     gradient: "from-stone-900 via-stone-700 to-stone-400",
   },
   {
-    label: "AI Spokesperson",
-    title: "Face-led creative without a shoot.",
-    icon: UserRoundIcon,
+    label: "Creator-style ad",
     gradient: "from-neutral-900 via-neutral-600 to-neutral-400",
   },
   {
-    label: "Campaign Teaser",
-    title: "A brand mood in under 30 seconds.",
-    icon: SparklesIcon,
+    label: "Lifestyle film",
     gradient: "from-slate-900 via-slate-700 to-slate-400",
   },
   {
-    label: "Founder Announcement",
-    title: "Say something. Make it land.",
-    icon: MegaphoneIcon,
+    label: "Animated story",
     gradient: "from-gray-900 via-gray-600 to-gray-300",
   },
 ];
@@ -357,6 +342,9 @@ function ReelShowcase() {
                 videoUrl={"videoUrl" in reel ? reel.videoUrl : undefined}
                 gradient={reel.gradient}
               />
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                {reel.label}
+              </p>
             </div>
           ))}
         </div>
