@@ -131,12 +131,12 @@ const pricing = [
   {
     name: "Monthly",
     tagline: "Ongoing engagement",
-    price: "$4,000",
+    price: "$5,000",
     cadence: "per month",
     description:
       "A steady stream of short-form reels for teams that need consistent output.",
     features: [
-      "8 reels per month",
+      "6 reels per month",
       "Mixed formats and use cases",
       "Rolling brief and feedback cycles",
       "Priority turnaround",
@@ -189,9 +189,97 @@ const faqs = [
   },
 ];
 
+const SITE_URL = "https://www.woven.video";
+
+function StructuredData() {
+  const organization = {
+    "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
+    name: "Woven",
+    url: SITE_URL,
+    logo: {
+      "@type": "ImageObject",
+      url: `${SITE_URL}/woven-logo.png`,
+      width: 1024,
+      height: 1024,
+    },
+    description:
+      "Woven is a short-form video studio that helps modern brands ship high-performing reels for ads and content using Generative AI.",
+    slogan: "Short-form reels to grow your brand.",
+  };
+
+  const website = {
+    "@type": "WebSite",
+    "@id": `${SITE_URL}/#website`,
+    url: SITE_URL,
+    name: "Woven",
+    description:
+      "High-performing short-form reels for modern brands, built with Generative AI.",
+    inLanguage: "en-US",
+    publisher: { "@id": `${SITE_URL}/#organization` },
+  };
+
+  const service = {
+    "@type": "Service",
+    "@id": `${SITE_URL}/#service`,
+    name: "Short-form brand reels",
+    serviceType: "Short-form video production",
+    provider: { "@id": `${SITE_URL}/#organization` },
+    areaServed: "Worldwide",
+    description:
+      "Vertical short-form reels under 60 seconds for ads, content launches, and brand campaigns — produced using Generative AI and existing brand assets.",
+    offers: pricing.map((tier) => {
+      const base = {
+        "@type": "Offer",
+        name: tier.name,
+        description: tier.description,
+        category: tier.tagline,
+        url: `${SITE_URL}/#pricing`,
+      };
+      const numeric = tier.price.match(/[\d,]+/);
+      if (numeric) {
+        return {
+          ...base,
+          price: numeric[0].replace(/,/g, ""),
+          priceCurrency: "USD",
+          availability: "https://schema.org/InStock",
+        };
+      }
+      return base;
+    }),
+  };
+
+  const faqPage = {
+    "@type": "FAQPage",
+    "@id": `${SITE_URL}/#faq`,
+    mainEntity: faqs.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.a,
+      },
+    })),
+  };
+
+  const graph = {
+    "@context": "https://schema.org",
+    "@graph": [organization, website, service, faqPage],
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      // eslint-disable-next-line react/no-danger
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }}
+    />
+  );
+}
+
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <StructuredData />
       <main className="flex-1">
         <Hero />
         <ReelShowcase />
