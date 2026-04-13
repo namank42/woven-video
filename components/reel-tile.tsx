@@ -6,10 +6,11 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 type ReelTileProps = {
   videoUrl?: string;
+  posterUrl?: string;
   gradient: string;
 };
 
-export function ReelTile({ videoUrl, gradient }: ReelTileProps) {
+export function ReelTile({ videoUrl, posterUrl, gradient }: ReelTileProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [muted, setMuted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -59,6 +60,7 @@ export function ReelTile({ videoUrl, gradient }: ReelTileProps) {
       <video
         ref={videoRef}
         src={videoUrl}
+        poster={posterUrl}
         loop
         playsInline
         preload="metadata"

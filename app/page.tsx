@@ -27,6 +27,7 @@ const reels = [
     label: "AI presenter",
     gradient: "from-zinc-900 via-zinc-700 to-zinc-500",
     videoUrl: "https://media.wovenlabs.net/week-14/april-2-final-web.mp4",
+    posterUrl: "https://media.wovenlabs.net/week-14/april-2-final-poster.jpg",
   },
   {
     label: "Product launch",
@@ -35,6 +36,8 @@ const reels = [
   {
     label: "Creator-style ad",
     gradient: "from-neutral-900 via-neutral-600 to-neutral-400",
+    videoUrl: "https://media.wovenlabs.net/woven-reels/linger-brand-awareness-v13-web.mp4",
+    posterUrl: "https://media.wovenlabs.net/woven-reels/linger-brand-awareness-v13-poster.jpg",
   },
   {
     label: "Lifestyle film",
@@ -340,6 +343,7 @@ function ReelShowcase() {
             >
               <ReelTile
                 videoUrl={"videoUrl" in reel ? reel.videoUrl : undefined}
+                posterUrl={"posterUrl" in reel ? reel.posterUrl : undefined}
                 gradient={reel.gradient}
               />
               <p className="mt-3 text-center text-xs text-muted-foreground">
