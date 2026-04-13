@@ -30,10 +30,6 @@ const reels = [
     posterUrl: "https://media.wovenlabs.net/week-14/april-2-final-poster.jpg",
   },
   {
-    label: "Product launch",
-    gradient: "from-stone-900 via-stone-700 to-stone-400",
-  },
-  {
     label: "Creator-style ad",
     gradient: "from-neutral-900 via-neutral-600 to-neutral-400",
     videoUrl: "https://media.wovenlabs.net/woven-reels/linger-brand-awareness-v13-web.mp4",
@@ -46,6 +42,12 @@ const reels = [
   {
     label: "Animated story",
     gradient: "from-gray-900 via-gray-600 to-gray-300",
+  },
+  {
+    label: "Feature update",
+    gradient: "from-stone-900 via-stone-700 to-stone-400",
+    videoUrl: "https://media.wovenlabs.net/woven-reels/drift-demo-v31-full.mp4",
+    posterUrl: "https://media.wovenlabs.net/woven-reels/drift-demo-v31-poster.jpg",
   },
 ];
 
