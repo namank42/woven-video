@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export const alt =
-  "Woven — High-performing short-form reels for modern brands";
+  "Woven — Short-form reels for modern brands";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

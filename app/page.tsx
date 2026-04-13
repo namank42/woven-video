@@ -203,7 +203,7 @@ function StructuredData() {
     url: SITE_URL,
     name: "Woven",
     description:
-      "High-performing short-form reels for modern brands, built with Generative AI.",
+      "Short-form reels for modern brands, with Generative AI.",
     inLanguage: "en-US",
     publisher: { "@id": `${SITE_URL}/#organization` },
   };

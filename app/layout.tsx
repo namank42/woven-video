@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 const siteUrl = "https://www.woven.video";
 const siteName = "Woven";
 const siteTitle =
-  "Woven — High-performing short-form reels for modern brands";
+  "Woven — Short-form reels for modern brands";
 const siteDescription =
   "Woven helps modern brands consistently ship high-performing reels for ads and content using Generative AI.";
 
