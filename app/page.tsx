@@ -26,8 +26,8 @@ const reels = [
   {
     label: "AI presenter",
     gradient: "from-zinc-900 via-zinc-700 to-zinc-500",
-    videoUrl: "https://media.wovenlabs.net/week-14/april-2-final-web.mp4",
-    posterUrl: "https://media.wovenlabs.net/week-14/april-2-final-poster.jpg",
+    videoUrl: "https://media.wovenlabs.net/woven-reels/no-caption-web.mp4",
+    posterUrl: "https://media.wovenlabs.net/woven-reels/no-caption-poster.jpg",
   },
   {
     label: "Creator-style ad",
