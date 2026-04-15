@@ -38,6 +38,8 @@ const reels = [
   {
     label: "Lifestyle film",
     gradient: "from-slate-900 via-slate-700 to-slate-400",
+    videoUrl: "https://media.wovenlabs.net/woven-reels/loft-showcase-v20-web.mp4",
+    posterUrl: "https://media.wovenlabs.net/woven-reels/loft-showcase-v20-poster.jpg",
   },
   {
     label: "Animated story",

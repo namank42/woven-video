@@ -11,7 +11,7 @@ Production roadmap for the 5 reels on the landing page (`ReelShowcase` in `app/p
 | 1 | AI presenter | ✅ shipped | `week-14/april-2-final-web.mp4` |
 | 2 | Product launch | ⏳ placeholder | — |
 | 3 | Creator-style ad | ⏳ placeholder | — |
-| 4 | Lifestyle film | ⏳ placeholder | — |
+| 4 | Lifestyle film | ✅ shipped | `woven-reels/loft-showcase-v20-web.mp4` |
 | 5 | Animated story | ⏳ placeholder | — |
 
 ---
@@ -67,7 +67,7 @@ Production roadmap for the 5 reels on the landing page (`ReelShowcase` in `app/p
 
 ---
 
-## 4. Lifestyle film ⏳
+## 4. Lifestyle film ✅
 
 **What it demonstrates**: cinematic brand / DTC mood work — the "content" half of the pitch, no talking head.
 
