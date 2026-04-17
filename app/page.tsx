@@ -44,6 +44,8 @@ const reels = [
   {
     label: "Animated story",
     gradient: "from-gray-900 via-gray-600 to-gray-300",
+    videoUrl: "https://media.wovenlabs.net/woven-reels/theo-honesty-v10-web.mp4",
+    posterUrl: "https://media.wovenlabs.net/woven-reels/theo-honesty-v10-poster.jpg",
   },
   {
     label: "Feature update",
@@ -124,7 +126,7 @@ const pricing = [
   {
     name: "Monthly",
     tagline: "Ongoing engagement",
-    price: "$5,000",
+    price: "From $5,000",
     cadence: "per month",
     description:
       "A steady stream of short-form reels for teams that need consistent output.",

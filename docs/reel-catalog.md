@@ -12,7 +12,7 @@ Production roadmap for the 5 reels on the landing page (`ReelShowcase` in `app/p
 | 2 | Product launch | ⏳ placeholder | — |
 | 3 | Creator-style ad | ⏳ placeholder | — |
 | 4 | Lifestyle film | ✅ shipped | `woven-reels/loft-showcase-v20-web.mp4` |
-| 5 | Animated story | ⏳ placeholder | — |
+| 5 | Animated story | ✅ shipped | `woven-reels/theo-honesty-v10-web.mp4` |
 
 ---
 
@@ -86,7 +86,7 @@ Production roadmap for the 5 reels on the landing page (`ReelShowcase` in `app/p
 
 ---
 
-## 5. Animated story ⏳
+## 5. Animated story ✅
 
 **What it demonstrates**: creative range with zero footage, zero talent, zero brand assets. Also maps to the "content" side of the pitch — this is the piece that has a chance of going viral on its own.
 
