@@ -45,7 +45,7 @@ const reels = [
     label: "Animated story",
     gradient: "from-gray-900 via-gray-600 to-gray-300",
     videoUrl: "https://media.wovenlabs.net/woven-reels/theo-honesty-v10-web.mp4",
-    posterUrl: "https://media.wovenlabs.net/woven-reels/theo-honesty-v10-poster.jpg",
+    posterUrl: "https://media.wovenlabs.net/woven-reels/theo-honesty-v10-poster-v2.jpg",
   },
   {
     label: "Feature update",
