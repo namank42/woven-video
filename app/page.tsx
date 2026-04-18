@@ -119,7 +119,7 @@ const pricing = [
       "1 revision round per reel",
       "Delivered in ~5 business days",
     ],
-    cta: "Book a call",
+    cta: "Book a discovery call",
     highlighted: true,
   },
   {
@@ -135,7 +135,7 @@ const pricing = [
       "Rolling brief and feedback cycles",
       "Priority turnaround",
     ],
-    cta: "Book a call",
+    cta: "Book a discovery call",
     highlighted: false,
   },
   {
@@ -151,7 +151,7 @@ const pricing = [
       "Custom formats and asset libraries",
       "Direct line to the Woven team",
     ],
-    cta: "Book a call",
+    cta: "Book a discovery call",
     highlighted: false,
   },
 ];
@@ -329,7 +329,7 @@ function Hero() {
           className={`${pillBtn} mt-6`}
           render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
         >
-          Book a call
+          Book a discovery call
         </Button>
       </div>
     </section>
@@ -536,7 +536,7 @@ function PilotSpotlight() {
               className={`${pillBtn} mt-2`}
               render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
             >
-              Book a call
+              Book a discovery call
             </Button>
           </div>
         </div>
@@ -663,7 +663,7 @@ function FinalCTA() {
             Let’s make the reels.
           </h2>
           <p className="max-w-xl text-base text-muted-foreground md:text-lg">
-            Book a short call. We’ll look at your assets, what you’re shipping,
+            Book a discovery call. We’ll look at your assets, what you’re shipping,
             and whether a Launch Reel Sprint is the right next step.
           </p>
           <Button
@@ -671,7 +671,7 @@ function FinalCTA() {
             className={pillBtn}
             render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
           >
-            Book a call
+            Book a discovery call
           </Button>
         </div>
       </div>
