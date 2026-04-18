@@ -692,7 +692,7 @@ function SiteFooter() {
             className="h-5 w-auto"
           />
           <span className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Woven. All rights reserved.
+            © {new Date().getFullYear()} Woven Labs. All rights reserved.
           </span>
         </div>
         <div className="flex items-center gap-6 text-sm text-muted-foreground">
