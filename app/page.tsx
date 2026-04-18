@@ -326,10 +326,10 @@ function Hero() {
         </p>
         <Button
           nativeButton={false}
-          className={`${pillBtn} mt-6`}
+          className="mt-8 h-12 rounded-full px-8 text-base font-medium"
           render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
         >
-          Book a discovery call
+          Book a discovery call &rarr;
         </Button>
       </div>
     </section>
