@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import {
   CheckIcon,
   XIcon,
@@ -84,10 +83,10 @@ const features = [
 ];
 
 const processSteps = [
-  { step: "01", title: "Send assets", body: "Share brand, product, and the launch you want to promote." },
-  { step: "02", title: "We develop concepts", body: "We turn the brief into distinct reel directions." },
-  { step: "03", title: "Production", body: "A systemized workflow built for speed and consistency." },
-  { step: "04", title: "Review", body: "You send focused feedback inside a defined revision boundary." },
+  { step: "01", title: "Share your brief", body: "Brand guidelines, reference reels you like, existing assets, and the launch or feature to promote." },
+  { step: "02", title: "Script & Shot list", body: "We develop the script and visual plan for each reel." },
+  { step: "03", title: "Alignment", body: "You review and approve the direction before production begins." },
+  { step: "04", title: "Production", body: "A systemized workflow built for speed and consistency." },
   { step: "05", title: "Delivery", body: "Final reels ready for Reels, TikTok, Shorts, and paid social." },
 ];
 
@@ -160,7 +159,7 @@ const pricing = [
 const faqs = [
   {
     q: "What do you need from us to get started?",
-    a: "Logo and brand guidelines, a link to your product or landing page, any footage or screenshots you have, and the key message, launch, or feature you want the reels to promote. The more clarity on the message, the faster we move.",
+    a: "Logo and brand guidelines, a link to your product or landing page, example reels you like as references, any existing footage or screenshots, and the key message, launch, or feature you want the reels to promote. The more clarity on the message, the faster we move.",
   },
   {
     q: "How fast is delivery?",
@@ -199,7 +198,7 @@ function StructuredData() {
       height: 1024,
     },
     description:
-      "Woven is a short-form video studio that helps modern brands ship high-performing reels for ads and content using Generative AI.",
+      "Woven is a short-form video studio that helps modern brands ship short-form reels for ads and content with Generative AI.",
     slogan: "Short-form reels to grow your brand.",
   };
 
@@ -317,18 +316,18 @@ function Hero() {
         </h1>
         <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
           Woven helps{" "}
-          <span className="font-medium text-orange-600">modern</span> brands
+          <span className="font-medium text-orange-600">modern brands</span>{" "}
           consistently ship{" "}
           <span className="font-medium text-emerald-600">
-            high-performing reels
+            short-form reels
           </span>{" "}
-          for ads and content using{" "}
+          for ads and content with{" "}
           <span className="font-medium text-violet-600">Generative AI</span>.
         </p>
         <Button
           nativeButton={false}
           className={`${pillBtn} mt-6`}
-          render={<Link href="#pricing" />}
+          render={<a href="https://cal.com/naman-woven" target="_blank" rel="noopener noreferrer" />}
         >
           Book a call
         </Button>
@@ -535,7 +534,7 @@ function PilotSpotlight() {
               nativeButton={false}
               variant="secondary"
               className={`${pillBtn} mt-2`}
-              render={<Link href="#pricing" />}
+              render={<a href="https://cal.com/naman-woven" target="_blank" rel="noopener noreferrer" />}
             >
               Book a call
             </Button>
@@ -556,8 +555,8 @@ function Pricing() {
             Start small. Scale when it works.
           </h2>
           <p className="max-w-2xl text-base text-muted-foreground md:text-lg">
-            Most clients start with a pilot, then move to a monthly engagement
-            once they see the output.
+            Start with a pilot, then scale to a monthly engagement
+            once you see the output.
           </p>
         </div>
         <div className="mt-14 grid gap-5 md:grid-cols-3">
@@ -574,7 +573,7 @@ function Pricing() {
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background">
                     <span className="size-1.5 rounded-full bg-emerald-400" />
-                    Most popular
+                    Start here
                   </span>
                 </div>
               )}
@@ -610,7 +609,7 @@ function Pricing() {
                 nativeButton={false}
                 variant={tier.highlighted ? "default" : "outline"}
                 className={`${pillBtn} mt-auto w-full`}
-                render={<Link href="#book" />}
+                render={<a href="https://cal.com/naman-woven" target="_blank" rel="noopener noreferrer" />}
               >
                 {tier.cta}
               </Button>
@@ -670,7 +669,7 @@ function FinalCTA() {
           <Button
             nativeButton={false}
             className={pillBtn}
-            render={<Link href="#book" />}
+            render={<a href="https://cal.com/naman-woven" target="_blank" rel="noopener noreferrer" />}
           >
             Book a call
           </Button>
@@ -708,6 +707,9 @@ function SiteFooter() {
           </a>
           <a href="#faq" className="hover:text-foreground">
             FAQ
+          </a>
+          <a href="mailto:hello@woven.video" className="hover:text-foreground">
+            hello@woven.video
           </a>
         </div>
       </div>
