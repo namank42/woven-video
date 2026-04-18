@@ -327,7 +327,7 @@ function Hero() {
         <Button
           nativeButton={false}
           className={`${pillBtn} mt-6`}
-          render={<a href="https://cal.com/naman-woven" target="_blank" rel="noopener noreferrer" />}
+          render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
         >
           Book a call
         </Button>
@@ -534,7 +534,7 @@ function PilotSpotlight() {
               nativeButton={false}
               variant="secondary"
               className={`${pillBtn} mt-2`}
-              render={<a href="https://cal.com/naman-woven" target="_blank" rel="noopener noreferrer" />}
+              render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
             >
               Book a call
             </Button>
@@ -609,7 +609,7 @@ function Pricing() {
                 nativeButton={false}
                 variant={tier.highlighted ? "default" : "outline"}
                 className={`${pillBtn} mt-auto w-full`}
-                render={<a href="https://cal.com/naman-woven" target="_blank" rel="noopener noreferrer" />}
+                render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
               >
                 {tier.cta}
               </Button>
@@ -669,7 +669,7 @@ function FinalCTA() {
           <Button
             nativeButton={false}
             className={pillBtn}
-            render={<a href="https://cal.com/naman-woven" target="_blank" rel="noopener noreferrer" />}
+            render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
           >
             Book a call
           </Button>
