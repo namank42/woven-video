@@ -1,18 +1,18 @@
+import {
+  AlertCircleIcon,
+  CheckCircle2Icon,
+  InfoIcon,
+  ReceiptIcon,
+  TrendingUpIcon,
+  WalletIcon,
+} from "lucide-react";
+
 import { BalanceTopUpForm } from "@/components/account/balance-top-up-form";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Field, FieldDescription, FieldError } from "@/components/ui/field";
-import { Separator } from "@/components/ui/separator";
 import { formatUsdFromMicros } from "@/lib/billing/money";
 import { firstSearchParam } from "@/lib/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 
 type LedgerEntry = {
   id: string;
@@ -126,6 +126,92 @@ function summarizeUsage(events: UsageEvent[]): UsageSummary {
   };
 }
 
+type AlertTone = "success" | "info" | "error";
+
+function Alert({
+  tone,
+  children,
+}: {
+  tone: AlertTone;
+  children: React.ReactNode;
+}) {
+  const Icon =
+    tone === "success"
+      ? CheckCircle2Icon
+      : tone === "error"
+        ? AlertCircleIcon
+        : InfoIcon;
+  return (
+    <div
+      role={tone === "error" ? "alert" : "status"}
+      className={cn(
+        "flex items-start gap-3 rounded-lg border px-4 py-3 text-sm",
+        tone === "success" &&
+          "border-foreground/10 bg-muted text-foreground",
+        tone === "info" && "border-foreground/10 bg-muted text-foreground",
+        tone === "error" &&
+          "border-destructive/30 bg-destructive/5 text-destructive",
+      )}
+    >
+      <Icon
+        className={cn(
+          "mt-0.5 size-4 shrink-0",
+          tone === "success" && "text-foreground/70",
+          tone === "info" && "text-foreground/70",
+          tone === "error" && "text-destructive",
+        )}
+      />
+      <p className="leading-relaxed">{children}</p>
+    </div>
+  );
+}
+
+function Stat({
+  icon: Icon,
+  label,
+  value,
+  accent = false,
+  errorMessage,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  accent?: boolean;
+  errorMessage?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-xl bg-card p-5 ring-1 ring-foreground/10",
+        accent && "ring-foreground/15",
+      )}
+    >
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span
+          className={cn(
+            "flex size-7 items-center justify-center rounded-md bg-muted",
+            accent && "bg-foreground text-background",
+          )}
+        >
+          <Icon className="size-4" />
+        </span>
+        <span>{label}</span>
+      </div>
+      <div
+        className={cn(
+          "font-heading font-medium tabular-nums",
+          accent ? "text-4xl" : "text-3xl",
+        )}
+      >
+        {value}
+      </div>
+      {errorMessage ? (
+        <p className="text-sm text-destructive">{errorMessage}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export default async function AccountPage({ searchParams }: AccountPageProps) {
   const params = await searchParams;
   const checkout = firstSearchParam(params.checkout);
@@ -154,123 +240,117 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   }).slice(0, 10);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="font-heading text-2xl font-medium">Account</h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Bring your own keys, or add prepaid balance when you want hosted
-          models and media generation to just work.
+    <div className="flex flex-col gap-10">
+      <div className="flex flex-col gap-1">
+        <h1 className="font-heading text-3xl font-medium tracking-tight">
+          Account
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Manage your prepaid balance and review activity.
         </p>
       </div>
 
       {checkout === "success" ? (
-        <Field>
-          <FieldDescription>
-            Checkout completed. Stripe may take a moment to deliver the webhook.
-          </FieldDescription>
-        </Field>
+        <Alert tone="success">
+          Checkout completed. Stripe may take a moment to deliver the webhook.
+        </Alert>
       ) : null}
 
       {checkout === "cancelled" ? (
-        <Field>
-          <FieldDescription>Checkout cancelled.</FieldDescription>
-        </Field>
+        <Alert tone="info">Checkout cancelled.</Alert>
       ) : null}
 
-      {error ? (
-        <Field data-invalid>
-          <FieldError>{error}</FieldError>
-        </Field>
-      ) : null}
+      {error ? <Alert tone="error">{error}</Alert> : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Balance</CardTitle>
-          <CardDescription>Available prepaid balance</CardDescription>
-          <CardAction>
-            <Badge variant="secondary">Prepaid</Badge>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <div className="font-heading text-4xl font-medium tabular-nums">
-            {formatUsdFromMicros(balanceUsdMicros)}
-          </div>
-          {balanceError ? (
-            <p className="mt-3 text-sm text-destructive">
-              Unable to load balance: {balanceError.message}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+      <section className="flex flex-col gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Stat
+            icon={WalletIcon}
+            label="Balance"
+            value={formatUsdFromMicros(balanceUsdMicros)}
+            accent
+            errorMessage={
+              balanceError
+                ? `Unable to load balance: ${balanceError.message}`
+                : undefined
+            }
+          />
+          <Stat
+            icon={TrendingUpIcon}
+            label="Total usage"
+            value={formatUsdFromMicros(usageSummary.hostedUsageUsdMicros, {
+              preciseSmallAmounts: true,
+            })}
+          />
+        </div>
+      </section>
 
       <section>
         <BalanceTopUpForm />
       </section>
 
-      <Card size="sm">
-        <CardHeader>
-          <CardTitle>Total usage</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="font-heading text-2xl font-medium tabular-nums">
-            {formatUsdFromMicros(usageSummary.hostedUsageUsdMicros, {
-              preciseSmallAmounts: true,
-            })}
-          </p>
-        </CardContent>
-      </Card>
+      <section className="flex flex-col gap-4">
+        <div className="flex items-baseline justify-between gap-4">
+          <div className="flex flex-col gap-0.5">
+            <h2 className="font-heading text-lg font-medium">Activity</h2>
+            <p className="text-sm text-muted-foreground">
+              Recent top-ups and balance adjustments.
+            </p>
+          </div>
+        </div>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-heading text-lg font-medium">Balance activity</h2>
-        <Card>
-          <CardContent className="flex flex-col gap-0">
-            {activityItems.length ? (
-              activityItems.map((item, index) => (
-                <div key={item.id}>
-                  {index > 0 ? <Separator /> : null}
-                  <div className="flex items-center justify-between gap-4 py-3">
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{item.badge}</Badge>
-                        <span className="truncate text-sm font-medium">
-                          {item.label}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                        <span className="truncate text-sm text-muted-foreground">
-                          {item.description}
-                        </span>
-                        <span aria-hidden="true">·</span>
-                        <span>{formatDate(item.createdAt)}</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium tabular-nums">
-                        {item.amountUsdMicros > 0 ? "+" : ""}
-                        {formatUsdFromMicros(
-                          item.amountUsdMicros,
-                          {
-                            preciseSmallAmounts: true,
-                          },
-                        )}
-                      </p>
-                      <p className="text-sm text-muted-foreground tabular-nums">
-                        {formatUsdFromMicros(
-                          item.balanceAfterUsdMicros,
-                        )} after
-                      </p>
-                    </div>
+        {activityItems.length ? (
+          <ul className="divide-y divide-foreground/10 rounded-xl bg-card ring-1 ring-foreground/10">
+            {activityItems.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-center justify-between gap-4 px-4 py-3.5"
+              >
+                <div className="flex min-w-0 flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="font-normal">
+                      {item.badge}
+                    </Badge>
+                    <span className="truncate text-sm font-medium">
+                      {item.label}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {item.description} · {formatDate(item.createdAt)}
                   </div>
                 </div>
-              ))
-            ) : (
-              <p className="py-3 text-sm text-muted-foreground">
-                No top-ups or balance adjustments yet.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                <div className="flex flex-col items-end gap-0.5">
+                  <p
+                    className={cn(
+                      "text-sm font-medium tabular-nums",
+                      item.amountUsdMicros < 0 && "text-muted-foreground",
+                    )}
+                  >
+                    {item.amountUsdMicros > 0 ? "+" : ""}
+                    {formatUsdFromMicros(item.amountUsdMicros, {
+                      preciseSmallAmounts: true,
+                    })}
+                  </p>
+                  <p className="text-xs text-muted-foreground tabular-nums">
+                    {formatUsdFromMicros(item.balanceAfterUsdMicros)} balance
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-foreground/15 bg-card/50 px-4 py-10 text-center">
+            <span className="flex size-9 items-center justify-center rounded-full bg-muted">
+              <ReceiptIcon className="size-4 text-muted-foreground" />
+            </span>
+            <p className="text-sm font-medium">No activity yet</p>
+            <p className="max-w-xs text-xs text-muted-foreground">
+              Add prepaid balance above and your top-ups will show up here.
+            </p>
+          </div>
+        )}
       </section>
+
     </div>
   );
 }

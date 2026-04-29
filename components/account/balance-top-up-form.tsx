@@ -13,32 +13,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldLabel,
-  FieldTitle,
-} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 
 const quickAmounts = [
   {
+    value: "500",
+    label: "$5",
+  },
+  {
     value: "1000",
     label: "$10",
-    description: "Small media tests and hosted model runs",
   },
   {
     value: "2000",
     label: "$20",
-    description: "A practical starting balance",
   },
   {
     value: "5000",
     label: "$50",
-    description: "More room for generated media",
   },
 ] as const;
 
@@ -57,13 +50,17 @@ function parseCustomAmountCents(value: string) {
   return Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
 }
 
-function BuyButton({ label }: { label: string }) {
+function BuyButton({ disabled }: { disabled: boolean }) {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" disabled={pending} className="sm:min-w-32">
+    <Button
+      type="submit"
+      disabled={pending || disabled}
+      className="h-10 rounded-lg px-5 sm:min-w-44"
+    >
       <WalletIcon data-icon="inline-start" />
-      {pending ? "Opening..." : label}
+      {pending ? "Opening Stripe..." : "Continue to payment"}
     </Button>
   );
 }
@@ -76,26 +73,24 @@ export function BalanceTopUpForm() {
     (amount) => amount.value === choice,
   );
   const customAmountCents = parseCustomAmountCents(customAmount);
-  const buttonLabel = useMemo(() => {
-    if (choice === "custom") {
-      return customAmountCents > 0
-        ? `Add ${formatUsd(customAmountCents)}`
-        : "Add balance";
-    }
-
-    return `Add ${formatUsd(Number(choice))}`;
-  }, [choice, customAmountCents]);
+  const selectedAmountCents = useMemo(
+    () => (choice === "custom" ? customAmountCents : Number(choice)),
+    [choice, customAmountCents],
+  );
+  const canSubmit =
+    choice !== "custom" ||
+    (customAmountCents >= 500 && customAmountCents <= 10000);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Add balance</CardTitle>
+        <CardTitle>Add Woven balance</CardTitle>
         <CardDescription>
-          Add prepaid balance for Woven-hosted models and media generation.
+          Prepaid balance for hosted models and media generation.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form action={createCheckoutSession} className="flex flex-col gap-4">
+      <CardContent className="px-0 pb-0">
+        <form action={createCheckoutSession} className="flex flex-col">
           <input type="hidden" name="topUpChoice" value={choice} />
           {selectedQuickAmount ? (
             <input
@@ -105,85 +100,85 @@ export function BalanceTopUpForm() {
             />
           ) : null}
 
-          <RadioGroup
-            value={choice}
-            onValueChange={(value) => setChoice(value as TopUpChoice)}
-            className="gap-1.5"
-          >
-            {quickAmounts.map((amount) => (
-              <FieldLabel
-                key={amount.value}
-                htmlFor={`top-up-${amount.value}`}
+          <div className="flex flex-col items-center px-4 pt-2 pb-6">
+            <div className="py-4 text-center font-heading text-4xl font-medium tracking-tight tabular-nums">
+              {formatUsd(selectedAmountCents)}
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-2">
+              {quickAmounts.map((amount) => {
+                const selected = choice === amount.value;
+
+                return (
+                  <button
+                    key={amount.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setChoice(amount.value)}
+                    className={cn(
+                      "h-9 rounded-lg border px-4 text-sm font-medium transition-colors",
+                      selected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background hover:bg-muted",
+                    )}
+                  >
+                    {amount.label}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                aria-pressed={choice === "custom"}
+                onClick={() => setChoice("custom")}
                 className={cn(
-                  "rounded-lg border bg-background px-3 py-2.5 transition-colors",
-                  "hover:bg-muted/50 has-data-checked:border-primary/30 has-data-checked:bg-primary/5",
+                  "h-9 rounded-lg border px-4 text-sm font-medium transition-colors",
+                  choice === "custom"
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background hover:bg-muted",
                 )}
-                onClick={() => setChoice(amount.value)}
               >
-                <Field orientation="horizontal" className="items-center gap-3">
-                  <RadioGroupItem
-                    id={`top-up-${amount.value}`}
-                    value={amount.value}
+                Custom
+              </button>
+            </div>
+
+            {choice === "custom" ? (
+              <div className="mt-5 flex w-full max-w-xs flex-col gap-2">
+                <label
+                  htmlFor="customAmountUsd"
+                  className="text-sm font-medium"
+                >
+                  Custom amount
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
+                    $
+                  </span>
+                  <Input
+                    id="customAmountUsd"
+                    name="customAmountUsd"
+                    type="number"
+                    inputMode="decimal"
+                    min="5"
+                    max="100"
+                    step="1"
+                    required
+                    value={customAmount}
+                    onChange={(event) => setCustomAmount(event.target.value)}
+                    className="h-10 pl-7 tabular-nums"
                   />
-                  <FieldContent className="grid gap-1 sm:grid-cols-[72px_1fr] sm:items-center">
-                    <FieldTitle className="text-sm tabular-nums">
-                      {amount.label}
-                    </FieldTitle>
-                    <FieldDescription>{amount.description}</FieldDescription>
-                  </FieldContent>
-                </Field>
-              </FieldLabel>
-            ))}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Enter an amount from $5 to $100.
+                </p>
+              </div>
+            ) : null}
+          </div>
 
-            <FieldLabel
-              htmlFor="top-up-custom"
-              className={cn(
-                "rounded-lg border bg-background px-3 py-2.5 transition-colors",
-                "hover:bg-muted/50 has-data-checked:border-primary/30 has-data-checked:bg-primary/5",
-              )}
-              onClick={() => setChoice("custom")}
-            >
-              <Field orientation="horizontal" className="items-center gap-3">
-                <RadioGroupItem id="top-up-custom" value="custom" />
-                <FieldContent className="grid gap-2 sm:grid-cols-[72px_minmax(120px,180px)_1fr] sm:items-center">
-                  <FieldTitle className="text-sm">Custom</FieldTitle>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-sm text-muted-foreground">
-                      $
-                    </span>
-                    <Input
-                      id="customAmountUsd"
-                      name="customAmountUsd"
-                      type="number"
-                      inputMode="decimal"
-                      min="5"
-                      max="100"
-                      step="1"
-                      required={choice === "custom"}
-                      value={customAmount}
-                      onFocus={() => setChoice("custom")}
-                      onChange={(event) => setCustomAmount(event.target.value)}
-                      className={cn(
-                        "h-7 pl-6 tabular-nums",
-                        choice !== "custom" && "opacity-60",
-                      )}
-                    />
-                  </div>
-                  <FieldDescription className="sm:text-right">
-                    {customAmountCents > 0
-                      ? formatUsd(customAmountCents)
-                      : "$5-$100"}
-                  </FieldDescription>
-                </FieldContent>
-              </Field>
-            </FieldLabel>
-          </RadioGroup>
-
-          <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              Balance is prepaid and used only for hosted Woven usage.
+              Secure checkout by Stripe.
             </p>
-            <BuyButton label={buttonLabel} />
+            <BuyButton disabled={!canSubmit} />
           </div>
         </form>
       </CardContent>
