@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Woven Video
 
-## Getting Started
+Website and backend foundation for Woven. The desktop app lives in `~/projects/woven-harness`; this repo owns the companion website, Supabase Auth/Postgres, prepaid balance ledger, Stripe top-ups, hosted model/media APIs, and generated artifact storage.
 
-First, run the development server:
+## Local Development
+
+Run the website:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Run the local Supabase stack:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+supabase start
+supabase db reset
+```
 
-## Learn More
+Copy `.env.example` to `.env.local` and fill the local keys printed by `supabase start`, plus Stripe test secrets when testing checkout.
 
-To learn more about Next.js, take a look at the following resources:
+Google login also needs `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` and `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` available to Supabase CLI, either exported in your shell or stored in a local root `.env` file before running `supabase start`. In Google Cloud, authorize `http://localhost:54321/auth/v1/callback` as the local redirect URI.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Hosted Woven model calls use Vercel AI Gateway. Set `AI_GATEWAY_API_KEY` in `.env.local` before calling `/api/v1/chat/completions`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Backend Foundation
 
-## Deploy on Vercel
+Supabase files live under `supabase/`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `supabase/migrations/20260429000100_init_billing_system.sql`
+- `supabase/functions/create-checkout-session`
+- `supabase/functions/stripe-webhook`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Architecture details are in [docs/billing-architecture.md](docs/billing-architecture.md).
+
+## Scripts
+
+```bash
+pnpm lint
+pnpm build
+```

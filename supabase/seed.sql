@@ -1,0 +1,1 @@
+-- Local seed data can go here once the account UI needs stable fixtures.

@@ -1,0 +1,10 @@
+{
+  "lock": false,
+  "compilerOptions": {
+    "strict": true
+  },
+  "imports": {
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@2.105.1",
+    "stripe": "npm:stripe@22.1.0"
+  }
+}
