@@ -1,16 +1,18 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
+  ArrowRightIcon,
+  AppleIcon,
   CheckIcon,
-  XIcon,
-  ClockIcon,
-  BoxIcon,
-  ShapesIcon,
-  UsersIcon,
-  WandSparklesIcon,
+  KeyIcon,
+  LaptopIcon,
+  LayersIcon,
+  PencilLineIcon,
+  PuzzleIcon,
+  SparklesIcon,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
@@ -18,8 +20,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ReelTile } from "@/components/reel-tile";
+import { AccountUserMenu } from "@/components/account/user-menu";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 
-const pillBtn = "h-11 rounded-full px-5 text-[0.9rem]";
+const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
 
 const reels = [
   {
@@ -29,157 +34,101 @@ const reels = [
     posterUrl: "https://media.wovenlabs.net/woven-reels/no-caption-poster.jpg",
   },
   {
-    label: "Creator-style ad",
+    label: "Skincare ad",
     gradient: "from-neutral-900 via-neutral-600 to-neutral-400",
     videoUrl: "https://media.wovenlabs.net/woven-reels/linger-brand-awareness-v13-web.mp4",
     posterUrl: "https://media.wovenlabs.net/woven-reels/linger-brand-awareness-v13-poster.jpg",
   },
   {
-    label: "Lifestyle film",
+    label: "Lifestyle",
     gradient: "from-slate-900 via-slate-700 to-slate-400",
     videoUrl: "https://media.wovenlabs.net/woven-reels/loft-showcase-v20-web.mp4",
     posterUrl: "https://media.wovenlabs.net/woven-reels/loft-showcase-v20-poster.jpg",
   },
   {
-    label: "Animated story",
+    label: "Animation",
     gradient: "from-gray-900 via-gray-600 to-gray-300",
     videoUrl: "https://media.wovenlabs.net/woven-reels/theo-honesty-v10-web.mp4",
     posterUrl: "https://media.wovenlabs.net/woven-reels/theo-honesty-v10-poster-v2.jpg",
   },
   {
-    label: "Feature update",
+    label: "Product demo",
     gradient: "from-stone-900 via-stone-700 to-stone-400",
     videoUrl: "https://media.wovenlabs.net/woven-reels/drift-demo-v31-full.mp4",
     posterUrl: "https://media.wovenlabs.net/woven-reels/drift-demo-v31-poster.jpg",
   },
 ];
 
-const features = [
-  {
-    icon: WandSparklesIcon,
-    title: "Generative AI assets",
-    body: "Fresh footage, talent, b-roll, and spokespersons — generated to fit your brand, no shoots required.",
-  },
-  {
-    icon: BoxIcon,
-    title: "Or your existing assets",
-    body: "Product shots, brand system, and raw footage you already have, transformed into polished reels.",
-  },
-  {
-    icon: ShapesIcon,
-    title: "Ads, content, launches",
-    body: "The full commercial range — performance creative, UGC-style ads, feature drops, and campaign teasers.",
-  },
-  {
-    icon: ClockIcon,
-    title: "Fast turnaround",
-    body: "Pilots delivered in around 5 business days. Monthly engagements run on rolling batches.",
-  },
-  {
-    icon: UsersIcon,
-    title: "No production overhead",
-    body: "A systemized workflow replaces the bloat of a traditional agency or internal video team.",
-  },
-];
+type FeatureCard = {
+  icon: React.ComponentType<{ className?: string }>;
+  eyebrow: string;
+  title: string;
+  body: string;
+};
 
-const processSteps = [
-  { step: "01", title: "Share your brief", body: "Brand guidelines, reference reels you like, existing assets, and the launch or feature to promote." },
-  { step: "02", title: "Script & Shot list", body: "We develop the script and visual plan for each reel." },
-  { step: "03", title: "Alignment", body: "You review and approve the direction before production begins." },
-  { step: "04", title: "Production", body: "A systemized workflow built for speed and consistency." },
-  { step: "05", title: "Delivery", body: "Final reels ready for Reels, TikTok, Shorts, and paid social." },
-];
-
-const builtFor = [
-  "AI startups and software companies",
-  "Consumer apps and SaaS tools",
-  "Founder-led brands with active launches",
-  "DTC and ecommerce with existing assets",
-  "Teams that want more reels without hiring motion designers",
-];
-
-const notAFit = [
-  "Full live-action production from scratch",
-  "Unlimited bespoke creative or strategy work",
-  "Long-form video and documentary work",
-  "“Make us go viral” with no assets or clarity",
-];
-
-const pricing = [
+const featureCards: FeatureCard[] = [
   {
-    name: "Launch Reel Sprint",
-    tagline: "Pilot engagement",
-    price: "$2,000",
-    cadence: "one-time",
-    description:
-      "Three vertical reels for one campaign, launch, or feature. The easiest way to try Woven.",
-    features: [
-      "3 reels, 30–45 seconds each",
-      "3 creative angles from one brief",
-      "1 revision round per reel",
-      "Delivered in ~5 business days",
-    ],
-    cta: "Book a discovery call",
-    highlighted: true,
+    icon: SparklesIcon,
+    eyebrow: "Chat-driven",
+    title: "Make a reel by chatting.",
+    body: "Describe the cut you want. Woven writes the script, generates the footage and voice, and assembles the timeline. You review and revise like a conversation — not a timeline.",
   },
   {
-    name: "Monthly",
-    tagline: "Ongoing engagement",
-    price: "From $5,000",
-    cadence: "per month",
-    description:
-      "A steady stream of short-form reels for teams that need consistent output.",
-    features: [
-      "6 reels per month",
-      "Mixed formats and use cases",
-      "Rolling brief and feedback cycles",
-      "Priority turnaround",
-    ],
-    cta: "Book a discovery call",
-    highlighted: false,
+    icon: LaptopIcon,
+    eyebrow: "macOS-native",
+    title: "Built for your Mac.",
+    body: "Full file system access. Drop folders in, work on local projects, no uploads.",
   },
   {
-    name: "Custom",
-    tagline: "For larger programs",
-    price: "Let’s talk",
-    cadence: "tailored",
-    description:
-      "Higher volume, dedicated capacity, or bespoke workflows for always-on creative programs.",
-    features: [
-      "Higher monthly output",
-      "Dedicated production lanes",
-      "Custom formats and asset libraries",
-      "Direct line to the Woven team",
-    ],
-    cta: "Book a discovery call",
-    highlighted: false,
+    icon: KeyIcon,
+    eyebrow: "Your keys, or ours",
+    title: "Local with your keys. Or hosted on a prepaid balance.",
+    body: "Free with your own Anthropic and OpenAI keys. Sign in for Woven-hosted models — same lineup, no key juggling.",
+  },
+  {
+    icon: LayersIcon,
+    eyebrow: "Multimodal",
+    title: "Generate and reason across media.",
+    body: "Images, video, audio — pick any model, or compare across them. Then point Claude or GPT at any file in your project to analyze or transform.",
+  },
+  {
+    icon: PencilLineIcon,
+    eyebrow: "Preview + edit",
+    title: "See your files. Shape them by chatting.",
+    body: "Open any video, image, or audio file directly in Woven. Trim, adjust, or replace by asking — no bouncing between apps.",
+  },
+  {
+    icon: PuzzleIcon,
+    eyebrow: "Skills + memory",
+    title: "Works with your Claude setup.",
+    body: "Woven respects your existing Claude skills and memory. Workflows you've built elsewhere carry into the app.",
   },
 ];
 
 const faqs = [
   {
-    q: "What do you need from us to get started?",
-    a: "Logo and brand guidelines, a link to your product or landing page, example reels you like as references, any existing footage or screenshots, and the key message, launch, or feature you want the reels to promote. The more clarity on the message, the faster we move.",
+    q: "Is Woven a desktop app or a web app?",
+    a: "Woven is a native macOS app. The website handles sign-in, hosted-model billing, and downloads. You do the work in the desktop app.",
   },
   {
-    q: "How fast is delivery?",
-    a: "The Launch Reel Sprint delivers three reels in around five business days from the point we have your assets and brief. Monthly engagements run on rolling batches with priority turnaround.",
+    q: "What platforms does Woven support?",
+    a: "macOS today. Windows and Linux are not yet supported.",
   },
   {
-    q: "How do revisions work?",
-    a: "Each reel in the pilot includes one revision round. The goal is tight, focused feedback — not open-ended changes. Monthly engagements operate on the same principle across rolling batches.",
+    q: "Do I need a Woven account to use the app?",
+    a: "Yes. Sign in once with Google. Then choose: run locally with your own Anthropic and OpenAI keys, or use Woven-hosted models on a prepaid balance.",
   },
   {
-    q: "Can you create reels with a spokesperson or influencer?",
-    a: "Yes. We can produce face-led, spokesperson-style, and influencer-style creative using synthetic talent — no live shoot required.",
+    q: "Which models can I use?",
+    a: "The same lineup either way — Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5, and GPT-5.5. Locally you bring your own Anthropic and OpenAI keys; with Woven-hosted, charges come from your prepaid balance. See the pricing page for per-model rates.",
   },
   {
-    q: "Who is Woven built for?",
-    a: "Modern internet-native brands — AI and software companies, consumer apps, SaaS tools, founder-led startups, and DTC brands — that already have assets and want more short-form video without the overhead of a traditional agency or internal video team.",
+    q: "How does the hosted-models balance work?",
+    a: "Top up a USD balance from $5. Each request is charged against your balance using published per-model rates. The balance is prepaid, so there are no surprise bills.",
   },
   {
-    q: "Do you do long-form video, live shoots, or social media management?",
-    a: "No. Woven is intentionally focused on short-form brand reels under 60 seconds. That’s how we stay fast and keep quality high.",
+    q: "Can I bring my own provider keys?",
+    a: "Yes. Local mode uses keys you provide. You pay providers directly at their rates and Woven takes nothing.",
   },
 ];
 
@@ -198,8 +147,8 @@ function StructuredData() {
       height: 1024,
     },
     description:
-      "Woven is a short-form video studio that helps modern brands ship short-form reels for ads and content with Generative AI.",
-    slogan: "Short-form reels to grow your brand.",
+      "Woven is a macOS app for making and editing short form video with AI.",
+    slogan: "The best way to make and edit short form video with AI.",
   };
 
   const website = {
@@ -208,39 +157,27 @@ function StructuredData() {
     url: SITE_URL,
     name: "Woven",
     description:
-      "Short-form reels for modern brands, with Generative AI.",
+      "The best way to make and edit short form video with AI.",
     inLanguage: "en-US",
     publisher: { "@id": `${SITE_URL}/#organization` },
   };
 
-  const service = {
-    "@type": "Service",
-    "@id": `${SITE_URL}/#service`,
-    name: "Short-form brand reels",
-    serviceType: "Short-form video production",
-    provider: { "@id": `${SITE_URL}/#organization` },
-    areaServed: "Worldwide",
+  const application = {
+    "@type": "SoftwareApplication",
+    "@id": `${SITE_URL}/#app`,
+    name: "Woven",
+    operatingSystem: "macOS",
+    applicationCategory: "MultimediaApplication",
     description:
-      "Vertical short-form reels under 60 seconds for ads, content launches, and brand campaigns — produced using Generative AI and existing brand assets.",
-    offers: pricing.map((tier) => {
-      const base = {
-        "@type": "Offer",
-        name: tier.name,
-        description: tier.description,
-        category: tier.tagline,
-        url: `${SITE_URL}/#pricing`,
-      };
-      const numeric = tier.price.match(/[\d,]+/);
-      if (numeric) {
-        return {
-          ...base,
-          price: numeric[0].replace(/,/g, ""),
-          priceCurrency: "USD",
-          availability: "https://schema.org/InStock",
-        };
-      }
-      return base;
-    }),
+      "Native macOS app to script, generate, and assemble short form video with AI. Bring your own provider keys, or use Woven-hosted models on a prepaid balance.",
+    url: SITE_URL,
+    downloadUrl: DOWNLOAD_URL,
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    publisher: { "@id": `${SITE_URL}/#organization` },
   };
 
   const faqPage = {
@@ -258,7 +195,7 @@ function StructuredData() {
 
   const graph = {
     "@context": "https://schema.org",
-    "@graph": [organization, website, service, faqPage],
+    "@graph": [organization, website, application, faqPage],
   };
 
   return (
@@ -274,19 +211,85 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <StructuredData />
+      <SiteHeader />
       <main className="flex-1">
         <Hero />
-        <ReelShowcase />
-        <WhyWoven />
-        <Process />
-        <Fit />
-        <PilotSpotlight />
+        <MadeWithWoven />
+        <Features />
         <Pricing />
         <FAQ />
         <FinalCTA />
       </main>
       <SiteFooter />
     </div>
+  );
+}
+
+async function SiteHeader() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-3">
+        <Link href="/" className="flex items-center gap-2" aria-label="Woven home">
+          <Image
+            src="/woven-logo.png"
+            alt=""
+            width={28}
+            height={28}
+            className="rounded-md"
+            priority
+          />
+          <span className="font-heading text-base font-medium">Woven</span>
+        </Link>
+        <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
+          <a href="#features" className="hover:text-foreground">
+            Features
+          </a>
+          <Link href="/pricing" className="hover:text-foreground">
+            Pricing
+          </Link>
+          <a href="#faq" className="hover:text-foreground">
+            FAQ
+          </a>
+        </nav>
+        <div className="flex items-center gap-3">
+          {user ? (
+            <>
+              <Link
+                href="/account"
+                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+              >
+                Account
+              </Link>
+              <AccountUserMenu email={user.email ?? ""} />
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
+              >
+                Sign in
+              </Link>
+              <a
+                href={DOWNLOAD_URL} download
+                className={cn(
+                  buttonVariants(),
+                  "h-9 rounded-full px-4 text-sm font-medium",
+                )}
+              >
+                <AppleIcon className="size-4" />
+                Download
+              </a>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
   );
 }
 
@@ -302,88 +305,170 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function Hero() {
   return (
     <section className="relative overflow-hidden">
-      <div className="mx-auto flex w-full max-w-5xl flex-col items-center px-6 pt-8 pb-16 text-center md:pt-10 md:pb-20">
-        <Image
-          src="/woven-logo.png"
-          alt="Woven"
-          width={96}
-          height={96}
-          priority
-          className="size-10"
+      {/* atmospheric backdrop */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+      >
+        {/* dot grid */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--foreground) 14%, transparent) 1.5px, transparent 0)",
+            backgroundSize: "22px 22px",
+            maskImage:
+              "radial-gradient(ellipse 80% 65% at 50% 30%, black, transparent 80%)",
+            WebkitMaskImage:
+              "radial-gradient(ellipse 80% 65% at 50% 30%, black, transparent 80%)",
+          }}
         />
-        <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-5xl">
-          Short-form reels to grow your brand.
+        {/* soft halo on top */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 55% at 50% 0%, color-mix(in oklch, var(--foreground) 7%, transparent), transparent 65%)",
+          }}
+        />
+      </div>
+      <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center px-6 pt-14 pb-12 text-center md:pt-16 md:pb-16">
+        <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-5xl">
+          The best way to make and edit{" "}
+          <span className="md:whitespace-nowrap">
+            short form video with AI.
+          </span>
         </h1>
-        <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-          Woven helps{" "}
-          <span className="font-medium text-orange-600">modern brands</span>{" "}
-          consistently ship{" "}
-          <span className="font-medium text-emerald-600">
-            short-form reels
-          </span>{" "}
-          for ads and content with{" "}
-          <span className="font-medium text-violet-600">Generative AI</span>.
+        <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
+          Script. Shot list. Generate. Animate. Edit. Assemble.
+          <span className="mt-1 block font-medium text-foreground">
+            All in one place.
+          </span>
         </p>
         <Button
           nativeButton={false}
-          className="mt-8 h-12 rounded-full px-8 text-base font-medium"
-          render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
+          className="mt-8 h-12 rounded-full px-7 text-base font-medium shadow-lg shadow-foreground/10"
+          render={<a href={DOWNLOAD_URL} download />}
         >
-          Book a discovery call &rarr;
+          <AppleIcon className="size-4" />
+          Download for Mac
         </Button>
+        <HeroMedia />
       </div>
     </section>
   );
 }
 
-function ReelShowcase() {
+function HeroMedia() {
   return (
-    <section id="work" className="pb-24">
+    <div className="relative mx-auto mt-10 w-full max-w-5xl md:mt-12">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-x-12 -top-8 -bottom-16 rounded-[3rem] bg-foreground/5 blur-3xl md:-inset-x-24"
+      />
+      <div className="relative overflow-hidden rounded-lg shadow-2xl shadow-foreground/30 ring-1 ring-foreground/20">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          poster="https://media.woven.video/woven-hero.png"
+          width={1778}
+          height={1080}
+          aria-label="Woven app demo — chat-driven reel assembly"
+          className="block h-auto w-full"
+        >
+          <source src="https://media.woven.video/woven-hero.mp4" type="video/mp4" />
+        </video>
+      </div>
+    </div>
+  );
+}
+
+function MadeWithWoven() {
+  return (
+    <section
+      id="made-with-woven"
+      className="relative scroll-mt-20 py-24 md:py-32"
+    >
+      {/* edge-faded top divider */}
+      <div
+        aria-hidden="true"
+        className="absolute left-0 right-0 top-0 h-px"
+        style={{
+          background:
+            "linear-gradient(to right, transparent, color-mix(in oklch, var(--foreground) 7%, transparent) 30%, color-mix(in oklch, var(--foreground) 7%, transparent) 70%, transparent)",
+        }}
+      />
       <div className="mx-auto w-full max-w-6xl px-6">
-        <div className="-mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-[12%] pb-2 md:mx-0 md:grid md:grid-cols-5 md:gap-5 md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {reels.map((reel) => (
+        <div className="flex flex-col items-center gap-3 text-center">
+          <h2 className="text-2xl font-medium tracking-tight md:text-3xl">
+            Made with Woven
+          </h2>
+          <p className="text-sm text-muted-foreground md:text-base">
+            Real work shipped to Reels, TikTok, and Shorts.
+          </p>
+        </div>
+        <div className="mt-14 -mx-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-[12%] pb-2 md:mx-0 md:grid md:grid-cols-5 md:gap-5 md:overflow-visible md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {reels.map((reel, i) => (
             <div
-              key={reel.label}
-              className="w-[76%] shrink-0 snap-center md:w-auto md:shrink"
+              key={i}
+              className="flex w-[76%] shrink-0 snap-center flex-col gap-3 md:w-auto md:shrink"
             >
               <ReelTile
-                videoUrl={"videoUrl" in reel ? reel.videoUrl : undefined}
-                posterUrl={"posterUrl" in reel ? reel.posterUrl : undefined}
+                videoUrl={reel.videoUrl}
+                posterUrl={reel.posterUrl}
                 gradient={reel.gradient}
               />
-              <p className="mt-3 text-center text-xs text-muted-foreground">
+              <p className="text-center text-sm text-muted-foreground">
                 {reel.label}
               </p>
             </div>
           ))}
         </div>
       </div>
+      {/* edge-faded bottom divider */}
+      <div
+        aria-hidden="true"
+        className="absolute bottom-0 left-0 right-0 h-px"
+        style={{
+          background:
+            "linear-gradient(to right, transparent, color-mix(in oklch, var(--foreground) 7%, transparent) 30%, color-mix(in oklch, var(--foreground) 7%, transparent) 70%, transparent)",
+        }}
+      />
     </section>
   );
 }
 
-function WhyWoven() {
+function Features() {
   return (
-    <section className="border-y border-border/60 bg-card/50">
-      <div className="mx-auto w-full max-w-6xl px-6 py-24 text-center">
-        <div className="flex flex-col items-center gap-4">
-          <SectionLabel>Why Woven</SectionLabel>
+    <section
+      id="features"
+      className="relative scroll-mt-20 overflow-hidden border-y border-border/60 bg-card/40"
+    >
+      {/* diagonal hatching */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(-45deg, color-mix(in oklch, var(--foreground) 4%, transparent) 0 1px, transparent 1px 14px)",
+        }}
+      />
+      <div className="relative mx-auto w-full max-w-6xl px-6 py-24 md:py-28">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <SectionLabel>Features</SectionLabel>
           <h2 className="max-w-3xl text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-            Generated, adapted, or both.
+            Built for the way you work.
           </h2>
           <p className="max-w-2xl text-base text-muted-foreground md:text-lg">
-            We use generative AI to create fresh assets when you need them, and
-            work from your existing brand system when you already have the raw
-            material. Most projects use both.
+            Native, multimodal, chat-driven — with the model and key setup you
+            choose.
           </p>
         </div>
-        <div className="mt-16 grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-10">
-          {features.slice(0, 3).map((f) => (
-            <Feature key={f.title} {...f} />
-          ))}
-        </div>
-        <div className="mt-12 grid grid-cols-1 gap-12 md:mx-auto md:max-w-3xl md:grid-cols-2 md:gap-10">
-          {features.slice(3).map((f) => (
+        <div className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {featureCards.map((f) => (
             <Feature key={f.title} {...f} />
           ))}
         </div>
@@ -392,262 +477,180 @@ function WhyWoven() {
   );
 }
 
-function Feature({
-  icon: Icon,
-  title,
-  body,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  body: string;
-}) {
+function Feature({ icon: Icon, eyebrow, title, body }: FeatureCard) {
   return (
-    <div className="flex flex-col items-center gap-3 text-center">
-      <div className="flex size-11 items-center justify-center rounded-full bg-foreground text-background">
-        <Icon className="size-5" />
+    <div className="group flex flex-col gap-3 rounded-3xl bg-card p-7 ring-1 ring-border transition-all hover:-translate-y-0.5 hover:ring-foreground/30 md:p-8">
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+        <Icon className="size-4 text-foreground" />
+        {eyebrow}
       </div>
-      <h3 className="text-lg font-semibold tracking-tight">{title}</h3>
-      <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
-        {body}
-      </p>
+      <h3 className="text-xl font-semibold tracking-tight md:text-2xl">{title}</h3>
+      <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
     </div>
-  );
-}
-
-function Process() {
-  return (
-    <section id="process">
-      <div className="mx-auto w-full max-w-6xl px-6 py-24 text-center">
-        <div className="flex flex-col items-center gap-4">
-          <SectionLabel>How it works</SectionLabel>
-          <h2 className="max-w-3xl text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-            A simple, fast process.
-          </h2>
-          <p className="max-w-2xl text-base text-muted-foreground md:text-lg">
-            Five steps from brief to delivery — less painful than a traditional
-            agency engagement.
-          </p>
-        </div>
-        <div className="mt-16 grid gap-10 md:grid-cols-5 md:gap-5">
-          {processSteps.map((s) => (
-            <div key={s.step} className="flex flex-col items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-full border border-border bg-card font-mono text-xs text-muted-foreground">
-                {s.step}
-              </div>
-              <h3 className="text-base font-semibold tracking-tight">
-                {s.title}
-              </h3>
-              <p className="max-w-[16rem] text-sm leading-relaxed text-muted-foreground">
-                {s.body}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Fit() {
-  return (
-    <section className="border-y border-border/60 bg-card/50">
-      <div className="mx-auto w-full max-w-5xl px-6 py-24 text-center">
-        <div className="flex flex-col items-center gap-4">
-          <SectionLabel>Who it’s for</SectionLabel>
-          <h2 className="max-w-3xl text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-            Built for modern brands. Narrow on purpose.
-          </h2>
-        </div>
-        <div className="mt-14 grid gap-5 text-left md:grid-cols-2">
-          <div className="rounded-2xl bg-card p-8 ring-1 ring-border">
-            <h3 className="text-lg font-semibold tracking-tight">Built for</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Teams already shipping, who want more reels.
-            </p>
-            <ul className="mt-6 flex flex-col gap-3">
-              {builtFor.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm">
-                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-                    <CheckIcon className="size-3" />
-                  </span>
-                  <span className="text-foreground">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="rounded-2xl bg-card p-8 ring-1 ring-border">
-            <h3 className="text-lg font-semibold tracking-tight">Not a fit</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Staying narrow is how we stay fast.
-            </p>
-            <ul className="mt-6 flex flex-col gap-3">
-              {notAFit.map((item) => (
-                <li key={item} className="flex items-start gap-3 text-sm">
-                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                    <XIcon className="size-3" />
-                  </span>
-                  <span className="text-muted-foreground">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function PilotSpotlight() {
-  return (
-    <section>
-      <div className="mx-auto w-full max-w-6xl px-6 py-24">
-        <div className="overflow-hidden rounded-3xl bg-foreground text-background">
-          <div className="flex flex-col items-center gap-8 px-8 py-16 text-center md:px-16 md:py-20">
-            <div className="inline-flex items-center gap-2 rounded-full bg-background/10 px-3 py-1 text-xs font-medium text-background/90 ring-1 ring-background/15">
-              <span className="size-1.5 rounded-full bg-emerald-400" />
-              Pilot engagement
-            </div>
-            <h2 className="max-w-3xl text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-6xl">
-              The Launch Reel Sprint.
-            </h2>
-            <p className="max-w-2xl text-base leading-relaxed text-background/70 md:text-lg">
-              A fixed-scope way to try Woven. Three polished reels built around
-              one launch, feature, or campaign — using the assets you already
-              have.
-            </p>
-            <div className="mt-2 grid w-full max-w-3xl grid-cols-2 gap-x-6 gap-y-3 text-left text-sm text-background/80 md:grid-cols-3">
-              {[
-                "3 vertical reels, 30–45s",
-                "3 creative angles",
-                "1 revision round per reel",
-                "Delivered in ~5 business days",
-                "Built from your assets",
-                "Starting at $2,000",
-              ].map((item) => (
-                <div key={item} className="flex items-start gap-2">
-                  <CheckIcon className="mt-0.5 size-4 shrink-0 text-emerald-400" />
-                  {item}
-                </div>
-              ))}
-            </div>
-            <Button
-              nativeButton={false}
-              variant="secondary"
-              className={`${pillBtn} mt-2`}
-              render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
-            >
-              Book a discovery call
-            </Button>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 
 function Pricing() {
   return (
-    <section id="pricing" className="border-y border-border/60 bg-card/50">
-      <div className="mx-auto w-full max-w-6xl px-6 py-24">
+    <section
+      id="pricing"
+      className="scroll-mt-20 border-b border-border/60"
+    >
+      <div className="mx-auto w-full max-w-5xl px-6 py-24 md:py-28">
         <div className="flex flex-col items-center gap-4 text-center">
           <SectionLabel>Pricing</SectionLabel>
           <h2 className="max-w-3xl text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-            Start small. Scale when it works.
+            Free to start. Pay for what you use.
           </h2>
           <p className="max-w-2xl text-base text-muted-foreground md:text-lg">
-            Start with a pilot, then scale to a monthly engagement
-            once you see the output.
+            Same Claude and GPT lineup either way. Use your own keys, or use
+            Woven-hosted on a prepaid balance.
           </p>
         </div>
-        <div className="mt-14 grid gap-5 md:grid-cols-3">
-          {pricing.map((tier) => (
-            <div
-              key={tier.name}
-              className={
-                tier.highlighted
-                  ? "relative flex flex-col gap-6 rounded-3xl bg-card p-8 ring-2 ring-foreground"
-                  : "relative flex flex-col gap-6 rounded-3xl bg-card p-8 ring-1 ring-border"
-              }
-            >
-              {tier.highlighted && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background">
-                    <span className="size-1.5 rounded-full bg-emerald-400" />
-                    Start here
-                  </span>
-                </div>
-              )}
-              <div className="flex flex-col gap-1">
-                <h3 className="text-lg font-semibold tracking-tight">
-                  {tier.name}
-                </h3>
-                <p className="text-xs text-muted-foreground">{tier.tagline}</p>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-semibold tracking-tight">
-                  {tier.price}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {tier.cadence}
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {tier.description}
+        <div className="mt-14 grid gap-5 text-left md:grid-cols-2">
+          <div className="group flex flex-col gap-6 rounded-3xl bg-card p-8 ring-1 ring-border transition-all hover:-translate-y-0.5 hover:ring-foreground/30 md:p-10">
+            <div className="flex flex-col gap-1">
+              <h3 className="text-base font-semibold tracking-tight">Free</h3>
+              <p className="text-xs text-muted-foreground">
+                Bring your own keys
               </p>
-              <ul className="flex flex-col gap-2.5 border-t border-border pt-6">
-                {tier.features.map((f) => (
-                  <li
-                    key={f}
-                    className="flex items-start gap-2.5 text-sm text-foreground"
-                  >
-                    <CheckIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Button
-                nativeButton={false}
-                variant={tier.highlighted ? "default" : "outline"}
-                className={`${pillBtn} mt-auto w-full`}
-                render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
-              >
-                {tier.cta}
-              </Button>
             </div>
-          ))}
+            <div className="flex items-baseline gap-2">
+              <span className="text-6xl font-semibold tracking-[-0.04em] md:text-7xl">
+                $0
+              </span>
+              <span className="text-sm text-muted-foreground">forever</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              The full app, running locally on your Mac. Pay providers directly.
+            </p>
+            <ul className="flex flex-col gap-3 border-t border-border pt-6 text-sm">
+              <BulletItem>Runs entirely on your Mac</BulletItem>
+              <BulletItem>Bring your own Anthropic and OpenAI keys</BulletItem>
+              <BulletItem>You pay providers directly at their rates</BulletItem>
+            </ul>
+            <a
+              href={DOWNLOAD_URL} download
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "mt-auto h-11 w-full rounded-full text-sm font-medium",
+              )}
+            >
+              <AppleIcon className="size-4" />
+              Download for Mac
+            </a>
+          </div>
+          <div className="group relative flex flex-col gap-6 overflow-hidden rounded-3xl bg-foreground p-8 text-background ring-1 ring-foreground transition-shadow hover:shadow-2xl md:p-10">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-background/8 blur-3xl"
+            />
+            <div className="relative flex flex-col gap-1">
+              <h3 className="text-base font-semibold tracking-tight">Hosted</h3>
+              <p className="text-xs text-background/70">
+                Pay as you go · No subscription
+              </p>
+            </div>
+            <div className="relative flex items-baseline gap-2">
+              <span className="text-6xl font-semibold tracking-[-0.04em] md:text-7xl">
+                From $5
+              </span>
+              <span className="text-sm text-background/70">top up</span>
+            </div>
+            <p className="relative text-sm text-background/80">
+              Sign in, top up your balance, and use Woven-hosted Claude and GPT
+              — published per-model rates.
+            </p>
+            <ul className="relative flex flex-col gap-3 border-t border-background/15 pt-6 text-sm text-background/90">
+              <BulletItem inverse>
+                Top up a prepaid USD balance from $5
+              </BulletItem>
+              <BulletItem inverse>
+                Hosted Claude Sonnet 4.6, Opus 4.7, Haiku 4.5, and GPT-5.5
+              </BulletItem>
+              <BulletItem inverse>
+                Charged per request at published rates
+              </BulletItem>
+            </ul>
+            <Link
+              href="/pricing"
+              className={cn(
+                buttonVariants({ variant: "secondary" }),
+                "relative mt-auto h-11 w-full rounded-full text-sm font-medium",
+              )}
+            >
+              See per-model pricing
+              <ArrowRightIcon className="size-4" />
+            </Link>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
+function BulletItem({
+  children,
+  inverse = false,
+}: {
+  children: React.ReactNode;
+  inverse?: boolean;
+}) {
+  return (
+    <li className="flex items-start gap-2.5">
+      <span
+        className={cn(
+          "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full",
+          inverse
+            ? "bg-background/15 text-background"
+            : "bg-foreground text-background",
+        )}
+      >
+        <CheckIcon className="size-3" />
+      </span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
 function FAQ() {
   return (
-    <section id="faq">
-      <div className="mx-auto w-full max-w-3xl px-6 py-24">
-        <div className="flex flex-col items-center gap-4 text-center">
-          <SectionLabel>FAQs</SectionLabel>
-          <h2 className="text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-            Common questions.
-          </h2>
-        </div>
-        <div className="mt-12 flex flex-col gap-3">
-          <Accordion>
-            {faqs.map((item) => (
-              <AccordionItem
-                key={item.q}
-                value={item.q}
-                className="mb-3 rounded-2xl border border-border bg-card px-5 not-last:border-b"
+    <section id="faq" className="scroll-mt-20 bg-card/40">
+      <div className="mx-auto w-full max-w-6xl px-6 py-24 md:py-28">
+        <div className="grid gap-12 md:grid-cols-[1fr_1.4fr] md:gap-20">
+          <div className="flex flex-col items-start gap-5">
+            <SectionLabel>FAQs</SectionLabel>
+            <h2 className="text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
+              Common questions.
+            </h2>
+            <p className="text-base text-muted-foreground">
+              Anything else?{" "}
+              <a
+                href="mailto:hello@woven.video"
+                className="text-foreground underline-offset-4 hover:underline"
               >
-                <AccordionTrigger className="text-base hover:no-underline">
-                  {item.q}
-                </AccordionTrigger>
-                <AccordionContent>
-                  <p className="text-muted-foreground">{item.a}</p>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+                hello@woven.video
+              </a>
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Accordion>
+              {faqs.map((item) => (
+                <AccordionItem
+                  key={item.q}
+                  value={item.q}
+                  className="mb-3 rounded-2xl border border-border bg-card px-5 transition-colors hover:border-foreground/20 not-last:border-b"
+                >
+                  <AccordionTrigger className="text-base hover:no-underline md:text-lg">
+                    {item.q}
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-muted-foreground">{item.a}</p>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
         </div>
       </div>
     </section>
@@ -656,24 +659,40 @@ function FAQ() {
 
 function FinalCTA() {
   return (
-    <section id="book" className="border-t border-border/60 bg-card/50">
-      <div className="mx-auto w-full max-w-4xl px-6 py-28 text-center md:py-36">
-        <div className="flex flex-col items-center gap-8">
-          <h2 className="max-w-3xl text-5xl font-semibold tracking-[-0.03em] leading-[1.02] md:text-7xl">
-            Let’s make the reels.
-          </h2>
-          <p className="max-w-xl text-base text-muted-foreground md:text-lg">
-            Book a discovery call. We’ll look at your assets, what you’re shipping,
-            and whether a Launch Reel Sprint is the right next step.
-          </p>
-          <Button
-            nativeButton={false}
-            className={pillBtn}
-            render={<a href="https://cal.com/naman-woven/30min" target="_blank" rel="noopener noreferrer" />}
-          >
-            Book a discovery call
-          </Button>
-        </div>
+    <section
+      id="download"
+      className="relative overflow-hidden bg-foreground text-background"
+    >
+      {/* film grain */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.08] mix-blend-overlay"
+        style={{
+          backgroundImage: "url('/noise.svg')",
+          backgroundSize: "200px 200px",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-32 left-1/2 size-[40rem] -translate-x-1/2 rounded-full bg-background/12 blur-3xl"
+      />
+      <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center gap-10 px-6 py-32 text-center md:py-44">
+        <h2 className="max-w-4xl text-5xl font-semibold tracking-[-0.035em] leading-[0.98] md:text-7xl lg:text-8xl">
+          Make your next short form video.
+        </h2>
+        <p className="max-w-xl text-base text-background/70 md:text-lg">
+          Download Woven, point it at your assets, and ship a vertical cut in
+          an afternoon.
+        </p>
+        <Button
+          nativeButton={false}
+          variant="secondary"
+          className="h-13 rounded-full px-8 text-base font-medium"
+          render={<a href={DOWNLOAD_URL} download />}
+        >
+          <AppleIcon className="size-4" />
+          Download for Mac
+        </Button>
       </div>
     </section>
   );
@@ -696,15 +715,12 @@ function SiteFooter() {
           </span>
         </div>
         <div className="flex items-center gap-6 text-sm text-muted-foreground">
-          <a href="#work" className="hover:text-foreground">
-            Work
+          <a href="#features" className="hover:text-foreground">
+            Features
           </a>
-          <a href="#process" className="hover:text-foreground">
-            Process
-          </a>
-          <a href="#pricing" className="hover:text-foreground">
+          <Link href="/pricing" className="hover:text-foreground">
             Pricing
-          </a>
+          </Link>
           <a href="#faq" className="hover:text-foreground">
             FAQ
           </a>

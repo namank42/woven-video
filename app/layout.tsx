@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 const siteUrl = "https://www.woven.video";
 const siteName = "Woven";
 const siteTitle =
-  "Woven — Short-form reels for modern brands";
+  "Woven — The best way to make and edit short form video with AI";
 const siteDescription =
-  "Woven helps modern brands consistently ship high-performing reels for ads and content using Generative AI.";
+  "Native macOS app to script, generate, and assemble short form video with AI. Bring your own keys, or use Woven-hosted models on a prepaid balance.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -31,17 +31,18 @@ export const metadata: Metadata = {
   creator: "Woven",
   publisher: "Woven",
   keywords: [
+    "AI video app",
+    "short form video",
     "short-form video",
-    "brand reels",
-    "AI video agency",
+    "AI video maker",
     "generative AI video",
     "Instagram Reels",
-    "TikTok ads",
-    "Shorts",
-    "performance creative",
-    "UGC ads",
-    "AI spokesperson",
-    "video content agency",
+    "TikTok",
+    "YouTube Shorts",
+    "macOS video app",
+    "AI b-roll",
+    "AI lip sync",
+    "AI voiceover",
   ],
   alternates: {
     canonical: "/",
@@ -70,7 +71,7 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
-  category: "Marketing and Advertising",
+  category: "Multimedia",
 };
 
 export const viewport: Viewport = {

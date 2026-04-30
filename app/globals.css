@@ -194,9 +194,11 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
 }
+
