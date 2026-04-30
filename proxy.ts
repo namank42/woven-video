@@ -57,8 +57,9 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Marketing routes (/, /pricing, etc.) are static and handle auth state
+// client-side. Only run the proxy on routes that gate access or refresh
+// sessions.
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: ["/account/:path*", "/auth/:path*", "/login", "/api/:path*"],
 };

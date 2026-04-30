@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense } from "react";
 import {
   ArrowRightIcon,
   AppleIcon,
@@ -21,9 +20,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ReelTile } from "@/components/reel-tile";
-import { AccountUserMenu } from "@/components/account/user-menu";
+import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { SiteFooter } from "@/components/site-footer";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
@@ -253,51 +251,9 @@ function SiteHeader() {
             FAQ
           </a>
         </nav>
-        <Suspense fallback={<HeaderAuthSkeleton />}>
-          <HeaderAuthControls />
-        </Suspense>
+        <HeaderAuthControls />
       </div>
     </header>
-  );
-}
-
-function HeaderAuthSkeleton() {
-  return (
-    <div className="size-8 animate-pulse rounded-full bg-muted" />
-  );
-}
-
-async function HeaderAuthControls() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return (
-    <div className="flex items-center gap-3">
-      {user ? (
-        <AccountUserMenu email={user.email ?? ""} />
-      ) : (
-        <>
-          <Link
-            href="/login"
-            className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
-          >
-            Sign in
-          </Link>
-          <a
-            href={DOWNLOAD_URL} download
-            className={cn(
-              buttonVariants(),
-              "h-9 rounded-full px-4 text-sm font-medium",
-            )}
-          >
-            <AppleIcon className="size-4" />
-            Download
-          </a>
-        </>
-      )}
-    </div>
   );
 }
 
