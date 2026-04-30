@@ -14,6 +14,16 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
+  // Anonymous visitors have no Supabase auth cookie. Without a session to
+  // refresh, getUser() is a wasted round-trip to Supabase on every nav.
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-"));
+
+  if (!hasAuthCookie) {
+    return response;
+  }
+
   const supabase = createServerClient(env.url, env.anonKey, {
     cookies: {
       getAll() {
