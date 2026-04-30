@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import {
   AppleIcon,
   ArrowRightIcon,
@@ -9,6 +10,7 @@ import {
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { AccountUserMenu } from "@/components/account/user-menu";
+import { SiteFooter } from "@/components/site-footer";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -77,7 +79,7 @@ const hostedBullets = [
   "Charged per request at the rates below",
 ];
 
-export default async function PricingPage() {
+export default function PricingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <SiteHeader />
@@ -93,12 +95,7 @@ export default async function PricingPage() {
   );
 }
 
-async function SiteHeader() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-3">
@@ -124,40 +121,51 @@ async function SiteHeader() {
             FAQ
           </Link>
         </nav>
-        <div className="flex items-center gap-3">
-          {user ? (
-            <>
-              <Link
-                href="/account"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-              >
-                Account
-              </Link>
-              <AccountUserMenu email={user.email ?? ""} />
-            </>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
-              >
-                Sign in
-              </Link>
-              <a
-                href={DOWNLOAD_URL} download
-                className={cn(
-                  buttonVariants(),
-                  "h-9 rounded-full px-4 text-sm font-medium",
-                )}
-              >
-                <AppleIcon className="size-4" />
-                Download
-              </a>
-            </>
-          )}
-        </div>
+        <Suspense fallback={<HeaderAuthSkeleton />}>
+          <HeaderAuthControls />
+        </Suspense>
       </div>
     </header>
+  );
+}
+
+function HeaderAuthSkeleton() {
+  return (
+    <div className="size-8 animate-pulse rounded-full bg-muted" />
+  );
+}
+
+async function HeaderAuthControls() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return (
+    <div className="flex items-center gap-3">
+      {user ? (
+        <AccountUserMenu email={user.email ?? ""} />
+      ) : (
+        <>
+          <Link
+            href="/login"
+            className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
+          >
+            Sign in
+          </Link>
+          <a
+            href={DOWNLOAD_URL} download
+            className={cn(
+              buttonVariants(),
+              "h-9 rounded-full px-4 text-sm font-medium",
+            )}
+          >
+            <AppleIcon className="size-4" />
+            Download
+          </a>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -406,37 +414,3 @@ function CtaBand() {
   );
 }
 
-function SiteFooter() {
-  return (
-    <footer className="border-t border-border/60">
-      <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-6 py-10 text-center md:flex-row md:justify-between md:text-left">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/woven-logo.png"
-            alt="Woven"
-            width={100}
-            height={28}
-            className="h-5 w-auto"
-          />
-          <span className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Woven Labs. All rights reserved.
-          </span>
-        </div>
-        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-          <Link href="/#features" className="hover:text-foreground">
-            Features
-          </Link>
-          <Link href="/pricing" className="hover:text-foreground">
-            Pricing
-          </Link>
-          <Link href="/#faq" className="hover:text-foreground">
-            FAQ
-          </Link>
-          <a href="mailto:hello@woven.video" className="hover:text-foreground">
-            hello@woven.video
-          </a>
-        </div>
-      </div>
-    </footer>
-  );
-}

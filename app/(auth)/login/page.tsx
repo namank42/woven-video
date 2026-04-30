@@ -39,9 +39,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <main className="min-h-screen bg-muted/30">
-      <header className="px-4 py-4">
-        <div className="mx-auto grid max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-3">
+    <main className="flex min-h-screen flex-col bg-muted/30">
+      <header className="py-3">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-3 px-6">
           <Link
             href="/"
             className={cn(
@@ -61,12 +61,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               className="rounded-md"
               priority
             />
-            <span className="font-heading text-lg font-medium">Woven</span>
+            <span className="font-heading text-base font-medium">Woven</span>
           </Link>
           <div aria-hidden="true" />
         </div>
       </header>
-      <div className="flex min-h-[calc(100vh-72px)] items-center justify-center px-4 py-10">
+      <div className="flex flex-1 items-center justify-center px-6 py-10">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-xl">Sign in to Woven</CardTitle>

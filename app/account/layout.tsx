@@ -3,6 +3,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import { AccountUserMenu } from "@/components/account/user-menu";
+import { SiteFooter } from "@/components/site-footer";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function AccountLayout({
@@ -20,9 +21,9 @@ export default async function AccountLayout({
   }
 
   return (
-    <main className="min-h-screen bg-background">
-      <header className="border-b bg-background">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
+    <main className="flex min-h-screen flex-col bg-background">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-3">
           <Link
             href="/"
             className="flex items-center gap-2"
@@ -36,12 +37,15 @@ export default async function AccountLayout({
               className="rounded-md"
               priority
             />
-            <span className="font-heading text-lg font-medium">Woven</span>
+            <span className="font-heading text-base font-medium">Woven</span>
           </Link>
           <AccountUserMenu email={user.email ?? ""} />
         </div>
       </header>
-      <div className="mx-auto max-w-5xl px-4 py-10">{children}</div>
+      <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+        {children}
+      </div>
+      <SiteFooter />
     </main>
   );
 }

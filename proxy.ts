@@ -41,6 +41,9 @@ export async function proxy(request: NextRequest) {
 
   await supabase.auth.getUser();
 
+  // Prevent CDNs from caching responses that may carry session cookies.
+  response.headers.set("Cache-Control", "private, no-store");
+
   return response;
 }
 

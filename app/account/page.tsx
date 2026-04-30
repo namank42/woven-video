@@ -218,22 +218,26 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const error = firstSearchParam(params.error);
   const supabase = await createSupabaseServerClient();
 
-  const { data: balanceRows, error: balanceError } =
-    await supabase.rpc("get_billing_balance");
+  const [
+    { data: balanceRows, error: balanceError },
+    { data: transactions },
+    { data: usageEvents },
+  ] = await Promise.all([
+    supabase.rpc("get_billing_balance"),
+    supabase
+      .from("ledger_entries")
+      .select(
+        "id, kind, amount_usd_micros, balance_after_usd_micros, source, source_id, metadata, created_at",
+      )
+      .order("created_at", { ascending: false })
+      .limit(40),
+    supabase
+      .from("usage_events")
+      .select("job_id, model, operation, charged_amount_usd_micros"),
+  ]);
   const balanceUsdMicros = Array.isArray(balanceRows)
     ? Number(balanceRows[0]?.balance_usd_micros ?? 0)
     : 0;
-
-  const { data: transactions } = await supabase
-    .from("ledger_entries")
-    .select(
-      "id, kind, amount_usd_micros, balance_after_usd_micros, source, source_id, metadata, created_at",
-    )
-    .order("created_at", { ascending: false })
-    .limit(40);
-  const { data: usageEvents } = await supabase
-    .from("usage_events")
-    .select("job_id, model, operation, charged_amount_usd_micros");
   const usageSummary = summarizeUsage((usageEvents ?? []) as UsageEvent[]);
   const activityItems = userFacingActivity({
     ledgerEntries: (transactions ?? []) as LedgerEntry[],

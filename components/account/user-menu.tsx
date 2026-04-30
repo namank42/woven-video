@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useTransition } from "react";
-import { LogOutIcon } from "lucide-react";
+import { LogOutIcon, UserIcon } from "lucide-react";
 
 import { signOut } from "@/app/account/actions";
 import {
@@ -31,6 +32,11 @@ export function AccountUserMenu({ email }: { email: string }) {
             {email}
           </span>
         </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem render={<Link href="/account" />}>
+          <UserIcon />
+          Account
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"

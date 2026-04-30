@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import {
   ArrowRightIcon,
   AppleIcon,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/accordion";
 import { ReelTile } from "@/components/reel-tile";
 import { AccountUserMenu } from "@/components/account/user-menu";
+import { SiteFooter } from "@/components/site-footer";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -225,12 +227,7 @@ export default function Home() {
   );
 }
 
-async function SiteHeader() {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-6 py-3">
@@ -256,40 +253,51 @@ async function SiteHeader() {
             FAQ
           </a>
         </nav>
-        <div className="flex items-center gap-3">
-          {user ? (
-            <>
-              <Link
-                href="/account"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-              >
-                Account
-              </Link>
-              <AccountUserMenu email={user.email ?? ""} />
-            </>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
-              >
-                Sign in
-              </Link>
-              <a
-                href={DOWNLOAD_URL} download
-                className={cn(
-                  buttonVariants(),
-                  "h-9 rounded-full px-4 text-sm font-medium",
-                )}
-              >
-                <AppleIcon className="size-4" />
-                Download
-              </a>
-            </>
-          )}
-        </div>
+        <Suspense fallback={<HeaderAuthSkeleton />}>
+          <HeaderAuthControls />
+        </Suspense>
       </div>
     </header>
+  );
+}
+
+function HeaderAuthSkeleton() {
+  return (
+    <div className="size-8 animate-pulse rounded-full bg-muted" />
+  );
+}
+
+async function HeaderAuthControls() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return (
+    <div className="flex items-center gap-3">
+      {user ? (
+        <AccountUserMenu email={user.email ?? ""} />
+      ) : (
+        <>
+          <Link
+            href="/login"
+            className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
+          >
+            Sign in
+          </Link>
+          <a
+            href={DOWNLOAD_URL} download
+            className={cn(
+              buttonVariants(),
+              "h-9 rounded-full px-4 text-sm font-medium",
+            )}
+          >
+            <AppleIcon className="size-4" />
+            Download
+          </a>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -333,7 +341,7 @@ function Hero() {
         />
       </div>
       <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center px-6 pt-14 pb-12 text-center md:pt-16 md:pb-16">
-        <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-5xl">
+        <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-5xl lg:text-6xl">
           The best way to make and edit{" "}
           <span className="md:whitespace-nowrap">
             short form video with AI.
@@ -361,7 +369,7 @@ function Hero() {
 
 function HeroMedia() {
   return (
-    <div className="relative mx-auto mt-10 w-full max-w-5xl md:mt-12">
+    <div className="relative mx-auto mt-10 w-full max-w-5xl md:mt-12 lg:max-w-6xl">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -inset-x-12 -top-8 -bottom-16 rounded-[3rem] bg-foreground/5 blur-3xl md:-inset-x-24"
@@ -698,37 +706,3 @@ function FinalCTA() {
   );
 }
 
-function SiteFooter() {
-  return (
-    <footer className="border-t border-border/60">
-      <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-6 px-6 py-10 text-center md:flex-row md:justify-between md:text-left">
-        <div className="flex items-center gap-3">
-          <Image
-            src="/woven-logo.png"
-            alt="Woven"
-            width={100}
-            height={28}
-            className="h-5 w-auto"
-          />
-          <span className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Woven Labs. All rights reserved.
-          </span>
-        </div>
-        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-          <a href="#features" className="hover:text-foreground">
-            Features
-          </a>
-          <Link href="/pricing" className="hover:text-foreground">
-            Pricing
-          </Link>
-          <a href="#faq" className="hover:text-foreground">
-            FAQ
-          </a>
-          <a href="mailto:hello@woven.video" className="hover:text-foreground">
-            hello@woven.video
-          </a>
-        </div>
-      </div>
-    </footer>
-  );
-}
