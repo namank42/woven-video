@@ -30,6 +30,13 @@ type ModelRate = {
   cacheWrite: string;
 };
 
+type ToolRate = {
+  name: string;
+  description: string;
+  perCall: string;
+  per1k: string;
+};
+
 const models: ModelRate[] = [
   {
     name: "Claude Sonnet 4.6",
@@ -65,6 +72,21 @@ const models: ModelRate[] = [
   },
 ];
 
+const tools: ToolRate[] = [
+  {
+    name: "Web Search",
+    description: "Searches the web for current info.",
+    perCall: "$0.012",
+    per1k: "$12.00",
+  },
+  {
+    name: "Web Fetch",
+    description: "Reads a webpage.",
+    perCall: "$0.006",
+    per1k: "$6.00",
+  },
+];
+
 const localBullets = [
   "Native macOS app, runs entirely on your Mac",
   "Bring your own Anthropic and OpenAI keys",
@@ -74,6 +96,7 @@ const localBullets = [
 const hostedBullets = [
   "Top up a prepaid USD balance from $5",
   "All Woven-hosted models, ready to go — no key management",
+  "Web search built in — flat per-call pricing",
   "Charged per request at the rates below",
 ];
 
@@ -85,6 +108,7 @@ export default function PricingPage() {
         <PricingHero />
         <Plans />
         <ModelsTable />
+        <ToolsTable />
         <Notes />
         <CtaBand />
       </main>
@@ -308,6 +332,73 @@ function ModelsTable() {
   );
 }
 
+function ToolsTable() {
+  return (
+    <section id="tools" className="pb-16">
+      <div className="mx-auto w-full max-w-5xl px-6">
+        <div className="flex flex-col gap-2 pb-8">
+          <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
+            Other features
+          </h2>
+          <p className="text-sm text-muted-foreground md:text-base">
+            Flat per-call pricing, deducted from your prepaid balance.
+          </p>
+        </div>
+
+        <div className="hidden overflow-hidden rounded-2xl ring-1 ring-border md:block">
+          <table className="w-full text-sm">
+            <thead className="bg-card text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-6 py-4 font-medium">Tool</th>
+                <th className="px-6 py-4 text-right font-medium">Per call</th>
+                <th className="px-6 py-4 text-right font-medium">Per 1k calls</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border bg-background">
+              {tools.map((t) => (
+                <tr key={t.name}>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground">{t.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {t.description}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-right tabular-nums">{t.perCall}</td>
+                  <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
+                    {t.per1k}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-col gap-3 md:hidden">
+          {tools.map((t) => (
+            <div
+              key={t.name}
+              className="flex flex-col gap-3 rounded-2xl bg-card p-5 ring-1 ring-border"
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="font-medium">{t.name}</span>
+                <span className="text-xs text-muted-foreground">{t.description}</span>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <dt className="text-muted-foreground">Per call</dt>
+                <dd className="text-right tabular-nums">{t.perCall}</dd>
+                <dt className="text-muted-foreground">Per 1k calls</dt>
+                <dd className="text-right tabular-nums">{t.per1k}</dd>
+              </dl>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Notes() {
   return (
     <section className="border-t border-border/60 bg-card/50">
@@ -318,8 +409,8 @@ function Notes() {
             to $100. Balance is denominated in USD and never expires.
           </NoteCard>
           <NoteCard title="Per-request billing">
-            Each request is charged against your balance at the rates above.
-            You only pay for tokens you actually use.
+            Model requests are charged per token used; tool calls are flat
+            per-call. Both deduct from the same prepaid balance.
           </NoteCard>
           <NoteCard title="Bring your own keys instead">
             Prefer to use your own provider keys? Run Woven locally for free —

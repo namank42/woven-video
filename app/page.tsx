@@ -533,6 +533,9 @@ function Pricing() {
                 Hosted Claude Sonnet 4.6, Opus 4.7, Haiku 4.5, and GPT-5.5
               </BulletItem>
               <BulletItem inverse>
+                Web search built in — flat per-call pricing
+              </BulletItem>
+              <BulletItem inverse>
                 Charged per request at published rates
               </BulletItem>
             </ul>
