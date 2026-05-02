@@ -70,6 +70,14 @@ const models: ModelRate[] = [
     cacheRead: "$0.60/M",
     cacheWrite: "—",
   },
+  {
+    name: "Kimi K2.6",
+    modelId: "moonshotai/kimi-k2.6",
+    input: "$1.14/M",
+    output: "$4.80/M",
+    cacheRead: "$0.19/M",
+    cacheWrite: "—",
+  },
 ];
 
 const tools: ToolRate[] = [
