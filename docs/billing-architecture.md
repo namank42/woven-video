@@ -109,6 +109,34 @@ The chat completion route:
 
 If the gateway request fails or the client cancels a stream before completion, the route calls `release_balance_reservation`.
 
+## Hosted Web Tools
+
+The desktop sidecar can route web search and web fetch through the Woven backend so users without their own Exa key consume Woven credits instead. Routes:
+
+- `POST /api/v1/web/search` — body `{ "query": string }`, returns Exa's `/search` JSON.
+- `POST /api/v1/web/fetch` — body `{ "url": string }`, returns Exa's `/contents` JSON.
+
+Both require a Woven/Supabase bearer token and `EXA_API_KEY` set on the server. Pricing is flat per call (no token math):
+
+| Tool | Raw cost (Exa) | Charged | Per 1k |
+| ---- | -------------- | ------- | ------ |
+| Web Search | ~$0.010 | $0.012 | $12 |
+| Web Fetch | ~$0.005 | $0.006 | $6 |
+
+20% markup matches chat (`markup_bps = 2000`). Pricing rows live in `model_pricing_rules` with `provider = 'exa'` and `operation` in (`'search'`, `'fetch'`); update via SQL to retune.
+
+The route flow:
+
+1. Validates the bearer token.
+2. Looks up the pricing rule for the operation.
+3. Creates a `generation_jobs` row with `type = 'web_search' | 'web_fetch'`.
+4. Calls `reserve_balance` for the rule's `reserve_amount_usd_micros`.
+5. Calls Exa with the server's `EXA_API_KEY`.
+6. On success: writes `usage_events` (raw provider cost from `costDollars` if present, else 0) and calls `settle_balance_reservation` with the same amount as the reservation. The adjustment ledger entry is $0 since reserve = settle for flat-fee tools.
+7. On failure or cancellation: calls `release_balance_reservation`.
+
+Shared logic lives in `lib/billing/charge-flat-tool.ts` and is reusable for any future flat-fee external API.
+
 ## Job Flow
 
 The intended hosted media/model flow is:
