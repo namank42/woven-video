@@ -30,11 +30,11 @@ type ModelRate = {
   cacheWrite: string;
 };
 
-type ToolRate = {
+type FeatureRate = {
   name: string;
   description: string;
-  perCall: string;
-  per1k: string;
+  rate: string;
+  reference: string;
 };
 
 const models: ModelRate[] = [
@@ -80,18 +80,24 @@ const models: ModelRate[] = [
   },
 ];
 
-const tools: ToolRate[] = [
+const otherFeatures: FeatureRate[] = [
+  {
+    name: "Auto captions",
+    description: "Generates word-timed captions from a reel voiceover.",
+    rate: "$0.01/min",
+    reference: "$0.01 minimum",
+  },
   {
     name: "Web Search",
     description: "Searches the web for current info.",
-    perCall: "$0.012",
-    per1k: "$12.00",
+    rate: "$0.012/call",
+    reference: "$12.00 / 1K calls",
   },
   {
     name: "Web Fetch",
     description: "Reads a webpage.",
-    perCall: "$0.006",
-    per1k: "$6.00",
+    rate: "$0.006/call",
+    reference: "$6.00 / 1K calls",
   },
 ];
 
@@ -349,7 +355,8 @@ function ToolsTable() {
             Other features
           </h2>
           <p className="text-sm text-muted-foreground md:text-base">
-            Flat per-call pricing, deducted from your prepaid balance.
+            Usage-based and flat feature pricing, deducted from your prepaid
+            balance.
           </p>
         </div>
 
@@ -357,25 +364,29 @@ function ToolsTable() {
           <table className="w-full text-sm">
             <thead className="bg-card text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-6 py-4 font-medium">Tool</th>
-                <th className="px-6 py-4 text-right font-medium">Per call</th>
-                <th className="px-6 py-4 text-right font-medium">Per 1k calls</th>
+                <th className="px-6 py-4 font-medium">Feature</th>
+                <th className="px-6 py-4 text-right font-medium">Rate</th>
+                <th className="px-6 py-4 text-right font-medium">Reference</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-background">
-              {tools.map((t) => (
-                <tr key={t.name}>
+              {otherFeatures.map((feature) => (
+                <tr key={feature.name}>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <span className="font-medium text-foreground">{t.name}</span>
+                      <span className="font-medium text-foreground">
+                        {feature.name}
+                      </span>
                       <span className="text-xs text-muted-foreground">
-                        {t.description}
+                        {feature.description}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-right tabular-nums">{t.perCall}</td>
+                  <td className="px-6 py-4 text-right tabular-nums">
+                    {feature.rate}
+                  </td>
                   <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
-                    {t.per1k}
+                    {feature.reference}
                   </td>
                 </tr>
               ))}
@@ -384,20 +395,22 @@ function ToolsTable() {
         </div>
 
         <div className="flex flex-col gap-3 md:hidden">
-          {tools.map((t) => (
+          {otherFeatures.map((feature) => (
             <div
-              key={t.name}
+              key={feature.name}
               className="flex flex-col gap-3 rounded-2xl bg-card p-5 ring-1 ring-border"
             >
               <div className="flex flex-col gap-0.5">
-                <span className="font-medium">{t.name}</span>
-                <span className="text-xs text-muted-foreground">{t.description}</span>
+                <span className="font-medium">{feature.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {feature.description}
+                </span>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <dt className="text-muted-foreground">Per call</dt>
-                <dd className="text-right tabular-nums">{t.perCall}</dd>
-                <dt className="text-muted-foreground">Per 1k calls</dt>
-                <dd className="text-right tabular-nums">{t.per1k}</dd>
+                <dt className="text-muted-foreground">Rate</dt>
+                <dd className="text-right tabular-nums">{feature.rate}</dd>
+                <dt className="text-muted-foreground">Reference</dt>
+                <dd className="text-right tabular-nums">{feature.reference}</dd>
               </dl>
             </div>
           ))}
@@ -417,8 +430,9 @@ function Notes() {
             to $100. Balance is denominated in USD and never expires.
           </NoteCard>
           <NoteCard title="Per-request billing">
-            Model requests are charged per token used; tool calls are flat
-            per-call. Both deduct from the same prepaid balance.
+            Model requests are charged per token used; media features are
+            usage-based; tool calls are flat per-call. All deduct from the same
+            prepaid balance.
           </NoteCard>
           <NoteCard title="Bring your own keys instead">
             Prefer to use your own provider keys? Run Woven locally for free —
@@ -468,4 +482,3 @@ function CtaBand() {
     </section>
   );
 }
-
