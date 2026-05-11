@@ -14,10 +14,9 @@ const geistMono = Geist_Mono({
 
 const siteUrl = "https://www.woven.video";
 const siteName = "Woven";
-const siteTitle =
-  "Woven — The best way to make and edit short form video with AI";
+const siteTitle = "Woven — The AI video editor";
 const siteDescription =
-  "Native macOS app to script, generate, and assemble short form video with AI. Bring your own keys, or use Woven-hosted models on a prepaid balance.";
+  "Woven is the AI video editor. A native macOS app to script, edit, and assemble short-form video by asking. Bring your own keys, or use Woven-hosted models on a prepaid balance.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

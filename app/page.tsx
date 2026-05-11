@@ -147,8 +147,8 @@ function StructuredData() {
       height: 1024,
     },
     description:
-      "Woven is a macOS app for making and editing short form video with AI.",
-    slogan: "The best way to make and edit short form video with AI.",
+      "Woven is the AI video editor — a native macOS app for making and editing short-form video by asking.",
+    slogan: "The AI video editor.",
   };
 
   const website = {
@@ -156,8 +156,7 @@ function StructuredData() {
     "@id": `${SITE_URL}/#website`,
     url: SITE_URL,
     name: "Woven",
-    description:
-      "The best way to make and edit short form video with AI.",
+    description: "The AI video editor.",
     inLanguage: "en-US",
     publisher: { "@id": `${SITE_URL}/#organization` },
   };
@@ -169,7 +168,7 @@ function StructuredData() {
     operatingSystem: "macOS",
     applicationCategory: "MultimediaApplication",
     description:
-      "Native macOS app to script, generate, and assemble short form video with AI. Bring your own provider keys, or use Woven-hosted models on a prepaid balance.",
+      "Woven is the AI video editor. A native macOS app to script, edit, and assemble short-form video by asking. Bring your own provider keys, or use Woven-hosted models on a prepaid balance.",
     url: SITE_URL,
     downloadUrl: DOWNLOAD_URL,
     offers: {
@@ -298,15 +297,12 @@ function Hero() {
       </div>
       <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center px-6 pt-14 pb-12 text-center md:pt-16 md:pb-16">
         <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-5xl lg:text-6xl">
-          The best way to make and edit{" "}
-          <span className="md:whitespace-nowrap">
-            short form video with AI.
-          </span>
+          The AI video editor.
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
           Script. Shot list. Generate. Animate. Edit. Assemble.
           <span className="mt-1 block font-medium text-foreground">
-            All in one place.
+            Native Mac. Built for short-form.
           </span>
         </p>
         <Button

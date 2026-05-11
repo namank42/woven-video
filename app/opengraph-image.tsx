@@ -2,8 +2,7 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const alt =
-  "Woven — The best way to make and edit short form video with AI";
+export const alt = "Woven — The AI video editor";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -52,7 +51,7 @@ export default async function Image() {
               maxWidth: 980,
             }}
           >
-            The best way to make and edit short form video with AI.
+            The AI video editor.
           </div>
           <div
             style={{
@@ -63,8 +62,8 @@ export default async function Image() {
               maxWidth: 900,
             }}
           >
-            A native Mac studio for short-form vertical video. Bring your
-            keys, or use Woven-hosted models.
+            Native Mac. Built for short-form. Bring your keys, or use
+            Woven-hosted models.
           </div>
         </div>
         <div
