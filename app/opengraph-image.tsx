@@ -51,7 +51,7 @@ export default async function Image() {
               maxWidth: 980,
             }}
           >
-            The AI Video Editor.
+            The AI Video Editor
           </div>
           <div
             style={{
