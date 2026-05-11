@@ -253,6 +253,101 @@ function createSafeJobInput(body: ChatBody, model: string) {
   };
 }
 
+function summarizeRequest(body: ChatBody) {
+  const messages = Array.isArray(body.messages) ? body.messages : [];
+  const tools = Array.isArray(body.tools) ? body.tools : [];
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+  const lastMessageObj = jsonBody(lastMessage) ? lastMessage : null;
+  const lastContent = lastMessageObj?.content;
+  let lastMessageChars: number | null = null;
+  const contentTypes = new Set<string>();
+
+  if (typeof lastContent === "string") {
+    lastMessageChars = lastContent.length;
+    contentTypes.add("text");
+  } else if (Array.isArray(lastContent)) {
+    let total = 0;
+    for (const part of lastContent) {
+      if (jsonBody(part) && typeof part.type === "string") {
+        contentTypes.add(part.type);
+        if (typeof part.text === "string") {
+          total += part.text.length;
+        }
+      }
+    }
+    lastMessageChars = total;
+  }
+
+  const toolNames = tools
+    .map((tool) => {
+      if (!jsonBody(tool)) return null;
+      const fn = jsonBody(tool.function) ? tool.function : null;
+      return typeof fn?.name === "string" ? fn.name : null;
+    })
+    .filter((name): name is string => name !== null);
+
+  let toolChoiceShape: string | null = null;
+  if (typeof body.tool_choice === "string") {
+    toolChoiceShape = `string:${body.tool_choice}`;
+  } else if (jsonBody(body.tool_choice)) {
+    toolChoiceShape = "object";
+  }
+
+  return {
+    messageCount: messages.length,
+    lastMessageRole: jsonBody(lastMessageObj) ? lastMessageObj.role : null,
+    lastMessageChars,
+    hasSystemMessage: messages.some(
+      (m) => jsonBody(m) && m.role === "system",
+    ),
+    toolCount: tools.length,
+    toolNames,
+    hasToolChoice: body.tool_choice !== undefined,
+    toolChoiceShape,
+    parallelToolCalls: body.parallel_tool_calls ?? null,
+    hasResponseFormat: body.response_format !== undefined,
+    reasoningEffort: body.reasoning_effort ?? null,
+    maxTokens: body.max_tokens ?? body.max_completion_tokens ?? null,
+    contentTypes: Array.from(contentTypes),
+    stream: body.stream === true,
+  };
+}
+
+function truncate(text: string, max = 2000) {
+  return text.length > max ? `${text.slice(0, max)}…(${text.length - max} more chars)` : text;
+}
+
+function extractFinishReasonAndTools(payload: unknown): {
+  finishReason: string | null;
+  toolCallNames: string[];
+} {
+  if (!jsonBody(payload)) return { finishReason: null, toolCallNames: [] };
+  const choices = Array.isArray(payload.choices) ? payload.choices : [];
+  const names: string[] = [];
+  let finishReason: string | null = null;
+
+  for (const choice of choices) {
+    if (!jsonBody(choice)) continue;
+    if (typeof choice.finish_reason === "string") {
+      finishReason = choice.finish_reason;
+    }
+    const message = jsonBody(choice.message) ? choice.message : null;
+    const delta = jsonBody(choice.delta) ? choice.delta : null;
+    for (const source of [message, delta]) {
+      const toolCalls = source && Array.isArray(source.tool_calls) ? source.tool_calls : [];
+      for (const call of toolCalls) {
+        if (!jsonBody(call)) continue;
+        const fn = jsonBody(call.function) ? call.function : null;
+        if (typeof fn?.name === "string" && fn.name) {
+          names.push(fn.name);
+        }
+      }
+    }
+  }
+
+  return { finishReason, toolCallNames: Array.from(new Set(names)) };
+}
+
 function responseHeaders(upstream: Response, jobId: string) {
   const headers = new Headers();
   const contentType = upstream.headers.get("content-type");
@@ -472,10 +567,15 @@ function createStreamObserver() {
   let buffer = "";
   let generationId: string | undefined;
   let fallback: ChatSettlementFallback = {};
+  let finishReason: string | null = null;
+  const toolCallNames = new Set<string>();
 
   function observeJson(payload: unknown) {
     generationId = extractGenerationId(payload) ?? generationId;
     const nextFallback = createSettlementFallback(payload);
+    const turn = extractFinishReasonAndTools(payload);
+    if (turn.finishReason) finishReason = turn.finishReason;
+    for (const name of turn.toolCallNames) toolCallNames.add(name);
 
     fallback = {
       usage: nextFallback.usage ?? fallback.usage,
@@ -530,6 +630,12 @@ function createStreamObserver() {
         gatewayGenerationId: fallback.gatewayGenerationId ?? generationId,
       };
     },
+    get finishReason() {
+      return finishReason;
+    },
+    get toolCallNames() {
+      return Array.from(toolCallNames);
+    },
   };
 }
 
@@ -541,6 +647,7 @@ async function proxyStreamingResponse({
   model,
   rule,
   abortController,
+  startedAt,
 }: {
   upstream: Response;
   admin: SupabaseAdmin;
@@ -549,6 +656,7 @@ async function proxyStreamingResponse({
   model: string;
   rule: ModelPricingRule;
   abortController: AbortController;
+  startedAt: number;
 }) {
   const reader = upstream.body?.getReader();
 
@@ -572,6 +680,16 @@ async function proxyStreamingResponse({
 
     finalized = true;
     observer.flush();
+    console.log("[chat-completions] turn finished", {
+      jobId,
+      model,
+      status: upstream.status,
+      stream: true,
+      finishReason: observer.finishReason,
+      hadToolCalls: observer.toolCallNames.length > 0,
+      toolCallNames: observer.toolCallNames,
+      durationMs: Date.now() - startedAt,
+    });
     await settleChatBalance({
       admin,
       userId,
@@ -641,6 +759,7 @@ async function proxyJsonResponse({
   jobId,
   model,
   rule,
+  startedAt,
 }: {
   upstream: Response;
   admin: SupabaseAdmin;
@@ -648,11 +767,24 @@ async function proxyJsonResponse({
   jobId: string;
   model: string;
   rule: ModelPricingRule;
+  startedAt: number;
 }) {
   const text = await upstream.text();
   const payload = JSON.parse(text) as Record<string, unknown>;
   const generationId = extractGenerationId(payload);
   const fallback = createSettlementFallback(payload);
+  const turn = extractFinishReasonAndTools(payload);
+
+  console.log("[chat-completions] turn finished", {
+    jobId,
+    model,
+    status: upstream.status,
+    stream: false,
+    finishReason: turn.finishReason,
+    hadToolCalls: turn.toolCallNames.length > 0,
+    toolCallNames: turn.toolCallNames,
+    durationMs: Date.now() - startedAt,
+  });
 
   await settleChatBalance({
     admin,
@@ -711,6 +843,8 @@ export async function POST(request: Request) {
 
   const admin = createSupabaseAdminClient();
   const userId = authResult.auth.user.id;
+  const startedAt = Date.now();
+  const requestSummary = summarizeRequest(payload);
   const job = await createChatJob({
     admin,
     userId,
@@ -767,6 +901,14 @@ export async function POST(request: Request) {
 
   if (!upstream.ok) {
     const errorText = await upstream.text().catch(() => "");
+    console.error("[chat-completions] gateway error", {
+      jobId: job.id,
+      model,
+      gatewayStatus: upstream.status,
+      gatewayBody: truncate(errorText || ""),
+      requestSummary,
+      durationMs: Date.now() - startedAt,
+    });
     await releaseChatBalance({
       admin,
       jobId: job.id,
@@ -788,6 +930,7 @@ export async function POST(request: Request) {
       model,
       rule,
       abortController,
+      startedAt,
     });
   }
 
@@ -799,6 +942,7 @@ export async function POST(request: Request) {
       jobId: job.id,
       model,
       rule,
+      startedAt,
     });
   } catch (error) {
     const message =
