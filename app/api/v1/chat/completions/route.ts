@@ -586,6 +586,8 @@ function createStreamObserver() {
   let fallback: ChatSettlementFallback = {};
   let finishReason: string | null = null;
   const toolCallNames = new Set<string>();
+  const recentDataChunks: string[] = [];
+  const RECENT_CHUNK_LIMIT = 3;
 
   function observeJson(payload: unknown) {
     generationId = extractGenerationId(payload) ?? generationId;
@@ -617,6 +619,11 @@ function createStreamObserver() {
 
       if (!data || data === "[DONE]") {
         continue;
+      }
+
+      recentDataChunks.push(data);
+      if (recentDataChunks.length > RECENT_CHUNK_LIMIT) {
+        recentDataChunks.shift();
       }
 
       try {
@@ -652,6 +659,9 @@ function createStreamObserver() {
     },
     get toolCallNames() {
       return Array.from(toolCallNames);
+    },
+    get recentDataChunks() {
+      return recentDataChunks.map((chunk) => truncate(chunk, 1500));
     },
   };
 }
@@ -706,6 +716,13 @@ async function proxyStreamingResponse({
       hadToolCalls: observer.toolCallNames.length > 0,
       toolCallNames: observer.toolCallNames,
       durationMs: Date.now() - startedAt,
+      providerNameFromStream: observer.fallback.providerName ?? null,
+      generationId: observer.generationId ?? null,
+    });
+    console.log("[chat-completions] last sse chunks", {
+      jobId,
+      model,
+      chunks: observer.recentDataChunks,
     });
     await settleChatBalance({
       admin,
@@ -937,6 +954,28 @@ export async function POST(request: Request) {
       headers: responseHeaders(upstream, job.id),
     });
   }
+
+  const headerKeys: string[] = [];
+  const interestingHeaders: Record<string, string> = {};
+  upstream.headers.forEach((value, key) => {
+    headerKeys.push(key);
+    const lower = key.toLowerCase();
+    if (
+      lower.includes("provider") ||
+      lower.includes("gateway") ||
+      lower.includes("vercel") ||
+      lower.includes("model") ||
+      lower.includes("route")
+    ) {
+      interestingHeaders[key] = value;
+    }
+  });
+  console.log("[chat-completions] upstream headers", {
+    jobId: job.id,
+    model,
+    headerKeys: headerKeys.sort(),
+    interestingHeaders,
+  });
 
   if (payload.stream === true) {
     return proxyStreamingResponse({
