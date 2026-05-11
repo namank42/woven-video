@@ -45,8 +45,11 @@ export async function GET(request: NextRequest) {
 
     if (!error) {
       const user = data.user;
-      if (user && user.created_at === user.last_sign_in_at) {
-        after(notifySlackOfNewSignup(user.email));
+      if (user?.created_at) {
+        const ageMs = Date.now() - new Date(user.created_at).getTime();
+        if (ageMs < 30_000) {
+          after(notifySlackOfNewSignup(user.email));
+        }
       }
       return NextResponse.redirect(new URL(next, redirectOrigin));
     }
