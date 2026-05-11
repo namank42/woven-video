@@ -17,7 +17,7 @@ const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Woven is free to download with your own provider keys. Use Woven-hosted Claude and GPT models on a prepaid balance with published per-model rates.",
+    "Woven is free to download with your own provider keys. Use Woven-hosted frontier models on a prepaid balance with published per-model rates.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -76,6 +76,14 @@ const models: ModelRate[] = [
     input: "$1.14/M",
     output: "$4.80/M",
     cacheRead: "$0.19/M",
+    cacheWrite: "—",
+  },
+  {
+    name: "Grok 4.3",
+    modelId: "xai/grok-4.3",
+    input: "$1.50/M",
+    output: "$3.00/M",
+    cacheRead: "$0.24/M",
     cacheWrite: "—",
   },
 ];
