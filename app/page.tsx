@@ -148,7 +148,7 @@ function StructuredData() {
     },
     description:
       "Woven is the AI Video Editor — a native macOS app for making and editing short-form video by asking.",
-    slogan: "The AI Video Editor.",
+    slogan: "The AI Video Editor",
   };
 
   const website = {
@@ -156,7 +156,7 @@ function StructuredData() {
     "@id": `${SITE_URL}/#website`,
     url: SITE_URL,
     name: "Woven",
-    description: "The AI Video Editor.",
+    description: "The AI Video Editor",
     inLanguage: "en-US",
     publisher: { "@id": `${SITE_URL}/#organization` },
   };
@@ -297,7 +297,7 @@ function Hero() {
       </div>
       <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center px-6 pt-14 pb-12 text-center md:pt-16 md:pb-16">
         <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-5xl lg:text-6xl">
-          The AI Video Editor.
+          The AI Video Editor
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
           Script. Shot list. Generate. Animate. Edit. Assemble.
