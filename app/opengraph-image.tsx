@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const alt = "Woven — The AI video editor";
+export const alt = "Woven — The AI Video Editor";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -51,7 +51,7 @@ export default async function Image() {
               maxWidth: 980,
             }}
           >
-            The AI video editor.
+            The AI Video Editor.
           </div>
           <div
             style={{
