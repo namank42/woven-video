@@ -35,8 +35,13 @@ type GatewayModelInfo = {
   };
 };
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_SUCCESS_MS = 5 * 60 * 1000;
+const CACHE_TTL_FAILURE_MS = 30 * 1000;
 const cache = new Map<string, { fetchedAt: number; value: ModelCapabilities | null }>();
+
+function encodeModelPath(modelId: string) {
+  return modelId.split("/").map(encodeURIComponent).join("/");
+}
 
 function safeNumber(value: string | undefined): number | null {
   if (value === undefined) return null;
@@ -46,17 +51,27 @@ function safeNumber(value: string | undefined): number | null {
 
 async function fetchModelCapabilities(modelId: string): Promise<ModelCapabilities | null> {
   const { baseUrl } = getAiGatewayConfig();
+  const url = `${baseUrl}/models/${encodeModelPath(modelId)}/endpoints`;
 
-  const response = await fetch(
-    `${baseUrl}/models/${encodeURIComponent(modelId)}/endpoints`,
-    { cache: "no-store" },
-  );
+  const response = await fetch(url, { cache: "no-store" });
 
-  if (!response.ok) return null;
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    console.error("[model-capabilities] gateway lookup failed", {
+      modelId,
+      url,
+      status: response.status,
+      body: body.slice(0, 500),
+    });
+    return null;
+  }
 
   const payload = (await response.json().catch(() => null)) as GatewayModelInfo | null;
   const data = payload?.data;
-  if (!data) return null;
+  if (!data) {
+    console.error("[model-capabilities] gateway lookup returned no data", { modelId });
+    return null;
+  }
 
   const endpoints = Array.isArray(data.endpoints) ? data.endpoints : [];
   if (endpoints.length === 0) return null;
@@ -101,8 +116,11 @@ export async function getModelCapabilities(
   modelId: string,
 ): Promise<ModelCapabilities | null> {
   const cached = cache.get(modelId);
-  if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
-    return cached.value;
+  if (cached) {
+    const ttl = cached.value === null ? CACHE_TTL_FAILURE_MS : CACHE_TTL_SUCCESS_MS;
+    if (Date.now() - cached.fetchedAt < ttl) {
+      return cached.value;
+    }
   }
 
   try {
@@ -110,7 +128,7 @@ export async function getModelCapabilities(
     cache.set(modelId, { fetchedAt: Date.now(), value });
     return value;
   } catch (error) {
-    console.error("[model-capabilities] fetch failed", { modelId, error });
+    console.error("[model-capabilities] fetch threw", { modelId, error });
     if (cached) return cached.value;
     cache.set(modelId, { fetchedAt: Date.now(), value: null });
     return null;
