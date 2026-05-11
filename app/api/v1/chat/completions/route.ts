@@ -144,7 +144,8 @@ function extractProviderName(payload: unknown): string | undefined {
   }
 
   const gateway = gatewayMetadata(payload);
-  const routing = jsonBody(payload.routing) ? payload.routing : undefined;
+  const topLevelRouting = jsonBody(payload.routing) ? payload.routing : undefined;
+  const gatewayRouting = jsonBody(gateway?.routing) ? gateway?.routing : undefined;
 
   const providerName =
     payload.provider_name ??
@@ -152,12 +153,31 @@ function extractProviderName(payload: unknown): string | undefined {
     gateway?.provider_name ??
     gateway?.providerName ??
     gateway?.provider ??
-    routing?.finalProvider ??
-    routing?.final_provider;
+    gatewayRouting?.finalProvider ??
+    gatewayRouting?.final_provider ??
+    gatewayRouting?.resolvedProvider ??
+    gatewayRouting?.resolved_provider ??
+    topLevelRouting?.finalProvider ??
+    topLevelRouting?.final_provider;
 
-  return typeof providerName === "string" && providerName.trim()
-    ? providerName
-    : undefined;
+  if (typeof providerName === "string" && providerName.trim()) {
+    return providerName;
+  }
+
+  const choices = payload.choices;
+  if (!Array.isArray(choices)) {
+    return undefined;
+  }
+
+  for (const choice of choices) {
+    if (!jsonBody(choice)) continue;
+    const fromMessage = extractProviderName(choice.message);
+    if (fromMessage) return fromMessage;
+    const fromDelta = extractProviderName(choice.delta);
+    if (fromDelta) return fromDelta;
+  }
+
+  return undefined;
 }
 
 function extractRawProviderCost(payload: unknown): number | string | undefined {
@@ -586,8 +606,6 @@ function createStreamObserver() {
   let fallback: ChatSettlementFallback = {};
   let finishReason: string | null = null;
   const toolCallNames = new Set<string>();
-  const recentDataChunks: string[] = [];
-  const RECENT_CHUNK_LIMIT = 3;
 
   function observeJson(payload: unknown) {
     generationId = extractGenerationId(payload) ?? generationId;
@@ -619,11 +637,6 @@ function createStreamObserver() {
 
       if (!data || data === "[DONE]") {
         continue;
-      }
-
-      recentDataChunks.push(data);
-      if (recentDataChunks.length > RECENT_CHUNK_LIMIT) {
-        recentDataChunks.shift();
       }
 
       try {
@@ -659,9 +672,6 @@ function createStreamObserver() {
     },
     get toolCallNames() {
       return Array.from(toolCallNames);
-    },
-    get recentDataChunks() {
-      return recentDataChunks.map((chunk) => truncate(chunk, 1500));
     },
   };
 }
@@ -716,13 +726,8 @@ async function proxyStreamingResponse({
       hadToolCalls: observer.toolCallNames.length > 0,
       toolCallNames: observer.toolCallNames,
       durationMs: Date.now() - startedAt,
-      providerNameFromStream: observer.fallback.providerName ?? null,
+      providerName: observer.fallback.providerName ?? null,
       generationId: observer.generationId ?? null,
-    });
-    console.log("[chat-completions] last sse chunks", {
-      jobId,
-      model,
-      chunks: observer.recentDataChunks,
     });
     await settleChatBalance({
       admin,
@@ -954,28 +959,6 @@ export async function POST(request: Request) {
       headers: responseHeaders(upstream, job.id),
     });
   }
-
-  const headerKeys: string[] = [];
-  const interestingHeaders: Record<string, string> = {};
-  upstream.headers.forEach((value, key) => {
-    headerKeys.push(key);
-    const lower = key.toLowerCase();
-    if (
-      lower.includes("provider") ||
-      lower.includes("gateway") ||
-      lower.includes("vercel") ||
-      lower.includes("model") ||
-      lower.includes("route")
-    ) {
-      interestingHeaders[key] = value;
-    }
-  });
-  console.log("[chat-completions] upstream headers", {
-    jobId: job.id,
-    model,
-    headerKeys: headerKeys.sort(),
-    interestingHeaders,
-  });
 
   if (payload.stream === true) {
     return proxyStreamingResponse({
