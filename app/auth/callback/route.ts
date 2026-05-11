@@ -5,18 +5,15 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 async function notifySlackOfNewSignup(email: string | undefined) {
   const url = process.env.SLACK_WEBHOOK_URL;
-  console.log("[slack-signup] notify called", { hasUrl: !!url, email });
   if (!url) return;
   try {
-    const res = await fetch(url, {
+    await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: `🎉 New signup: ${email ?? "(no email)"}` }),
     });
-    const body = await res.text();
-    console.log("[slack-signup] response", { status: res.status, body });
   } catch (error) {
-    console.error("[slack-signup] fetch failed", error);
+    console.error("Slack signup notification failed", error);
   }
 }
 
@@ -48,18 +45,11 @@ export async function GET(request: NextRequest) {
 
     if (!error) {
       const user = data.user;
-      const ageMs = user?.created_at
-        ? Date.now() - new Date(user.created_at).getTime()
-        : null;
-      console.log("[slack-signup] callback", {
-        userId: user?.id,
-        email: user?.email,
-        createdAt: user?.created_at,
-        lastSignInAt: user?.last_sign_in_at,
-        ageMs,
-      });
-      if (ageMs !== null && ageMs < 30_000) {
-        after(notifySlackOfNewSignup(user!.email));
+      if (user?.created_at) {
+        const ageMs = Date.now() - new Date(user.created_at).getTime();
+        if (ageMs < 30_000) {
+          after(notifySlackOfNewSignup(user.email));
+        }
       }
       return NextResponse.redirect(new URL(next, redirectOrigin));
     }
