@@ -302,7 +302,7 @@ function Hero() {
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
           Script. Shot list. Generate. Animate. Edit. Assemble.
           <span className="mt-1 block font-medium text-foreground">
-            Native Mac. Built for short-form.
+            All in one place.
           </span>
         </p>
         <Button
