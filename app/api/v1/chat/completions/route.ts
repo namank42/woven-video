@@ -240,6 +240,23 @@ function createGatewayBody(body: ChatBody, model: string) {
     };
   }
 
+  const existingProviderOptions = jsonBody(body.providerOptions)
+    ? body.providerOptions
+    : {};
+  const existingGateway = jsonBody(existingProviderOptions.gateway)
+    ? existingProviderOptions.gateway
+    : {};
+
+  if (existingGateway.sort === undefined && existingGateway.order === undefined) {
+    gatewayBody.providerOptions = {
+      ...existingProviderOptions,
+      gateway: {
+        ...existingGateway,
+        sort: "ttft",
+      },
+    };
+  }
+
   return gatewayBody;
 }
 
