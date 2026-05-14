@@ -485,6 +485,7 @@ function Pricing() {
               The full app, running locally on your Mac. Pay providers directly.
             </p>
             <ul className="flex flex-col gap-3 border-t border-border pt-6 text-sm">
+              <BulletItem>Sign in with ChatGPT — GPT-5+ included with your Plus, Pro, or Team plan</BulletItem>
               <BulletItem>Runs entirely on your Mac</BulletItem>
               <BulletItem>Bring your own Anthropic and OpenAI keys</BulletItem>
               <BulletItem>You pay providers directly at their rates</BulletItem>
