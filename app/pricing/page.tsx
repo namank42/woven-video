@@ -17,7 +17,7 @@ const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Woven is free to download with your own provider keys. Use Woven-hosted frontier models on a prepaid balance with published per-model rates.",
+    "Woven is free to download with your own provider keys. Use Woven-hosted frontier models on a prepaid balance with published per-model rates, or sign in with ChatGPT to use GPT-5+ on your existing subscription.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -110,6 +110,7 @@ const otherFeatures: FeatureRate[] = [
 ];
 
 const localBullets = [
+  "Sign in with ChatGPT — GPT-5+ included with your Plus, Pro, or Team plan",
   "Native macOS app, runs entirely on your Mac",
   "Bring your own Anthropic and OpenAI keys",
   "You pay providers directly at their rates",
