@@ -28,6 +28,7 @@ type Row = {
   email: string | null;
   created_at: string;
   raw_app_meta_data: { provider?: string } | null;
+  raw_user_meta_data: { full_name?: string; name?: string } | null;
 };
 
 async function listUsers(): Promise<Row[]> {
@@ -42,6 +43,7 @@ async function listUsers(): Promise<Row[]> {
         email: u.email ?? null,
         created_at: u.created_at,
         raw_app_meta_data: (u.app_metadata as { provider?: string }) ?? null,
+        raw_user_meta_data: (u.user_metadata as { full_name?: string; name?: string }) ?? null,
       });
     }
     if (data.users.length < 1000) break;
@@ -50,9 +52,16 @@ async function listUsers(): Promise<Row[]> {
   return out;
 }
 
+function firstNameOf(row: Row): string | undefined {
+  const full = row.raw_user_meta_data?.full_name ?? row.raw_user_meta_data?.name ?? "";
+  const first = full.trim().split(/\s+/)[0];
+  return first || undefined;
+}
+
 async function upsertLoops(row: Row): Promise<"ok" | "skip" | "err"> {
   if (!row.email) return "skip";
-  const body = {
+  const firstName = firstNameOf(row);
+  const body: Record<string, unknown> = {
     email: row.email,
     userId: row.id,
     source: "backfill",
@@ -60,6 +69,7 @@ async function upsertLoops(row: Row): Promise<"ok" | "skip" | "err"> {
     createdAt: row.created_at,
     mailingLists: { [EDITOR]: true },
   };
+  if (firstName) body.firstName = firstName;
   if (DRY) {
     console.log("[dry]", JSON.stringify(body));
     return "ok";
