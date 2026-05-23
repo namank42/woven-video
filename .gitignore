@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# local-only Supabase seed (vault secrets for local dev — never commit)
+supabase/seed.local.sql
+
 # vercel
 .vercel
 
