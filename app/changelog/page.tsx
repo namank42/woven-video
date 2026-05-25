@@ -72,7 +72,12 @@ function ReleaseEntry({ release }: { release: Release }) {
           v{release.version}
         </h2>
         {date && (
-          <time className="text-sm text-muted-foreground">{date}</time>
+          <time
+            dateTime={release.date?.toISOString().slice(0, 10)}
+            className="text-sm text-muted-foreground"
+          >
+            {date}
+          </time>
         )}
       </div>
 
@@ -155,6 +160,9 @@ function SiteHeader() {
           </Link>
           <Link href="/pricing" className="hover:text-foreground">
             Pricing
+          </Link>
+          <Link href="/#faq" className="hover:text-foreground">
+            FAQ
           </Link>
           <Link href="/changelog" className="text-foreground">
             Changelog
