@@ -114,17 +114,22 @@ function ReleaseEntry({ entry }: { entry: ResolvedEntry }) {
             </div>
           </>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {release.notes.map((note, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground md:text-base"
-              >
-                <span className="mt-2 size-1.5 shrink-0 rounded-full bg-foreground/40" />
-                <span>{note}</span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              v{release.version}
+            </h2>
+            <ul className="mt-4 flex flex-col gap-3">
+              {release.notes.map((note, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground md:text-base"
+                >
+                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-foreground/40" />
+                  <span>{note}</span>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
     </article>
