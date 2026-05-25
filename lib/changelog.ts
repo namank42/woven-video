@@ -3,6 +3,8 @@
 // Sparkle appcast (uploaded on every release by the woven-harness /release-woven
 // skill) and merges in optional per-version media from changelog-extras.ts.
 
+import { changelogExtras } from "./changelog-extras";
+
 export type ImageMedia = {
   type: "image";
   src: string; // under /public, e.g. "/changelog/0.1.34-codex-mcp.png"
@@ -83,5 +85,34 @@ export function parseAppcast(xml: string): Release[] {
     });
   }
 
+  return releases;
+}
+
+// Fetch the appcast (ISR: cached and revalidated hourly — a new release appears
+// within ~1h with no redeploy), parse it, merge enrichment by version, and sort
+// newest-first. Never throws: on any failure it returns [] so the page can
+// render an empty state and, critically, so a transient R2 outage during
+// `next build` does not fail the deploy.
+export async function getReleases(): Promise<Release[]> {
+  let xml: string;
+  try {
+    const res = await fetch(APPCAST_URL, { next: { revalidate: 3600 } });
+    if (!res.ok) return [];
+    xml = await res.text();
+  } catch {
+    return [];
+  }
+
+  const releases = parseAppcast(xml);
+
+  for (const release of releases) {
+    const extra = changelogExtras[release.version];
+    if (extra) {
+      release.lead = extra.lead;
+      release.media = extra.media;
+    }
+  }
+
+  releases.sort((a, b) => b.buildNumber - a.buildNumber);
   return releases;
 }
