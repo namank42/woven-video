@@ -39,8 +39,8 @@ function decodeEntities(input: string): string {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#0*39;/g, "'")
     .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, n: string) => String.fromCodePoint(Number.parseInt(n, 16)))
     .replace(/&amp;/g, "&");
 }
 
@@ -72,7 +72,7 @@ export function parseAppcast(xml: string): Release[] {
         item,
       )?.[1] ?? "";
     const notes = [...cdata.matchAll(/<li>([\s\S]*?)<\/li>/gi)]
-      .map((m) => decodeEntities(m[1].replace(/\s+/g, " ").trim()))
+      .map((m) => decodeEntities(m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim()))
       .filter((s) => s.length > 0);
 
     releases.push({
