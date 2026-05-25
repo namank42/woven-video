@@ -22,6 +22,7 @@ import {
 import { ReelTile } from "@/components/reel-tile";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { SiteFooter } from "@/components/site-footer";
+import { WhatsNewLink } from "@/components/whats-new-link";
 import { cn } from "@/lib/utils";
 
 const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
@@ -296,6 +297,7 @@ function Hero() {
         />
       </div>
       <div className="relative mx-auto flex w-full max-w-6xl flex-col items-center px-6 pt-14 pb-12 text-center md:pt-16 md:pb-16">
+        <WhatsNewLink />
         <h1 className="max-w-4xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-5xl lg:text-6xl">
           The AI Video Editor
         </h1>
