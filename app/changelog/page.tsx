@@ -52,19 +52,8 @@ export default async function ChangelogPage() {
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <SiteHeader />
       <main className="flex-1">
-        <section>
-          <div className="mx-auto w-full max-w-4xl px-6 pt-16 pb-12 md:pt-20">
-            <SectionLabel>Changelog</SectionLabel>
-            <h1 className="mt-6 text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-5xl">
-              What&rsquo;s new in Woven
-            </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-              Every update to the app, newest first.
-            </p>
-          </div>
-        </section>
-
-        <section className="pb-24">
+        <h1 className="sr-only">Changelog</h1>
+        <section className="pb-24 pt-16 md:pt-20">
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-14 px-6">
             {entries.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -168,14 +157,5 @@ function SiteHeader() {
         <HeaderAuthControls />
       </div>
     </header>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-      <span className="size-1.5 rounded-full bg-foreground" />
-      {children}
-    </div>
   );
 }
