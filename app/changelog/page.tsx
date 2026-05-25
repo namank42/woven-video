@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import type { ComponentType } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { SiteFooter } from "@/components/site-footer";
 import { getReleases, type Release } from "@/lib/changelog";
+import { changelogEntries } from "@/lib/changelog-content";
 
 export const revalidate = 3600;
 
@@ -13,6 +15,12 @@ export const metadata: Metadata = {
   description:
     "Every update to the Woven app — new features, improvements, and fixes, newest first.",
   alternates: { canonical: "/changelog" },
+};
+
+type ResolvedEntry = {
+  release: Release;
+  Body: ComponentType | null;
+  title?: string;
 };
 
 function formatDate(date: Date | null): string | null {
@@ -25,15 +33,27 @@ function formatDate(date: Date | null): string | null {
   });
 }
 
+async function resolveEntries(releases: Release[]): Promise<ResolvedEntry[]> {
+  return Promise.all(
+    releases.map(async (release) => {
+      const loader = changelogEntries[release.version];
+      if (!loader) return { release, Body: null };
+      const mod = await loader();
+      return { release, Body: mod.default, title: mod.title };
+    }),
+  );
+}
+
 export default async function ChangelogPage() {
   const releases = await getReleases();
+  const entries = await resolveEntries(releases);
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <SiteHeader />
       <main className="flex-1">
         <section>
-          <div className="mx-auto w-full max-w-3xl px-6 pt-16 pb-10 md:pt-20">
+          <div className="mx-auto w-full max-w-4xl px-6 pt-16 pb-12 md:pt-20">
             <SectionLabel>Changelog</SectionLabel>
             <h1 className="mt-6 text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-5xl">
               What&rsquo;s new in Woven
@@ -45,14 +65,14 @@ export default async function ChangelogPage() {
         </section>
 
         <section className="pb-24">
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-12 px-6">
-            {releases.length === 0 ? (
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-14 px-6">
+            {entries.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 The changelog is unavailable right now. Please check back soon.
               </p>
             ) : (
-              releases.map((release) => (
-                <ReleaseEntry key={release.version} release={release} />
+              entries.map((entry) => (
+                <ReleaseEntry key={entry.release.version} entry={entry} />
               ))
             )}
           </div>
@@ -63,14 +83,16 @@ export default async function ChangelogPage() {
   );
 }
 
-function ReleaseEntry({ release }: { release: Release }) {
+function ReleaseEntry({ entry }: { entry: ResolvedEntry }) {
+  const { release, Body, title } = entry;
   const date = formatDate(release.date);
+
   return (
-    <article className="flex flex-col gap-5 border-t border-border/60 pt-12 first:border-t-0 first:pt-0">
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight">
-          v{release.version}
-        </h2>
+    <article className="flex flex-col gap-5 border-t border-border/60 pt-14 first:border-t-0 first:pt-0 md:flex-row md:gap-12">
+      <div className="flex items-center gap-3 md:sticky md:top-24 md:w-36 md:shrink-0 md:flex-col md:items-start md:gap-2 md:self-start">
+        <span className="rounded bg-card px-2 py-1 font-mono text-xs text-muted-foreground ring-1 ring-border">
+          {release.version}
+        </span>
         {date && (
           <time
             dateTime={release.date?.toISOString().slice(0, 10)}
@@ -81,60 +103,30 @@ function ReleaseEntry({ release }: { release: Release }) {
         )}
       </div>
 
-      {release.lead && (
-        <p className="text-base leading-relaxed text-muted-foreground">
-          {release.lead}
-        </p>
-      )}
-
-      <ul className="flex flex-col gap-3">
-        {release.notes.map((note, i) => (
-          <li
-            key={i}
-            className="flex items-start gap-2.5 text-sm leading-relaxed md:text-base"
-          >
-            <span className="mt-2 size-1.5 shrink-0 rounded-full bg-foreground/40" />
-            <span>{note}</span>
-          </li>
-        ))}
-      </ul>
-
-      {release.media && release.media.length > 0 && (
-        <div className="mt-2 flex flex-col gap-6">
-          {release.media.map((item) =>
-            item.type === "image" ? (
-              <figure key={item.src} className="flex flex-col gap-2">
-                <Image
-                  src={item.src}
-                  alt={item.alt}
-                  width={item.width}
-                  height={item.height}
-                  className="w-full rounded-xl ring-1 ring-border"
-                />
-                {item.caption && (
-                  <figcaption className="text-xs text-muted-foreground">
-                    {item.caption}
-                  </figcaption>
-                )}
-              </figure>
-            ) : (
-              <figure key={item.src} className="flex flex-col gap-2">
-                <video
-                  src={item.src}
-                  poster={item.poster}
-                  controls
-                  className="w-full rounded-xl ring-1 ring-border"
-                />
-                {item.caption && (
-                  <figcaption className="text-xs text-muted-foreground">
-                    {item.caption}
-                  </figcaption>
-                )}
-              </figure>
-            ),
-          )}
-        </div>
-      )}
+      <div className="min-w-0 flex-1">
+        {Body ? (
+          <>
+            {title && (
+              <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+            )}
+            <div className="mt-1">
+              <Body />
+            </div>
+          </>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {release.notes.map((note, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-2.5 text-sm leading-relaxed text-muted-foreground md:text-base"
+              >
+                <span className="mt-2 size-1.5 shrink-0 rounded-full bg-foreground/40" />
+                <span>{note}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </article>
   );
 }

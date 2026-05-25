@@ -1,35 +1,15 @@
 // lib/changelog.ts
 // Data layer for the /changelog page. Pulls release notes from the public
 // Sparkle appcast (uploaded on every release by the woven-harness /release-woven
-// skill) and merges in optional per-version media from changelog-extras.ts.
-
-import { changelogExtras } from "./changelog-extras";
-
-export type ImageMedia = {
-  type: "image";
-  src: string; // under /public, e.g. "/changelog/0.1.34-codex-mcp.png"
-  alt: string;
-  width: number;
-  height: number;
-  caption?: string;
-};
-
-export type VideoMedia = {
-  type: "video";
-  src: string; // under /public, e.g. "/changelog/0.1.34-demo.mp4"
-  poster?: string;
-  caption?: string;
-};
-
-export type Media = ImageMedia | VideoMedia;
+// skill). Versions worth dressing up get an authored MDX body — see
+// lib/changelog-content.ts — but that enrichment is resolved in the page, not
+// here; this module is just the automatic version/date/notes spine.
 
 export type Release = {
   version: string; // "0.1.34"
   buildNumber: number; // 34 — used for sorting newest-first
   date: Date | null;
-  notes: string[]; // plain-text bullets from the appcast
-  lead?: string; // optional, from enrichment
-  media?: Media[]; // optional, from enrichment
+  notes: string[]; // plain-text bullets from the appcast (fallback body)
 };
 
 const APPCAST_URL = "https://release.woven.video/appcast.xml";
@@ -89,7 +69,7 @@ export function parseAppcast(xml: string): Release[] {
 }
 
 // Fetch the appcast (ISR: cached and revalidated hourly — a new release appears
-// within ~1h with no redeploy), parse it, merge enrichment by version, and sort
+// within ~1h with no redeploy), parse it, dedupe by version, and sort
 // newest-first. Never throws: on any failure it returns [] so the page can
 // render an empty state and, critically, so a transient R2 outage during
 // `next build` does not fail the deploy.
@@ -103,16 +83,16 @@ export async function getReleases(): Promise<Release[]> {
     return [];
   }
 
-  const releases = parseAppcast(xml);
-
-  for (const release of releases) {
-    const extra = changelogExtras[release.version];
-    if (extra) {
-      release.lead = extra.lead;
-      release.media = extra.media;
+  // The feed can contain accidental duplicate items for the same version
+  // (e.g. a double-published 0.1.0). Keep one entry per version — the highest
+  // build number — so the page shows no duplicates and React keys stay unique.
+  const byVersion = new Map<string, Release>();
+  for (const release of parseAppcast(xml)) {
+    const existing = byVersion.get(release.version);
+    if (!existing || release.buildNumber > existing.buildNumber) {
+      byVersion.set(release.version, release);
     }
   }
 
-  releases.sort((a, b) => b.buildNumber - a.buildNumber);
-  return releases;
+  return [...byVersion.values()].sort((a, b) => b.buildNumber - a.buildNumber);
 }

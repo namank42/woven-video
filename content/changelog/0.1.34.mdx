@@ -1,0 +1,35 @@
+export const title = "Codex MCP, multi-lane text & truer exports";
+
+## Codex speaks to your MCP servers
+
+The MCP servers you've configured in Woven now flow straight through to Codex,
+and every tool call Codex makes against them shows up inline in chat — the same
+one-line tool rows you already see for built-in tools. When a skill needs a
+clarifying answer or a server sends an elicitation request mid-call, both
+surface as a small inline form right inside the conversation instead of stalling
+silently in the background. The forms are fully keyboard-driven, and secret
+fields are scrubbed from the saved transcript.
+
+## Text on multiple timeline lanes
+
+Drop a second caption while the first is still on screen and Woven places it on
+its own lane instead of fighting the overlap. You can drag text items vertically
+between lanes the same way you've been moving audio, trims clamp to whichever
+lane an item is on, and the layout you see in the editor is exactly what renders
+out at export.
+
+## Preview and export finally agree
+
+If your reel has a top or bottom bar, the editor preview now shows exactly what
+the export will produce — no more "the preview cropped tighter than the file I
+got back." The render pipeline normalizes layout defaults once at the entry
+point, so preview and final render fall back to the same numbers.
+
+## Steadier audio preview
+
+Audio preview no longer goes silent after the app sleeps or you switch away and
+back. The paths that used to leave preview audio half-initialized now reset
+cleanly before the next play, and clips that are still importing no longer block
+the rest of the timeline from playing through.
+
+Hosted models for all of this are billed per request — see [pricing](/pricing).
