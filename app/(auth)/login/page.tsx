@@ -71,8 +71,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <CardHeader>
             <CardTitle className="text-xl">Sign in to Woven</CardTitle>
             <CardDescription>
-              Use Woven locally with your own keys, or sign in to use
-              Woven-hosted models.
+              Sign in to manage your license and balance.
             </CardDescription>
           </CardHeader>
           <CardContent>
