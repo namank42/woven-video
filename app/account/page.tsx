@@ -39,8 +39,19 @@ type ActivityItem = {
   description: string;
   badge: string;
   amountUsdMicros: number;
-  balanceAfterUsdMicros: number;
+  balanceAfterUsdMicros: number | null;
+  signed: boolean;
   createdAt: string;
+};
+
+type LicenseRow = {
+  id: string;
+  status: string;
+  source: string;
+  source_id: string;
+  granted_at: string;
+  revoked_at: string | null;
+  metadata: Record<string, unknown> | null;
 };
 
 type UsageSummary = {
@@ -90,8 +101,10 @@ function sourceLabel(source: string) {
 
 function userFacingActivity({
   ledgerEntries,
+  licenseRows,
 }: {
   ledgerEntries: LedgerEntry[];
+  licenseRows: LicenseRow[];
 }) {
   const activity: ActivityItem[] = [];
 
@@ -112,7 +125,28 @@ function userFacingActivity({
       badge: entry.kind,
       amountUsdMicros: asNumber(entry.amount_usd_micros),
       balanceAfterUsdMicros: asNumber(entry.balance_after_usd_micros),
+      signed: true,
       createdAt: entry.created_at,
+    });
+  }
+
+  for (const row of licenseRows) {
+    activity.push({
+      id: `license_${row.id}`,
+      label:
+        row.status === "revoked"
+          ? "Lifetime license — refunded"
+          : "Lifetime license",
+      description: "Stripe checkout",
+      badge: row.status === "revoked" ? "refunded" : "license",
+      amountUsdMicros:
+        Number(row.metadata?.amount_cents ?? 9900) * 10_000,
+      balanceAfterUsdMicros: null,
+      signed: false,
+      createdAt:
+        row.status === "revoked"
+          ? (row.revoked_at ?? row.granted_at)
+          : row.granted_at,
     });
   }
 
@@ -225,6 +259,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     { data: balanceRows, error: balanceError },
     { data: transactions },
     { data: usageEvents },
+    { data: licenseRowsForActivity },
   ] = await Promise.all([
     supabase.rpc("get_billing_balance"),
     supabase
@@ -237,6 +272,10 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     supabase
       .from("usage_events")
       .select("job_id, model, operation, charged_amount_usd_micros"),
+    supabase
+      .from("licenses")
+      .select("id, status, source, source_id, granted_at, revoked_at, metadata")
+      .eq("source", "stripe"),
   ]);
   const balanceUsdMicros = Array.isArray(balanceRows)
     ? Number(balanceRows[0]?.balance_usd_micros ?? 0)
@@ -244,6 +283,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const usageSummary = summarizeUsage((usageEvents ?? []) as UsageEvent[]);
   const activityItems = userFacingActivity({
     ledgerEntries: (transactions ?? []) as LedgerEntry[],
+    licenseRows: (licenseRowsForActivity ?? []) as LicenseRow[],
   }).slice(0, 10);
 
   const { data: hasLicense } = await supabase.rpc("has_active_license");
@@ -374,14 +414,16 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                       item.amountUsdMicros < 0 && "text-muted-foreground",
                     )}
                   >
-                    {item.amountUsdMicros > 0 ? "+" : ""}
+                    {item.signed && item.amountUsdMicros > 0 ? "+" : ""}
                     {formatUsdFromMicros(item.amountUsdMicros, {
                       preciseSmallAmounts: true,
                     })}
                   </p>
-                  <p className="text-xs text-muted-foreground tabular-nums">
-                    {formatUsdFromMicros(item.balanceAfterUsdMicros)} balance
-                  </p>
+                  {item.balanceAfterUsdMicros != null ? (
+                    <p className="text-xs text-muted-foreground tabular-nums">
+                      {formatUsdFromMicros(item.balanceAfterUsdMicros)} balance
+                    </p>
+                  ) : null}
                 </div>
               </li>
             ))}

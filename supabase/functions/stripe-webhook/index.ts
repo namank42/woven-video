@@ -94,6 +94,7 @@ async function handleCheckoutCompleted(
       p_metadata: {
         checkout_session_id: session.id,
         payment_intent_id: paymentIntentId,
+        amount_cents: session.amount_total,
       },
     });
 
