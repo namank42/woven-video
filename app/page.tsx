@@ -471,8 +471,9 @@ function Pricing() {
           </h2>
           <p className="max-w-2xl text-base text-muted-foreground md:text-lg">
             A $99 one-time lifetime license unlocks the full app — includes $5 in
-            hosted credits and a 7-day money-back guarantee. Use your own keys, or
-            top up for Woven-hosted models.
+            hosted credits and a 7-day money-back guarantee. Run models your way:
+            bring your own keys, sign in with ChatGPT, or top up for Woven-hosted
+            models.
           </p>
         </div>
         <div className="mx-auto mt-14 w-full max-w-xl text-left">
