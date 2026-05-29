@@ -50,12 +50,13 @@ function parseCustomAmountCents(value: string) {
   return Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
 }
 
-function BuyButton({ disabled }: { disabled: boolean }) {
+function BuyButton({ disabled, locked }: { disabled: boolean; locked: boolean }) {
   const { pending } = useFormStatus();
 
   return (
     <Button
       type="submit"
+      variant={locked ? "outline" : "default"}
       disabled={pending || disabled}
       className="h-10 rounded-lg px-5 sm:min-w-44"
     >
@@ -65,7 +66,7 @@ function BuyButton({ disabled }: { disabled: boolean }) {
   );
 }
 
-export function BalanceTopUpForm() {
+export function BalanceTopUpForm({ disabled = false }: { disabled?: boolean }) {
   const [choice, setChoice] = useState<TopUpChoice>("2000");
   const [customAmount, setCustomAmount] = useState("25");
 
@@ -100,7 +101,13 @@ export function BalanceTopUpForm() {
             />
           ) : null}
 
-          <div className="flex flex-col items-center px-4 pt-2 pb-6">
+          <div
+            className={cn(
+              "flex flex-col items-center px-4 pt-2 pb-6",
+              disabled && "pointer-events-none opacity-40",
+            )}
+            aria-disabled={disabled || undefined}
+          >
             <div className="py-4 text-center font-heading text-4xl font-medium tracking-tight tabular-nums">
               {formatUsd(selectedAmountCents)}
             </div>
@@ -114,12 +121,15 @@ export function BalanceTopUpForm() {
                     key={amount.value}
                     type="button"
                     aria-pressed={selected}
+                    disabled={disabled}
                     onClick={() => setChoice(amount.value)}
                     className={cn(
                       "h-9 rounded-lg border px-4 text-sm font-medium transition-colors",
-                      selected
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background hover:bg-muted",
+                      disabled
+                        ? "border-border bg-background text-muted-foreground"
+                        : selected
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background hover:bg-muted",
                     )}
                   >
                     {amount.label}
@@ -129,12 +139,15 @@ export function BalanceTopUpForm() {
               <button
                 type="button"
                 aria-pressed={choice === "custom"}
+                disabled={disabled}
                 onClick={() => setChoice("custom")}
                 className={cn(
                   "h-9 rounded-lg border px-4 text-sm font-medium transition-colors",
-                  choice === "custom"
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background hover:bg-muted",
+                  disabled
+                    ? "border-border bg-background text-muted-foreground"
+                    : choice === "custom"
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:bg-muted",
                 )}
               >
                 Custom
@@ -164,6 +177,7 @@ export function BalanceTopUpForm() {
                     required
                     value={customAmount}
                     onChange={(event) => setCustomAmount(event.target.value)}
+                    disabled={disabled}
                     className="h-10 pl-7 tabular-nums"
                   />
                 </div>
@@ -176,9 +190,11 @@ export function BalanceTopUpForm() {
 
           <div className="flex flex-col gap-3 border-t bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              Secure checkout by Stripe.
+              {disabled
+                ? "A lifetime license is required to add credits."
+                : "Secure checkout by Stripe."}
             </p>
-            <BuyButton disabled={!canSubmit} />
+            <BuyButton disabled={disabled || !canSubmit} locked={disabled} />
           </div>
         </form>
       </CardContent>

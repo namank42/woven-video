@@ -5,6 +5,7 @@ import {
   AppleIcon,
   ArrowRightIcon,
   CheckIcon,
+  WalletIcon,
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -17,7 +18,7 @@ const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Woven is free to download with your own provider keys. Use Woven-hosted frontier models on a prepaid balance with published per-model rates, or sign in with ChatGPT to use GPT-5+ on your existing subscription.",
+    "Woven is a $99 one-time lifetime license — yours forever, includes $5 in hosted credits, with a 7-day money-back guarantee. Run any model your way: bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -109,19 +110,6 @@ const otherFeatures: FeatureRate[] = [
   },
 ];
 
-const localBullets = [
-  "Sign in with ChatGPT — GPT-5+ included with your Plus, Pro, or Team plan",
-  "Native macOS app, runs entirely on your Mac",
-  "Bring your own Anthropic and OpenAI keys",
-  "You pay providers directly at their rates",
-];
-
-const hostedBullets = [
-  "Top up a prepaid USD balance from $5",
-  "All Woven-hosted models, ready to go — no key management",
-  "Web search built in — flat per-call pricing",
-  "Charged per request at the rates below",
-];
 
 export default function PricingPage() {
   return (
@@ -187,11 +175,12 @@ function PricingHero() {
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-6 pt-16 pb-10 text-center md:pt-20">
         <SectionLabel>Pricing</SectionLabel>
         <h1 className="mt-6 max-w-2xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-6xl">
-          Free to start. Pay for what you use.
+          One price. Yours forever.
         </h1>
         <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-          Free with your own keys. Or top up to use Woven-hosted models with
-          published per-model rates. No subscriptions, no minimums.
+          $99 one-time for a lifetime license — includes $5 in hosted credits and a
+          7-day money-back guarantee. Run models your way: bring your own keys, sign
+          in with ChatGPT, or top up for Woven-hosted models.
         </p>
       </div>
     </section>
@@ -199,77 +188,88 @@ function PricingHero() {
 }
 
 function Plans() {
+  const licenseBullets = [
+    "Lifetime access — no subscription",
+    "Bring your own Anthropic and OpenAI keys",
+    "Or sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan",
+    "$5 in Woven-hosted credits included",
+    "7-day money-back guarantee",
+  ];
+
   return (
     <section className="pb-12">
-      <div className="mx-auto w-full max-w-5xl px-6">
-        <div className="grid gap-5 md:grid-cols-2">
-          <div className="flex flex-col gap-5 rounded-3xl bg-card p-8 ring-1 ring-border">
+      <div className="mx-auto w-full max-w-xl px-6">
+        {/* Required base: the lifetime license */}
+        <div className="flex flex-col gap-5 rounded-3xl bg-card p-8 ring-2 ring-foreground">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
-              <h2 className="text-lg font-semibold tracking-tight">Free</h2>
-              <p className="text-xs text-muted-foreground">Bring your own keys</p>
+              <h2 className="text-lg font-semibold tracking-tight">Lifetime license</h2>
+              <p className="text-xs text-muted-foreground">One-time — yours forever</p>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-semibold tracking-tight">$0</span>
-              <span className="text-sm text-muted-foreground">forever</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              The full app, running locally on your Mac. Pay providers directly.
-            </p>
-            <ul className="mt-2 flex flex-col gap-3 border-t border-border pt-6 text-sm">
-              {localBullets.map((b) => (
-                <li key={b} className="flex items-start gap-2.5">
-                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                    <CheckIcon className="size-3" />
-                  </span>
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
-            <a
-              href={DOWNLOAD_URL} download
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "mt-auto h-11 w-full rounded-full text-sm font-medium",
-              )}
-            >
-              <AppleIcon className="size-4" />
-              Download for Mac
-            </a>
+            <span className="inline-flex items-center rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background">
+              Required
+            </span>
           </div>
-          <div className="flex flex-col gap-5 rounded-3xl bg-card p-8 ring-2 ring-foreground">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-lg font-semibold tracking-tight">Hosted</h2>
-              <p className="text-xs text-muted-foreground">Pay-as-you-go</p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-5xl font-semibold tracking-tight">$99</span>
+            <span className="text-sm text-muted-foreground">once</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            The full Woven app on your Mac, forever. Includes $5 in hosted credits
+            to start. 7-day money-back guarantee.
+          </p>
+          <ul className="mt-2 flex flex-col gap-3 border-t border-border pt-6 text-sm">
+            {licenseBullets.map((b) => (
+              <li key={b} className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                  <CheckIcon className="size-3" />
+                </span>
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+          <Link
+            href="/login?next=/account"
+            className={cn(
+              buttonVariants(),
+              "mt-auto h-11 w-full rounded-full text-sm font-medium",
+            )}
+          >
+            Get your license — $99
+            <ArrowRightIcon className="size-4" />
+          </Link>
+        </div>
+
+        {/* Optional add-on: hosted credits, layered on top */}
+        <div className="mt-4 flex flex-col gap-3 rounded-2xl bg-card p-6 ring-1 ring-border">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+                <WalletIcon className="size-4" />
+              </span>
+              <div className="flex flex-col">
+                <h3 className="text-sm font-semibold tracking-tight">
+                  Hosted credits
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Optional · pay-as-you-go
+                </p>
+              </div>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-semibold tracking-tight">From $5</span>
-              <span className="text-sm text-muted-foreground">top up</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Sign in, top up a prepaid USD balance, and use any Woven-hosted
-              model at the rates listed below.
-            </p>
-            <ul className="mt-2 flex flex-col gap-3 border-t border-border pt-6 text-sm">
-              {hostedBullets.map((b) => (
-                <li key={b} className="flex items-start gap-2.5">
-                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-                    <CheckIcon className="size-3" />
-                  </span>
-                  <span>{b}</span>
-                </li>
-              ))}
-            </ul>
+            <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-3 py-1 text-sm font-medium tabular-nums">
+              From $5
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Top up a prepaid balance anytime to run Woven-hosted models — layered on
+            top of your license, no key management.{" "}
             <Link
-              href="/login?next=/account"
-              className={cn(
-                buttonVariants(),
-                "mt-auto h-11 w-full rounded-full text-sm font-medium",
-              )}
+              href="#models"
+              className="font-medium text-foreground underline underline-offset-4"
             >
-              Sign in to top up
-              <ArrowRightIcon className="size-4" />
+              See per-model rates ↓
             </Link>
-          </div>
+          </p>
         </div>
       </div>
     </section>
@@ -443,10 +443,10 @@ function Notes() {
             usage-based; tool calls are flat per-call. All deduct from the same
             prepaid balance.
           </NoteCard>
-          <NoteCard title="Bring your own keys instead">
-            Prefer to use your own provider keys? Run Woven locally for free —
-            no Woven account and no balance to manage. You pay providers
-            directly.
+          <NoteCard title="Use your own keys">
+            Your license covers the full app whether you bring your own Anthropic/
+            OpenAI keys (pay providers directly) or sign in with ChatGPT. Hosted
+            credits are only needed for Woven-hosted models.
           </NoteCard>
         </div>
       </div>
@@ -474,10 +474,10 @@ function CtaBand() {
     <section className="border-t border-border/60">
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-6 px-6 py-20 text-center">
         <h2 className="max-w-2xl text-3xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-          Start with the local app.
+          Buy once. Use forever.
         </h2>
         <p className="max-w-xl text-base text-muted-foreground md:text-lg">
-          Free download. Bring your keys. Top up later if you want hosted models.
+          $99 one-time, includes $5 in hosted credits, 7-day money-back guarantee.
         </p>
         <Button
           nativeButton={false}

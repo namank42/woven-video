@@ -57,15 +57,6 @@ Deno.serve(async (req) => {
   try {
     const user = await requireAuthenticatedUser(req);
     const body = await req.json().catch(() => ({}));
-    const topUp = getTopUpFromBody(body);
-
-    if (
-      !topUp ||
-      topUp.amountCents < MIN_TOP_UP_CENTS ||
-      topUp.amountCents > MAX_TOP_UP_CENTS
-    ) {
-      throw new HttpError(400, "invalid_top_up_amount");
-    }
 
     const admin = createServiceClient();
     const stripe = new Stripe(requiredEnv("STRIPE_SECRET_KEY"), {
@@ -121,8 +112,72 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ---- LICENSE checkout ----
+    if (body.purpose === "license") {
+      const { data: alreadyLicensed, error: existingError } = await admin.rpc(
+        "user_has_active_license",
+        { p_user_id: user.id },
+      );
+
+      if (existingError) {
+        throw new HttpError(500, "failed_to_check_license", existingError);
+      }
+
+      if (alreadyLicensed) {
+        return jsonResponse({ alreadyLicensed: true });
+      }
+
+      const licenseMetadata = { user_id: user.id, purpose: "license" };
+      const licenseSession = await stripe.checkout.sessions.create({
+        mode: "payment",
+        customer: customerId,
+        client_reference_id: user.id,
+        payment_method_types: ["card"],
+        line_items: [
+          { price: requiredEnv("STRIPE_LICENSE_PRICE_ID"), quantity: 1 },
+        ],
+        metadata: licenseMetadata,
+        payment_intent_data: { metadata: licenseMetadata },
+        success_url:
+          `${siteUrl}/account?license=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${siteUrl}/account?license=cancelled`,
+      });
+
+      return jsonResponse({ url: licenseSession.url });
+    }
+
+    // ---- TOPUP checkout ----
+    const topUp = getTopUpFromBody(body);
+
+    if (
+      !topUp ||
+      topUp.amountCents < MIN_TOP_UP_CENTS ||
+      topUp.amountCents > MAX_TOP_UP_CENTS
+    ) {
+      throw new HttpError(400, "invalid_top_up_amount");
+    }
+
+    // No credit purchase without a license. Same flag as the hosted-route gate, so
+    // this is a no-op until enforcement is turned on. Grandfather eligibility is
+    // derived (created_at < cutoff), so pre-cutoff users pass without a license row.
+    if (Deno.env.get("WOVEN_ENFORCE_LICENSE") === "true") {
+      const { data: licensed, error: licenseCheckError } = await admin.rpc(
+        "user_has_active_license",
+        { p_user_id: user.id },
+      );
+
+      if (licenseCheckError) {
+        throw new HttpError(500, "failed_to_check_license", licenseCheckError);
+      }
+
+      if (!licensed) {
+        throw new HttpError(403, "license_required");
+      }
+    }
+
     const metadata = {
       user_id: user.id,
+      purpose: "topup",
       top_up_id: topUp.topUpId,
       amount_cents: String(topUp.amountCents),
       amount_usd_micros: String(topUp.amountCents * USD_MICROS_PER_CENT),

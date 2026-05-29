@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { BalanceTopUpForm } from "@/components/account/balance-top-up-form";
+import { LicenseCta } from "@/components/account/license-cta";
 import { Badge } from "@/components/ui/badge";
 import { formatUsdFromMicros } from "@/lib/billing/money";
 import { firstSearchParam } from "@/lib/navigation";
@@ -38,8 +39,19 @@ type ActivityItem = {
   description: string;
   badge: string;
   amountUsdMicros: number;
-  balanceAfterUsdMicros: number;
+  balanceAfterUsdMicros: number | null;
+  signed: boolean;
   createdAt: string;
+};
+
+type LicenseRow = {
+  id: string;
+  status: string;
+  source: string;
+  source_id: string;
+  granted_at: string;
+  revoked_at: string | null;
+  metadata: Record<string, unknown> | null;
 };
 
 type UsageSummary = {
@@ -50,6 +62,7 @@ type AccountPageProps = {
   searchParams: Promise<{
     checkout?: string | string[];
     error?: string | string[];
+    license?: string | string[];
   }>;
 };
 
@@ -88,8 +101,10 @@ function sourceLabel(source: string) {
 
 function userFacingActivity({
   ledgerEntries,
+  licenseRows,
 }: {
   ledgerEntries: LedgerEntry[];
+  licenseRows: LicenseRow[];
 }) {
   const activity: ActivityItem[] = [];
 
@@ -110,7 +125,28 @@ function userFacingActivity({
       badge: entry.kind,
       amountUsdMicros: asNumber(entry.amount_usd_micros),
       balanceAfterUsdMicros: asNumber(entry.balance_after_usd_micros),
+      signed: true,
       createdAt: entry.created_at,
+    });
+  }
+
+  for (const row of licenseRows) {
+    activity.push({
+      id: `license_${row.id}`,
+      label:
+        row.status === "revoked"
+          ? "Lifetime license — refunded"
+          : "Lifetime license",
+      description: "Stripe checkout",
+      badge: row.status === "revoked" ? "refunded" : "license",
+      amountUsdMicros:
+        Number(row.metadata?.amount_cents ?? 9900) * 10_000,
+      balanceAfterUsdMicros: null,
+      signed: false,
+      createdAt:
+        row.status === "revoked"
+          ? (row.revoked_at ?? row.granted_at)
+          : row.granted_at,
     });
   }
 
@@ -216,12 +252,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const params = await searchParams;
   const checkout = firstSearchParam(params.checkout);
   const error = firstSearchParam(params.error);
+  const license = firstSearchParam(params.license);
   const supabase = await createSupabaseServerClient();
 
   const [
     { data: balanceRows, error: balanceError },
     { data: transactions },
     { data: usageEvents },
+    { data: licenseRowsForActivity },
   ] = await Promise.all([
     supabase.rpc("get_billing_balance"),
     supabase
@@ -234,6 +272,10 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     supabase
       .from("usage_events")
       .select("job_id, model, operation, charged_amount_usd_micros"),
+    supabase
+      .from("licenses")
+      .select("id, status, source, source_id, granted_at, revoked_at, metadata")
+      .eq("source", "stripe"),
   ]);
   const balanceUsdMicros = Array.isArray(balanceRows)
     ? Number(balanceRows[0]?.balance_usd_micros ?? 0)
@@ -241,7 +283,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const usageSummary = summarizeUsage((usageEvents ?? []) as UsageEvent[]);
   const activityItems = userFacingActivity({
     ledgerEntries: (transactions ?? []) as LedgerEntry[],
+    licenseRows: (licenseRowsForActivity ?? []) as LicenseRow[],
   }).slice(0, 10);
+
+  const { data: hasLicense } = await supabase.rpc("has_active_license");
+  const licensed = hasLicense === true;
+  // No top-up without a license once enforcement is on (same flag as the API gate).
+  const enforceLicense = process.env.WOVEN_ENFORCE_LICENSE === "true";
+  const canTopUp = !enforceLicense || licensed;
 
   return (
     <div className="flex flex-col gap-10">
@@ -266,32 +315,67 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
 
       {error ? <Alert tone="error">{error}</Alert> : null}
 
-      <section className="flex flex-col gap-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Stat
-            icon={WalletIcon}
-            label="Balance"
-            value={formatUsdFromMicros(balanceUsdMicros)}
-            accent
-            errorMessage={
-              balanceError
-                ? `Unable to load balance: ${balanceError.message}`
-                : undefined
-            }
-          />
-          <Stat
-            icon={TrendingUpIcon}
-            label="Total usage"
-            value={formatUsdFromMicros(usageSummary.hostedUsageUsdMicros, {
-              preciseSmallAmounts: true,
-            })}
-          />
-        </div>
-      </section>
+      {license === "success" ? (
+        <Alert tone="success">
+          License purchase complete. Welcome to Woven — your $5 in starter credits
+          is on its way.
+        </Alert>
+      ) : null}
+      {license === "already" ? (
+        <Alert tone="info">You already have a lifetime license.</Alert>
+      ) : null}
+      {license === "cancelled" ? (
+        <Alert tone="info">License checkout cancelled.</Alert>
+      ) : null}
 
-      <section>
-        <BalanceTopUpForm />
-      </section>
+      {(() => {
+        const statsSection = (muted: boolean) => (
+          <section className={cn("flex flex-col gap-3", muted && "opacity-60")}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Stat
+                icon={WalletIcon}
+                label="Balance"
+                value={formatUsdFromMicros(balanceUsdMicros)}
+                accent={!muted}
+                errorMessage={
+                  balanceError
+                    ? `Unable to load balance: ${balanceError.message}`
+                    : undefined
+                }
+              />
+              <Stat
+                icon={TrendingUpIcon}
+                label="Total usage"
+                value={formatUsdFromMicros(usageSummary.hostedUsageUsdMicros, {
+                  preciseSmallAmounts: true,
+                })}
+              />
+            </div>
+          </section>
+        );
+
+        return licensed ? (
+          <>
+            {statsSection(false)}
+            <section>
+              <LicenseCta licensed={licensed} />
+            </section>
+            <section>
+              <BalanceTopUpForm disabled={!canTopUp} />
+            </section>
+          </>
+        ) : (
+          <>
+            <section>
+              <LicenseCta licensed={licensed} />
+            </section>
+            {statsSection(true)}
+            <section>
+              <BalanceTopUpForm disabled={!canTopUp} />
+            </section>
+          </>
+        );
+      })()}
 
       <section className="flex flex-col gap-4">
         <div className="flex items-baseline justify-between gap-4">
@@ -330,14 +414,16 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                       item.amountUsdMicros < 0 && "text-muted-foreground",
                     )}
                   >
-                    {item.amountUsdMicros > 0 ? "+" : ""}
+                    {item.signed && item.amountUsdMicros > 0 ? "+" : ""}
                     {formatUsdFromMicros(item.amountUsdMicros, {
                       preciseSmallAmounts: true,
                     })}
                   </p>
-                  <p className="text-xs text-muted-foreground tabular-nums">
-                    {formatUsdFromMicros(item.balanceAfterUsdMicros)} balance
-                  </p>
+                  {item.balanceAfterUsdMicros != null ? (
+                    <p className="text-xs text-muted-foreground tabular-nums">
+                      {formatUsdFromMicros(item.balanceAfterUsdMicros)} balance
+                    </p>
+                  ) : null}
                 </div>
               </li>
             ))}

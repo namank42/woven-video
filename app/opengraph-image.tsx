@@ -62,8 +62,7 @@ export default async function Image() {
               maxWidth: 900,
             }}
           >
-            Native Mac. Built for short-form. Bring your keys, or use
-            Woven-hosted models.
+            Native Mac. Built for short-form. Edit by talking.
           </div>
         </div>
         <div

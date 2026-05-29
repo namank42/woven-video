@@ -1,4 +1,5 @@
 import { requireApiAuth } from "@/lib/api/auth";
+import { licenseGateResponse } from "@/lib/api/license";
 import { apiError } from "@/lib/api/responses";
 import {
   gatewayAuthorizationHeader,
@@ -846,6 +847,11 @@ export async function POST(request: Request) {
 
   if (!authResult.ok) {
     return authResult.response;
+  }
+
+  const licenseError = await licenseGateResponse(authResult.auth);
+  if (licenseError) {
+    return licenseError;
   }
 
   const payload = await request.json().catch(() => null);
