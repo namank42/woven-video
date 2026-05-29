@@ -50,12 +50,13 @@ function parseCustomAmountCents(value: string) {
   return Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
 }
 
-function BuyButton({ disabled }: { disabled: boolean }) {
+function BuyButton({ disabled, locked }: { disabled: boolean; locked: boolean }) {
   const { pending } = useFormStatus();
 
   return (
     <Button
       type="submit"
+      variant={locked ? "outline" : "default"}
       disabled={pending || disabled}
       className="h-10 rounded-lg px-5 sm:min-w-44"
     >
@@ -103,7 +104,7 @@ export function BalanceTopUpForm({ disabled = false }: { disabled?: boolean }) {
           <div
             className={cn(
               "flex flex-col items-center px-4 pt-2 pb-6",
-              disabled && "pointer-events-none opacity-60",
+              disabled && "pointer-events-none opacity-40",
             )}
             aria-disabled={disabled || undefined}
           >
@@ -124,10 +125,11 @@ export function BalanceTopUpForm({ disabled = false }: { disabled?: boolean }) {
                     onClick={() => setChoice(amount.value)}
                     className={cn(
                       "h-9 rounded-lg border px-4 text-sm font-medium transition-colors",
-                      selected
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-background hover:bg-muted",
-                      disabled && "cursor-not-allowed",
+                      disabled
+                        ? "border-border bg-background text-muted-foreground"
+                        : selected
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-background hover:bg-muted",
                     )}
                   >
                     {amount.label}
@@ -141,10 +143,11 @@ export function BalanceTopUpForm({ disabled = false }: { disabled?: boolean }) {
                 onClick={() => setChoice("custom")}
                 className={cn(
                   "h-9 rounded-lg border px-4 text-sm font-medium transition-colors",
-                  choice === "custom"
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background hover:bg-muted",
-                  disabled && "cursor-not-allowed",
+                  disabled
+                    ? "border-border bg-background text-muted-foreground"
+                    : choice === "custom"
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background hover:bg-muted",
                 )}
               >
                 Custom
@@ -191,7 +194,7 @@ export function BalanceTopUpForm({ disabled = false }: { disabled?: boolean }) {
                 ? "A lifetime license is required to add credits."
                 : "Secure checkout by Stripe."}
             </p>
-            <BuyButton disabled={disabled || !canSubmit} />
+            <BuyButton disabled={disabled || !canSubmit} locked={disabled} />
           </div>
         </form>
       </CardContent>

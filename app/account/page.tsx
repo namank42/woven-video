@@ -288,36 +288,55 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         <Alert tone="info">License checkout cancelled.</Alert>
       ) : null}
 
-      <section className="flex flex-col gap-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Stat
-            icon={WalletIcon}
-            label="Balance"
-            value={formatUsdFromMicros(balanceUsdMicros)}
-            accent
-            errorMessage={
-              balanceError
-                ? `Unable to load balance: ${balanceError.message}`
-                : undefined
-            }
-          />
-          <Stat
-            icon={TrendingUpIcon}
-            label="Total usage"
-            value={formatUsdFromMicros(usageSummary.hostedUsageUsdMicros, {
-              preciseSmallAmounts: true,
-            })}
-          />
-        </div>
-      </section>
+      {(() => {
+        const showStats = licensed || balanceUsdMicros > 0;
+        const statsSection = showStats ? (
+          <section className="flex flex-col gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Stat
+                icon={WalletIcon}
+                label="Balance"
+                value={formatUsdFromMicros(balanceUsdMicros)}
+                accent
+                errorMessage={
+                  balanceError
+                    ? `Unable to load balance: ${balanceError.message}`
+                    : undefined
+                }
+              />
+              <Stat
+                icon={TrendingUpIcon}
+                label="Total usage"
+                value={formatUsdFromMicros(usageSummary.hostedUsageUsdMicros, {
+                  preciseSmallAmounts: true,
+                })}
+              />
+            </div>
+          </section>
+        ) : null;
 
-      <section>
-        <LicenseCta licensed={licensed} />
-      </section>
-
-      <section>
-        <BalanceTopUpForm disabled={!canTopUp} />
-      </section>
+        return licensed ? (
+          <>
+            {statsSection}
+            <section>
+              <LicenseCta licensed={licensed} />
+            </section>
+            <section>
+              <BalanceTopUpForm disabled={!canTopUp} />
+            </section>
+          </>
+        ) : (
+          <>
+            <section>
+              <LicenseCta licensed={licensed} />
+            </section>
+            {statsSection}
+            <section>
+              <BalanceTopUpForm disabled={!canTopUp} />
+            </section>
+          </>
+        );
+      })()}
 
       <section className="flex flex-col gap-4">
         <div className="flex items-baseline justify-between gap-4">
