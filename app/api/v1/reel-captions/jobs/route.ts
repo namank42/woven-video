@@ -1,4 +1,5 @@
 import { requireApiAuth } from "@/lib/api/auth";
+import { licenseGateResponse } from "@/lib/api/license";
 import { apiError } from "@/lib/api/responses";
 import {
   chargeUsdMicrosForDuration,
@@ -25,6 +26,9 @@ function isObject(value: unknown): value is Record<string, unknown> {
 export async function POST(request: Request) {
   const authResult = await requireApiAuth(request);
   if (!authResult.ok) return authResult.response;
+
+  const licenseError = await licenseGateResponse(authResult.auth);
+  if (licenseError) return licenseError;
 
   const payload = await request.json().catch(() => null);
   if (!isObject(payload)) {
