@@ -83,8 +83,8 @@ const featureCards: FeatureCard[] = [
   {
     icon: KeyIcon,
     eyebrow: "Your keys, or ours",
-    title: "Local with your keys. Or hosted on a prepaid balance.",
-    body: "Free with your own Anthropic and OpenAI keys. Sign in for Woven-hosted models — same lineup, no key juggling.",
+    title: "Your keys, or Woven-hosted.",
+    body: "A $99 lifetime license unlocks the full app. Bring your own Anthropic and OpenAI keys, or use Woven-hosted models on a prepaid balance — same lineup, no key juggling.",
   },
   {
     icon: LayersIcon,
@@ -108,6 +108,10 @@ const featureCards: FeatureCard[] = [
 
 const faqs = [
   {
+    q: "How much does Woven cost?",
+    a: "Woven is a $99 one-time lifetime license — yours forever, no subscription. It includes $5 in hosted credits to start and a 7-day money-back guarantee. After that, bring your own provider keys or top up a prepaid balance for Woven-hosted models.",
+  },
+  {
     q: "Is Woven a desktop app or a web app?",
     a: "Woven is a native macOS app. The website handles sign-in, hosted-model billing, and downloads. You do the work in the desktop app.",
   },
@@ -117,7 +121,7 @@ const faqs = [
   },
   {
     q: "Do I need a Woven account to use the app?",
-    a: "Yes. Sign in once with Google. Then choose: run locally with your own Anthropic and OpenAI keys, or use Woven-hosted models on a prepaid balance.",
+    a: "Yes. Sign in once with Google and get a $99 lifetime license. After that, run with your own Anthropic and OpenAI keys, or use Woven-hosted models on a prepaid balance.",
   },
   {
     q: "Which models can I use?",
@@ -129,7 +133,7 @@ const faqs = [
   },
   {
     q: "Can I bring my own provider keys?",
-    a: "Yes. Local mode uses keys you provide. You pay providers directly at their rates and Woven takes nothing.",
+    a: "Yes. With your lifetime license, run Woven with the keys you provide — you pay providers directly at their rates and Woven takes nothing extra for inference.",
   },
 ];
 
@@ -169,12 +173,12 @@ function StructuredData() {
     operatingSystem: "macOS",
     applicationCategory: "MultimediaApplication",
     description:
-      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. Bring your own provider keys, or use Woven-hosted models on a prepaid balance.",
+      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. A $99 one-time lifetime license; bring your own provider keys, or use Woven-hosted models on a prepaid balance.",
     url: SITE_URL,
     downloadUrl: DOWNLOAD_URL,
     offers: {
       "@type": "Offer",
-      price: "0",
+      price: "99.00",
       priceCurrency: "USD",
     },
     publisher: { "@id": `${SITE_URL}/#organization` },
@@ -462,92 +466,85 @@ function Pricing() {
         <div className="flex flex-col items-center gap-4 text-center">
           <SectionLabel>Pricing</SectionLabel>
           <h2 className="max-w-3xl text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-            Free to start. Pay for what you use.
+            One price. Yours forever.
           </h2>
           <p className="max-w-2xl text-base text-muted-foreground md:text-lg">
-            Same Claude and GPT lineup either way. Use your own keys, or use
-            Woven-hosted on a prepaid balance.
+            A $99 one-time lifetime license unlocks the full app — includes $5 in
+            hosted credits and a 7-day money-back guarantee. Use your own keys, or
+            top up for Woven-hosted models.
           </p>
         </div>
-        <div className="mt-14 grid gap-5 text-left md:grid-cols-2">
-          <div className="group flex flex-col gap-6 rounded-3xl bg-card p-8 ring-1 ring-border transition-all hover:-translate-y-0.5 hover:ring-foreground/30 md:p-10">
-            <div className="flex flex-col gap-1">
-              <h3 className="text-base font-semibold tracking-tight">Free</h3>
-              <p className="text-xs text-muted-foreground">
-                Bring your own keys
-              </p>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-6xl font-semibold tracking-[-0.04em] md:text-7xl">
-                $0
-              </span>
-              <span className="text-sm text-muted-foreground">forever</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              The full app, running locally on your Mac. Pay providers directly.
-            </p>
-            <ul className="flex flex-col gap-3 border-t border-border pt-6 text-sm">
-              <BulletItem>Sign in with ChatGPT — GPT-5+ included with your Plus, Pro, or Team plan</BulletItem>
-              <BulletItem>Runs entirely on your Mac</BulletItem>
-              <BulletItem>Bring your own Anthropic and OpenAI keys</BulletItem>
-              <BulletItem>You pay providers directly at their rates</BulletItem>
-            </ul>
-            <a
-              href={DOWNLOAD_URL} download
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "mt-auto h-11 w-full rounded-full text-sm font-medium",
-              )}
-            >
-              <AppleIcon className="size-4" />
-              Download for Mac
-            </a>
-          </div>
+        <div className="mx-auto mt-14 w-full max-w-xl text-left">
+          {/* Required base: the lifetime license */}
           <div className="group relative flex flex-col gap-6 overflow-hidden rounded-3xl bg-foreground p-8 text-background ring-1 ring-foreground transition-shadow hover:shadow-2xl md:p-10">
             <div
               aria-hidden="true"
               className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-background/8 blur-3xl"
             />
-            <div className="relative flex flex-col gap-1">
-              <h3 className="text-base font-semibold tracking-tight">Hosted</h3>
-              <p className="text-xs text-background/70">
-                Pay as you go · No subscription
-              </p>
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-base font-semibold tracking-tight">
+                  Lifetime license
+                </h3>
+                <p className="text-xs text-background/70">
+                  One-time — yours forever
+                </p>
+              </div>
+              <span className="inline-flex items-center rounded-full bg-background px-3 py-1 text-xs font-medium text-foreground">
+                Required
+              </span>
             </div>
             <div className="relative flex items-baseline gap-2">
               <span className="text-6xl font-semibold tracking-[-0.04em] md:text-7xl">
-                From $5
+                $99
               </span>
-              <span className="text-sm text-background/70">top up</span>
+              <span className="text-sm text-background/70">once</span>
             </div>
             <p className="relative text-sm text-background/80">
-              Sign in, top up your balance, and use Woven-hosted Claude and GPT
-              — published per-model rates.
+              The full Woven app on your Mac, forever. Includes $5 in hosted
+              credits to start. 7-day money-back guarantee.
             </p>
             <ul className="relative flex flex-col gap-3 border-t border-background/15 pt-6 text-sm text-background/90">
+              <BulletItem inverse>Lifetime access — no subscription</BulletItem>
+              <BulletItem inverse>$5 in Woven-hosted credits included</BulletItem>
               <BulletItem inverse>
-                Top up a prepaid USD balance from $5
+                Bring your own Anthropic and OpenAI keys, or sign in with ChatGPT
               </BulletItem>
-              <BulletItem inverse>
-                Hosted Claude Sonnet 4.6, Opus 4.7, Haiku 4.5, and GPT-5.5
-              </BulletItem>
-              <BulletItem inverse>
-                Web search built in — flat per-call pricing
-              </BulletItem>
-              <BulletItem inverse>
-                Charged per request at published rates
-              </BulletItem>
+              <BulletItem inverse>7-day money-back guarantee</BulletItem>
             </ul>
             <Link
-              href="/pricing"
+              href="/login?next=/account"
               className={cn(
                 buttonVariants({ variant: "secondary" }),
                 "relative mt-auto h-11 w-full rounded-full text-sm font-medium",
               )}
             >
-              See per-model pricing
+              Get your license — $99
               <ArrowRightIcon className="size-4" />
             </Link>
+          </div>
+
+          {/* Optional add-on: hosted credits, layered on top */}
+          <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-border bg-muted/30 p-6">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-0.5">
+                + Optional add-on
+              </span>
+              <span>Pay-as-you-go</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                Hosted credits from $5.
+              </span>{" "}
+              Top up a prepaid balance anytime to run Woven-hosted Claude and GPT —
+              layered on top of your license, no key management.{" "}
+              <Link
+                href="/pricing"
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                See per-model pricing →
+              </Link>
+            </p>
           </div>
         </div>
       </div>
