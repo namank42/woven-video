@@ -1,7 +1,7 @@
 import { CheckCircle2Icon } from "lucide-react";
 
 import { createLicenseCheckoutSession } from "@/app/account/actions";
-import { Button } from "@/components/ui/button";
+import { LicenseBuyButton } from "@/components/account/license-buy-button";
 import {
   Card,
   CardContent,
@@ -39,9 +39,7 @@ export function LicenseCta({ licensed }: { licensed: boolean }) {
       </CardHeader>
       <CardContent className="px-0 pb-0">
         <form action={createLicenseCheckoutSession} className="border-t bg-muted/20 px-4 py-4">
-          <Button type="submit" className="h-10 rounded-lg px-5">
-            Buy lifetime license — $99
-          </Button>
+          <LicenseBuyButton />
         </form>
       </CardContent>
     </Card>

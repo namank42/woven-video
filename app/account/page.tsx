@@ -315,11 +315,9 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         <LicenseCta licensed={licensed} />
       </section>
 
-      {canTopUp ? (
-        <section>
-          <BalanceTopUpForm />
-        </section>
-      ) : null}
+      <section>
+        <BalanceTopUpForm disabled={!canTopUp} />
+      </section>
 
       <section className="flex flex-col gap-4">
         <div className="flex items-baseline justify-between gap-4">
