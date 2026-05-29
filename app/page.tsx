@@ -10,6 +10,7 @@ import {
   PencilLineIcon,
   PuzzleIcon,
   SparklesIcon,
+  WalletIcon,
 } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -525,17 +526,26 @@ function Pricing() {
           </div>
 
           {/* Optional add-on: hosted credits, layered on top */}
-          <div className="mt-4 flex flex-col gap-2 rounded-2xl border border-border bg-muted/30 p-6">
-            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-              <span className="inline-flex items-center rounded-full border border-border bg-background px-2.5 py-0.5">
-                + Optional add-on
+          <div className="mt-4 flex flex-col gap-3 rounded-2xl bg-card p-6 ring-1 ring-border">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+                  <WalletIcon className="size-4" />
+                </span>
+                <div className="flex flex-col">
+                  <h3 className="text-sm font-semibold tracking-tight">
+                    Hosted credits
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Optional · pay-as-you-go
+                  </p>
+                </div>
+              </div>
+              <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-3 py-1 text-sm font-medium tabular-nums">
+                From $5
               </span>
-              <span>Pay-as-you-go</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">
-                Hosted credits from $5.
-              </span>{" "}
               Top up a prepaid balance anytime to run Woven-hosted Claude and GPT —
               layered on top of your license, no key management.{" "}
               <Link
