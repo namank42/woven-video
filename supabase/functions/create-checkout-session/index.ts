@@ -158,7 +158,8 @@ Deno.serve(async (req) => {
     }
 
     // No credit purchase without a license. Same flag as the hosted-route gate, so
-    // this is a no-op pre-launch and during the deploy->backfill window.
+    // this is a no-op until enforcement is turned on. Grandfather eligibility is
+    // derived (created_at < cutoff), so pre-cutoff users pass without a license row.
     if (Deno.env.get("WOVEN_ENFORCE_LICENSE") === "true") {
       const { data: licensed, error: licenseCheckError } = await admin.rpc(
         "user_has_active_license",
