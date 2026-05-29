@@ -289,14 +289,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       ) : null}
 
       {(() => {
-        const statsSection = (
-          <section className="flex flex-col gap-3">
+        const statsSection = (muted: boolean) => (
+          <section className={cn("flex flex-col gap-3", muted && "opacity-60")}>
             <div className="grid gap-3 sm:grid-cols-2">
               <Stat
                 icon={WalletIcon}
                 label="Balance"
                 value={formatUsdFromMicros(balanceUsdMicros)}
-                accent
+                accent={!muted}
                 errorMessage={
                   balanceError
                     ? `Unable to load balance: ${balanceError.message}`
@@ -316,7 +316,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
 
         return licensed ? (
           <>
-            {statsSection}
+            {statsSection(false)}
             <section>
               <LicenseCta licensed={licensed} />
             </section>
@@ -329,7 +329,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             <section>
               <LicenseCta licensed={licensed} />
             </section>
-            {statsSection}
+            {statsSection(true)}
             <section>
               <BalanceTopUpForm disabled={!canTopUp} />
             </section>
