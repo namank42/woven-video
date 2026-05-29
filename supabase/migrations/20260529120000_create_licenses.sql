@@ -51,6 +51,9 @@ begin
   if p_source_id is null or length(trim(p_source_id)) = 0 then
     raise exception 'license_source_id_required';
   end if;
+  if p_kind not in ('lifetime') then
+    raise exception 'invalid_license_kind';
+  end if;
 
   -- Replay / tombstone: a row for this exact (source, source_id) is returned unchanged.
   -- This is what makes an out-of-order refund-before-grant safe: a 'revoked' tombstone
@@ -69,12 +72,19 @@ begin
     returning * into v_row;
   exception
     when unique_violation then
-      -- A different (source, source_id) but the user already holds an active license
-      -- (partial unique index fired). Return their existing active row; do not insert.
+      -- Two unique constraints can fire here. If (source, source_id) collided (a row
+      -- committed between the pre-check and this insert), return that row — it may be a
+      -- revoked tombstone, which must NOT be reactivated. Otherwise the partial-active
+      -- index fired: the user already holds an active license; return it.
       select * into v_row
       from public.licenses
-      where user_id = p_user_id and status = 'active'
-      limit 1;
+      where source = p_source and source_id = p_source_id;
+      if v_row.id is null then
+        select * into v_row
+        from public.licenses
+        where user_id = p_user_id and status = 'active'
+        limit 1;
+      end if;
   end;
 
   return v_row;
@@ -119,7 +129,7 @@ begin
     set status = 'revoked',
         revoked_at = now(),
         revoke_reason = p_reason,
-        metadata = coalesce(p_metadata, '{}'::jsonb) || metadata
+        metadata = metadata || coalesce(p_metadata, '{}'::jsonb)
     where id = v_row.id
     returning * into v_row;
     return v_row;
