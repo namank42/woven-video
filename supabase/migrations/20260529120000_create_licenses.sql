@@ -154,7 +154,7 @@ returns timestamptz
 language sql
 immutable
 as $$
-  select '2099-01-01T00:00:00Z'::timestamptz;  -- TODO(launch): set the real launch cutoff (UTC)
+  select '2026-05-28T00:00:00Z'::timestamptz;  -- launch cutoff (UTC): accounts created before this are grandfathered; on/after pay $99
 $$;
 
 -- Grandfather eligibility is DERIVED (created_at < cutoff), not a pre-written row.
