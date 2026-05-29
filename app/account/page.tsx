@@ -246,12 +246,8 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     ledgerEntries: (transactions ?? []) as LedgerEntry[],
   }).slice(0, 10);
 
-  const { data: licenseRows } = await supabase
-    .from("licenses")
-    .select("id")
-    .eq("status", "active")
-    .limit(1);
-  const licensed = Array.isArray(licenseRows) && licenseRows.length > 0;
+  const { data: hasLicense } = await supabase.rpc("has_active_license");
+  const licensed = hasLicense === true;
   // No top-up without a license once enforcement is on (same flag as the API gate).
   const enforceLicense = process.env.WOVEN_ENFORCE_LICENSE === "true";
   const canTopUp = !enforceLicense || licensed;

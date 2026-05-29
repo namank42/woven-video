@@ -114,18 +114,16 @@ Deno.serve(async (req) => {
 
     // ---- LICENSE checkout ----
     if (body.purpose === "license") {
-      const { data: existing, error: existingError } = await admin
-        .from("licenses")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
+      const { data: alreadyLicensed, error: existingError } = await admin.rpc(
+        "user_has_active_license",
+        { p_user_id: user.id },
+      );
 
       if (existingError) {
         throw new HttpError(500, "failed_to_check_license", existingError);
       }
 
-      if (existing) {
+      if (alreadyLicensed) {
         return jsonResponse({ alreadyLicensed: true });
       }
 
@@ -162,18 +160,16 @@ Deno.serve(async (req) => {
     // No credit purchase without a license. Same flag as the hosted-route gate, so
     // this is a no-op pre-launch and during the deploy->backfill window.
     if (Deno.env.get("WOVEN_ENFORCE_LICENSE") === "true") {
-      const { data: licenseRow, error: licenseCheckError } = await admin
-        .from("licenses")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .maybeSingle();
+      const { data: licensed, error: licenseCheckError } = await admin.rpc(
+        "user_has_active_license",
+        { p_user_id: user.id },
+      );
 
       if (licenseCheckError) {
         throw new HttpError(500, "failed_to_check_license", licenseCheckError);
       }
 
-      if (!licenseRow) {
+      if (!licensed) {
         throw new HttpError(403, "license_required");
       }
     }

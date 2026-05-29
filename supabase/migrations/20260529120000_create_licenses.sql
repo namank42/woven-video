@@ -149,7 +149,17 @@ begin
 end;
 $$;
 
-create or replace function public.has_active_license()
+create or replace function public.license_cutoff()
+returns timestamptz
+language sql
+immutable
+as $$
+  select '2099-01-01T00:00:00Z'::timestamptz;  -- TODO(launch): set the real launch cutoff (UTC)
+$$;
+
+-- Grandfather eligibility is DERIVED (created_at < cutoff), not a pre-written row.
+-- Shared by has_active_license() (auth.uid) and the edge function (explicit user id).
+create or replace function public.user_has_active_license(p_user_id uuid)
 returns boolean
 language sql
 stable
@@ -158,8 +168,22 @@ set search_path = public, extensions
 as $$
   select exists (
     select 1 from public.licenses
-    where user_id = auth.uid() and status = 'active'
+    where user_id = p_user_id and status = 'active'
+  )
+  or exists (
+    select 1 from auth.users
+    where id = p_user_id and created_at < public.license_cutoff()
   );
+$$;
+
+create or replace function public.has_active_license()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, extensions
+as $$
+  select public.user_has_active_license(auth.uid());
 $$;
 
 -- ---------- RLS + grants ----------
@@ -178,8 +202,12 @@ grant all on public.licenses to service_role;
 
 revoke all on function public.grant_license(uuid, text, text, text, jsonb) from public, anon, authenticated;
 revoke all on function public.revoke_license(text, text, uuid, text, jsonb) from public, anon, authenticated;
+revoke all on function public.license_cutoff() from public, anon;
+revoke all on function public.user_has_active_license(uuid) from public, anon;
 revoke all on function public.has_active_license() from public, anon;
 
 grant execute on function public.grant_license(uuid, text, text, text, jsonb) to service_role;
 grant execute on function public.revoke_license(text, text, uuid, text, jsonb) to service_role;
+grant execute on function public.license_cutoff() to authenticated, service_role;
+grant execute on function public.user_has_active_license(uuid) to authenticated, service_role;
 grant execute on function public.has_active_license() to authenticated, service_role;

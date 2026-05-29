@@ -25,17 +25,21 @@ export async function GET(request: Request) {
   // Omit the field on a read error so the client falls back to its own cache
   // (fail-open within its grace window) rather than us asserting a state.
   let license: { active: boolean; granted_at: string | null } | undefined;
-  const { data: licenseRow, error: licenseError } = await supabase
-    .from("licenses")
-    .select("granted_at")
-    .eq("status", "active")
-    .maybeSingle();
+  const { data: active, error: licenseError } = await supabase.rpc(
+    "has_active_license",
+  );
 
   if (!licenseError) {
-    license = {
-      active: licenseRow !== null,
-      granted_at: licenseRow?.granted_at ?? null,
-    };
+    let grantedAt: string | null = null;
+    if (active) {
+      const { data: licenseRow } = await supabase
+        .from("licenses")
+        .select("granted_at")
+        .eq("status", "active")
+        .maybeSingle();
+      grantedAt = licenseRow?.granted_at ?? null;
+    }
+    license = { active: active === true, granted_at: grantedAt };
   }
 
   return Response.json({
