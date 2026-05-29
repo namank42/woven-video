@@ -289,8 +289,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       ) : null}
 
       {(() => {
-        const showStats = licensed || balanceUsdMicros > 0;
-        const statsSection = showStats ? (
+        const statsSection = (
           <section className="flex flex-col gap-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <Stat
@@ -313,7 +312,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
               />
             </div>
           </section>
-        ) : null;
+        );
 
         return licensed ? (
           <>
