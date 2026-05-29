@@ -1,7 +1,7 @@
 # Woven $99 one-time lifetime license — design spec
 
 **Date:** 2026-05-29
-**Status:** Draft, pending founder review
+**Status:** Implemented on `feat/99-license` (PR #13). NOTE: grandfathering was changed from a one-time backfill to **read-time derivation** during implementation — this doc reflects the as-built design.
 **Spans two repos:** `woven-video` (Next.js site + Supabase/Stripe billing backend) and `woven-harness` (native macOS Swift/SwiftUI app)
 
 ## Problem
@@ -26,11 +26,11 @@ substantial, **every paid license also includes $5 of hosted credits**.
 | Bundled value | Every **paid** $99 purchase also grants **$5 of hosted credits** (promo grant). |
 | Hosted credits | Remain a **separate, optional** prepaid top-up ($5–$100) layered on top of the license. The two subsystems never share math. |
 | Gate | **Hard gate**: after Google sign-in, block the editor and ALL model use until the user holds an active license. |
-| Existing users | **Grandfather everyone**: every user created before a fixed launch cutoff gets a free lifetime license via a one-time backfill. They do **not** get the $5 bonus (that is tied to the paid purchase). |
+| Existing users | **Grandfather everyone**: every user created before a fixed launch cutoff is treated as licensed — **derived at read time** from `created_at < license_cutoff()` (no backfill row needed). They do **not** get the $5 bonus (that is tied to the paid purchase). |
 | Money-back guarantee | **7 days**, fully manual via the Stripe Dashboard. A refund auto-revokes the license; the $5 bonus is **not** clawed back. |
-| Credit-purchase gating | **Buying credits requires an active license too** — the license is the single gate; no top-up without it. Enforced via the same `WOVEN_ENFORCE_LICENSE` flag as the hosted routes (so the deploy→backfill window can't wrongly block existing users). |
+| Credit-purchase gating | **Buying credits requires an active license too** — the license is the single gate; no top-up without it. Enforced via the same `WOVEN_ENFORCE_LICENSE` flag as the hosted routes (off until launch, so nobody is blocked pre-launch). |
 | BYOK/Codex enforcement | Accept **best-effort client-only** enforcement (those calls never touch Woven's servers). |
-| Launch cutoff | A clearly-marked placeholder constant in the backfill migration; finalized at launch. |
+| Launch cutoff | The `license_cutoff()` SQL function (single source of truth); set to `2026-05-28` during build, finalized to the real launch instant at go-live. |
 
 ## Enforcement reality (sign off on this)
 
@@ -124,13 +124,24 @@ impossible.
   activate. Idempotent (already-revoked → no-op). Append-preserving; never
   deletes. This makes it impossible to revoke a grandfather row or a legitimate
   re-purchase by mistake.
-- **`has_active_license() returns boolean`** — `stable`; granted to
-  `authenticated` + `service_role`. `exists(select 1 from licenses where
-  user_id = auth.uid() and status = 'active')`. Must be called via the route's
+- **`license_cutoff() returns timestamptz`** — `immutable`; the single source of
+  truth for the grandfather cutoff (a hardcoded UTC literal — `2026-05-28` during
+  build, set to the real launch instant at go-live).
+- **`user_has_active_license(p_user_id uuid) returns boolean`** — `stable`,
+  `security definer`. The shared eligibility check: `exists(active license row
+  for p_user_id) OR exists(auth.users where id = p_user_id and created_at <
+  license_cutoff())`. **Grandfathering is derived here, at read time** — no
+  pre-written row. Granted to `authenticated` + `service_role` so the edge
+  function can call it with an explicit user id (and so refunds-vs-grandfather
+  resolve correctly: a refund flips only the *paid* row; a pre-cutoff user stays
+  licensed via the second disjunct).
+- **`has_active_license() returns boolean`** — `stable`; `select
+  user_has_active_license(auth.uid())`. Must be called via the route's
   **RLS-scoped** client (`authResult.auth.supabase`), not the service-role admin
   client (which has no `auth.uid()`). Reused by the balance route, the hosted
-  routes, and the checkout pre-check. The `status='active'` predicate covers
-  grandfather **and** stripe rows uniformly.
+  routes, the account page, and the checkout pre-checks. Because eligibility is
+  derived, a paid (`stripe`) row and a pre-cutoff signup both resolve to licensed
+  uniformly.
 
 ---
 
@@ -224,7 +235,9 @@ guarantee (optionally Slack-notify a human). No in-webhook auto-refund machinery
   `topup` branch also **pre-checks an active license** when `WOVEN_ENFORCE_LICENSE`
   is on and returns `403 license_required` for an unlicensed user (no credit
   purchase without a license). No-op when the flag is off, so existing behavior
-  and the deploy→backfill window are unaffected.
+  is unaffected until enforcement is turned on. Uses the derived
+  `user_has_active_license(user.id)` (so grandfathered users — who have no row —
+  are correctly allowed to top up once enforcement is on).
 - **`functions/v1/stripe-webhook`** — `purpose` branch + `charge.refunded`
   handler (above).
 
@@ -306,38 +319,40 @@ guarantee (optionally Slack-notify a human). No in-webhook auto-refund machinery
 
 ---
 
-## 6. Grandfathering & backfill
+## 6. Grandfathering (read-time, derived)
 
-- **Backfill** — one-time, idempotent migration **run after the cutoff instant
-  has passed** (so no eligible row can be created between the `SELECT` and the
-  cutoff — eliminates the launch-spike race):
-  ```sql
-  insert into public.licenses (user_id, kind, status, source, source_id, granted_at, metadata)
-  select id, 'lifetime', 'active', 'grandfather', id::text, now(),
-         jsonb_build_object('reason','pre_launch_grandfather')
-  from auth.users
-  where created_at < '<FIXED_LAUNCH_CUTOFF_TS>'::timestamptz   -- PLACEHOLDER, set at launch
-  on conflict (source, source_id) do nothing;
-  ```
-  `source = 'grandfather'`, `source_id = user_id::text` → stable per-user key
-  that can never collide with the `stripe` keyspace; re-runs are pure no-ops.
-  Does **not** call `ensure_billing_account` (licenses are orthogonal). Scans by
-  signup date, so dormant pre-cutoff users who open the app later are already
-  grandfathered. **No $5 bonus** (paid-purchase only).
+> Originally specced as a one-time backfill migration; replaced during
+> implementation with read-time derivation. A snapshot migration only covers
+> users that exist at migration-run time (so it can't be tested locally where
+> `db reset` wipes users, and — critically — once enforcement is on, a
+> grandfathered user with no row would be wrongly blocked from buying credits).
+> Deriving eligibility on read removes all of that.
+
+- **No backfill.** Grandfather eligibility is computed live by
+  `user_has_active_license()` (§1): a user is licensed if they hold an active
+  license row **or** `auth.users.created_at < license_cutoff()`. No migration
+  materializes grandfather rows — so it's self-healing, identical locally and in
+  prod, and immune to migration-timing races.
+- **Cutoff** — `license_cutoff()` holds the single UTC literal (`2026-05-28`
+  during build). Everyone with `created_at <` it is free, forever; `>=` pays
+  $99. Moving this one value is what turns "free for everyone" (pre-launch) into
+  "grandfather the old, charge the new." Dormant pre-cutoff users are covered
+  automatically the next time they sign in (pure date math, not a snapshot).
+- **Revocation interplay** — a refund revokes only the *paid* row; a pre-cutoff
+  user can never be locked out (their `created_at < cutoff` disjunct is always
+  true), which is the intended grandfather guarantee.
 - **Signup trigger** — **unchanged.** `create_profile_and_billing_account` grants
-  no entitlement, so new signups land unlicensed and hit the paywall. Add a code
-  comment: do **not** wire `grant_license` into any signup trigger.
-- **Cutoff** — eligibility = `created_at < <FIXED UTC literal>`, hardcoded in the
-  single backfill migration (no `billing_config` table — one consumer). A missed
-  edge user is fixed with a one-line manual `grant_license`.
+  no entitlement; do **not** wire `grant_license` into any signup trigger.
+- **No $5 bonus** for grandfathered users — that's tied to the paid purchase.
 
 ---
 
 ## 7. Rollout order (load-bearing)
 
 1. **DB migration:** `public.licenses` (+ partial-unique-active index + CHECKs +
-   RLS + grants) and `grant_license` / `revoke_license` / `has_active_license`
-   RPCs. No behavior change yet.
+   RLS + grants) and the `grant_license` / `revoke_license` / `license_cutoff` /
+   `user_has_active_license` / `has_active_license` RPCs (grandfathering derived
+   at read time). No behavior change yet.
 2. **Stripe:** create the $99 Product + reusable Price (card-eligible) in **test
    and live**; set `STRIPE_LICENSE_PRICE_ID` per env. **Register
    `charge.refunded`** on the webhook endpoint's enabled-events list.
@@ -350,9 +365,9 @@ guarantee (optionally Slack-notify a human). No in-webhook auto-refund machinery
    License purchase now works end-to-end on web.
 5. **Balance endpoint:** extend `GET /api/v1/billing/balance` to compose the
    `license` object (additive, backward-compatible, fail-open).
-6. **Backfill:** pick the fixed cutoff instant, **wait until it passes**, then
-   run the one-time grandfather backfill. Verify on staging that pre-cutoff
-   users show `active` and counts match.
+6. **Cutoff:** set `license_cutoff()` to the real launch instant (a one-line
+   `create or replace` migration). No backfill needed — eligibility is derived,
+   so pre-cutoff users read as licensed immediately and post-cutoff signups pay.
 7. **Harness (Sparkle release):** ship the client that (a) handles `403
    license_required` gracefully and (b) adds the `requiresLicense` tri-state,
    `LicensePaywallView`, `didBecomeActive` refresh, `ChatView` guard, and
@@ -387,7 +402,7 @@ guarantee (optionally Slack-notify a human). No in-webhook auto-refund machinery
 | Grant lands seconds after returning from browser | `didBecomeActive` refresh + bounded backoff poll converge; "I already purchased" is the guaranteed fallback. |
 | Stale build hits a hosted route directly | Server `has_active_license()` `403` enforces hosted routes; BYOK/Codex is provider-direct so client guard is the only (best-effort) control. |
 | In-flight reserved job when license revoked | License checked at admission only; `revoke_license` never touches `generation_jobs`. The user simply can't start new jobs. |
-| Backfill re-runs (replay/preview DB) | Fixed cutoff literal + `source_id=user_id` + `on conflict do nothing` + partial-unique-active → guaranteed no-op; can't grandfather post-cutoff signups. |
+| Grandfather on any DB (local / preview / restore) | Derived from `created_at < license_cutoff()` at read time — no snapshot to replay or mis-time; always consistent, and post-cutoff signups never qualify. |
 | User signed in on two Macs | License is per-user; the buying Mac unlocks via poll, the other on next foreground refresh. Expected. |
 | Won chargeback (if a dispute ever happens) | Manual operator `grant_license` (idempotent on the original payment_intent) re-grants. Automated dispute handling deferred. |
 
@@ -399,8 +414,8 @@ guarantee (optionally Slack-notify a human). No in-webhook auto-refund machinery
   test vs live).
 - `LICENSE_BONUS_USD_MICROS = 5_000_000` — named constant for the $5 bonus
   (single consumer in the webhook; no config table).
-- `<FIXED_LAUNCH_CUTOFF_TS>` — placeholder literal in the backfill migration,
-  finalized at launch.
+- `license_cutoff()` — SQL function holding the grandfather cutoff literal
+  (`2026-05-28` during build); finalized to the real launch instant at go-live.
 
 ## 10. Deferred / future
 
