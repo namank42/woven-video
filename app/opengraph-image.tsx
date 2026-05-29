@@ -62,7 +62,7 @@ export default async function Image() {
               maxWidth: 900,
             }}
           >
-            Native Mac. Built for short-form. Edit by asking.
+            Native Mac. Built for short-form. Edit by talking.
           </div>
         </div>
         <div
