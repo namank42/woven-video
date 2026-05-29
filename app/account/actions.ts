@@ -128,3 +128,72 @@ export async function createCheckoutSession(formData: FormData) {
 
   redirect(checkoutUrl);
 }
+
+export async function createLicenseCheckoutSession() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?next=/account");
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    redirect("/login?next=/account");
+  }
+
+  const { url, anonKey } = getSupabaseEnv();
+  let checkoutUrl: string | undefined;
+  let errorMessage: string | undefined;
+  let alreadyLicensed = false;
+
+  try {
+    const response = await fetch(`${url}/functions/v1/create-checkout-session`, {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ purpose: "license" }),
+      cache: "no-store",
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      url?: string;
+      alreadyLicensed?: boolean;
+      error?: string;
+      msg?: string;
+      message?: string;
+    };
+
+    if (payload.alreadyLicensed) {
+      alreadyLicensed = true;
+    } else if (!response.ok) {
+      errorMessage =
+        payload.error ??
+        payload.msg ??
+        payload.message ??
+        `Unable to start license checkout. (${response.status})`;
+    } else {
+      checkoutUrl = payload.url;
+    }
+  } catch {
+    errorMessage = "Checkout function is not reachable.";
+  }
+
+  if (alreadyLicensed) {
+    redirect(searchParamUrl("/account", { license: "already" }));
+  }
+
+  if (!checkoutUrl) {
+    redirect(searchParamUrl("/account", { error: errorMessage }));
+  }
+
+  redirect(checkoutUrl);
+}

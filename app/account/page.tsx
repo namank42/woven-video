@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { BalanceTopUpForm } from "@/components/account/balance-top-up-form";
+import { LicenseCta } from "@/components/account/license-cta";
 import { Badge } from "@/components/ui/badge";
 import { formatUsdFromMicros } from "@/lib/billing/money";
 import { firstSearchParam } from "@/lib/navigation";
@@ -50,6 +51,7 @@ type AccountPageProps = {
   searchParams: Promise<{
     checkout?: string | string[];
     error?: string | string[];
+    license?: string | string[];
   }>;
 };
 
@@ -216,6 +218,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const params = await searchParams;
   const checkout = firstSearchParam(params.checkout);
   const error = firstSearchParam(params.error);
+  const license = firstSearchParam(params.license);
   const supabase = await createSupabaseServerClient();
 
   const [
@@ -243,6 +246,16 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     ledgerEntries: (transactions ?? []) as LedgerEntry[],
   }).slice(0, 10);
 
+  const { data: licenseRows } = await supabase
+    .from("licenses")
+    .select("id")
+    .eq("status", "active")
+    .limit(1);
+  const licensed = Array.isArray(licenseRows) && licenseRows.length > 0;
+  // No top-up without a license once enforcement is on (same flag as the API gate).
+  const enforceLicense = process.env.WOVEN_ENFORCE_LICENSE === "true";
+  const canTopUp = !enforceLicense || licensed;
+
   return (
     <div className="flex flex-col gap-10">
       <div className="flex flex-col gap-1">
@@ -265,6 +278,19 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       ) : null}
 
       {error ? <Alert tone="error">{error}</Alert> : null}
+
+      {license === "success" ? (
+        <Alert tone="success">
+          License purchase complete. Welcome to Woven — your $5 in starter credits
+          is on its way.
+        </Alert>
+      ) : null}
+      {license === "already" ? (
+        <Alert tone="info">You already have a lifetime license.</Alert>
+      ) : null}
+      {license === "cancelled" ? (
+        <Alert tone="info">License checkout cancelled.</Alert>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -290,8 +316,14 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       </section>
 
       <section>
-        <BalanceTopUpForm />
+        <LicenseCta licensed={licensed} />
       </section>
+
+      {canTopUp ? (
+        <section>
+          <BalanceTopUpForm />
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-4">
         <div className="flex items-baseline justify-between gap-4">
