@@ -16,7 +16,7 @@ const siteUrl = "https://www.woven.video";
 const siteName = "Woven";
 const siteTitle = "Woven — The AI Video Editor";
 const siteDescription =
-  "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. Bring your own keys, or use Woven-hosted models on a prepaid balance.";
+  "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. A $99 one-time lifetime license; bring your own provider keys, or use Woven-hosted models on a prepaid balance.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
