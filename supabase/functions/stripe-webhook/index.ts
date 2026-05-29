@@ -35,7 +35,6 @@ Deno.serve(async (req) => {
 
     if (event.type === "checkout.session.completed") {
       await handleCheckoutCompleted(
-        stripe,
         event.data.object as Stripe.Checkout.Session,
       );
     } else if (event.type === "charge.refunded") {
@@ -49,7 +48,6 @@ Deno.serve(async (req) => {
 });
 
 async function handleCheckoutCompleted(
-  stripe: Stripe,
   session: Stripe.Checkout.Session,
 ) {
   if (session.mode !== "payment" || session.payment_status !== "paid") {
