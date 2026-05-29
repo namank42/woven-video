@@ -12,8 +12,9 @@ import {
 
 const licenseBullets = [
   "Lifetime access — no subscription",
+  "Bring your own Anthropic and OpenAI keys",
+  "Or sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan",
   "$5 in Woven-hosted credits included",
-  "Use your own Anthropic/OpenAI keys, or sign in with ChatGPT",
   "7-day money-back guarantee",
 ];
 

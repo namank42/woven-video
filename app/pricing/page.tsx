@@ -18,7 +18,7 @@ const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Woven is a $99 one-time lifetime license — yours forever, includes $5 in hosted credits, with a 7-day money-back guarantee. Add prepaid credits anytime for Woven-hosted frontier models at published per-model rates.",
+    "Woven is a $99 one-time lifetime license — yours forever, includes $5 in hosted credits, with a 7-day money-back guarantee. Run any model your way: bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -179,8 +179,8 @@ function PricingHero() {
         </h1>
         <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
           $99 one-time for a lifetime license — includes $5 in hosted credits and a
-          7-day money-back guarantee. Use your own keys, or top up to run
-          Woven-hosted models at published per-model rates.
+          7-day money-back guarantee. Run models your way: bring your own keys, sign
+          in with ChatGPT, or top up for Woven-hosted models.
         </p>
       </div>
     </section>
@@ -190,8 +190,9 @@ function PricingHero() {
 function Plans() {
   const licenseBullets = [
     "Lifetime access — no subscription",
+    "Bring your own Anthropic and OpenAI keys",
+    "Or sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan",
     "$5 in Woven-hosted credits included",
-    "Use your own Anthropic/OpenAI keys, or sign in with ChatGPT",
     "7-day money-back guarantee",
   ];
 

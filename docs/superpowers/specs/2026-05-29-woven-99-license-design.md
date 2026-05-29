@@ -17,6 +17,8 @@ Users are prompted to buy it during onboarding in the harness app (after Google
 sign-in, where they already see balance + "Add credits"). To make the $99 feel
 substantial, **every paid license also includes $5 of hosted credits**.
 
+**Three ways to run models under the license:** bring your own Anthropic/OpenAI keys, sign in with ChatGPT (GPT-5+ on an existing Plus/Pro/Team plan), or Woven-hosted prepaid credits. All three sit on top of the one-time license; ChatGPT-Codex is gated and best-effort client-side like BYOK (decision #1).
+
 ## Decisions (locked)
 
 | Decision | Choice |
@@ -274,7 +276,7 @@ guarantee (optionally Slack-notify a human). No in-webhook auto-refund machinery
   + license atomically from one decode.
 - **`Views/LicensePaywallView.swift` (new)** — modeled on `SignInWelcomeView`:
   headline, **"$99 one-time — includes $5 in hosted credits, yours forever"**,
-  what-you-get list (note hosted credits beyond the $5 are a separate optional
+  what-you-get list (should mention all three inference paths: BYO Anthropic/OpenAI keys, sign in with ChatGPT, and Woven-hosted credits; note hosted credits beyond the $5 are a separate optional
   top-up), **7-day money-back** line, primary **"Buy lifetime license — $99"**
   opening web Checkout via `NSWorkspace.shared.open(accountURL?purchase=license)`
   (reuse `OnboardingView.openTopUp`), a manual **"Refresh / I already

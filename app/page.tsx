@@ -84,8 +84,8 @@ const featureCards: FeatureCard[] = [
   {
     icon: KeyIcon,
     eyebrow: "Your keys, or ours",
-    title: "Your keys, or Woven-hosted.",
-    body: "A $99 lifetime license unlocks the full app. Bring your own Anthropic and OpenAI keys, or use Woven-hosted models on a prepaid balance — same lineup, no key juggling.",
+    title: "Your keys, ChatGPT, or Woven-hosted.",
+    body: "A $99 lifetime license unlocks the full app. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance — same lineup, no key juggling.",
   },
   {
     icon: LayersIcon,
@@ -110,7 +110,7 @@ const featureCards: FeatureCard[] = [
 const faqs = [
   {
     q: "How much does Woven cost?",
-    a: "Woven is a $99 one-time lifetime license — yours forever, no subscription. It includes $5 in hosted credits to start and a 7-day money-back guarantee. After that, bring your own provider keys or top up a prepaid balance for Woven-hosted models.",
+    a: "Woven is a $99 one-time lifetime license — yours forever, no subscription. It includes $5 in hosted credits and a 7-day money-back guarantee. After that, bring your own provider keys, sign in with ChatGPT (GPT-5+ on your existing plan), or top up a prepaid balance for Woven-hosted models.",
   },
   {
     q: "Is Woven a desktop app or a web app?",
@@ -122,11 +122,11 @@ const faqs = [
   },
   {
     q: "Do I need a Woven account to use the app?",
-    a: "Yes. Sign in once with Google and get a $99 lifetime license. After that, run with your own Anthropic and OpenAI keys, or use Woven-hosted models on a prepaid balance.",
+    a: "Yes. Sign in once with Google and get a $99 lifetime license. After that, run with your own Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
   },
   {
     q: "Which models can I use?",
-    a: "The same lineup either way — Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5, and GPT-5.5. Locally you bring your own Anthropic and OpenAI keys; with Woven-hosted, charges come from your prepaid balance. See the pricing page for per-model rates.",
+    a: "The same lineup either way — Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5, and GPT-5.5. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or use Woven-hosted models (charged from your prepaid balance). See the pricing page for per-model rates.",
   },
   {
     q: "How does the hosted-models balance work?",
@@ -174,7 +174,7 @@ function StructuredData() {
     operatingSystem: "macOS",
     applicationCategory: "MultimediaApplication",
     description:
-      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. A $99 one-time lifetime license; bring your own provider keys, or use Woven-hosted models on a prepaid balance.",
+      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. A $99 one-time lifetime license; bring your own provider keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
     url: SITE_URL,
     downloadUrl: DOWNLOAD_URL,
     offers: {
@@ -507,10 +507,13 @@ function Pricing() {
             </p>
             <ul className="relative flex flex-col gap-3 border-t border-background/15 pt-6 text-sm text-background/90">
               <BulletItem inverse>Lifetime access — no subscription</BulletItem>
-              <BulletItem inverse>$5 in Woven-hosted credits included</BulletItem>
               <BulletItem inverse>
-                Bring your own Anthropic and OpenAI keys, or sign in with ChatGPT
+                Bring your own Anthropic and OpenAI keys
               </BulletItem>
+              <BulletItem inverse>
+                Or sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan
+              </BulletItem>
+              <BulletItem inverse>$5 in Woven-hosted credits included</BulletItem>
               <BulletItem inverse>7-day money-back guarantee</BulletItem>
             </ul>
             <Link
