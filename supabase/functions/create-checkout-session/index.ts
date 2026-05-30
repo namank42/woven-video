@@ -128,6 +128,20 @@ Deno.serve(async (req) => {
       }
 
       const licenseMetadata = { user_id: user.id, purpose: "license" };
+
+      // Whitelisted redirect target. App buyers are authenticated in the app but
+      // usually NOT in this browser, so /account would bounce them to /login —
+      // route them to the public confirmation pages instead. Any value other
+      // than "app" (including absent) keeps the original web behavior. Never echo
+      // a client-supplied raw URL (open-redirect).
+      const origin = body.origin === "app" ? "app" : "web";
+      const successUrl = origin === "app"
+        ? `${siteUrl}/checkout/success`
+        : `${siteUrl}/account?license=success&session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrl = origin === "app"
+        ? `${siteUrl}/checkout/cancelled`
+        : `${siteUrl}/account?license=cancelled`;
+
       const licenseSession = await stripe.checkout.sessions.create({
         mode: "payment",
         customer: customerId,
@@ -138,9 +152,8 @@ Deno.serve(async (req) => {
         ],
         metadata: licenseMetadata,
         payment_intent_data: { metadata: licenseMetadata },
-        success_url:
-          `${siteUrl}/account?license=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${siteUrl}/account?license=cancelled`,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
       });
 
       return jsonResponse({ url: licenseSession.url });
