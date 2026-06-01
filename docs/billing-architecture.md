@@ -51,7 +51,7 @@ Hosted model and media pricing should produce estimated and final costs in `usd_
 Initial hosted chat models:
 
 - `anthropic/claude-sonnet-4.6`
-- `anthropic/claude-opus-4.7`
+- `anthropic/claude-opus-4.8`
 - `anthropic/claude-haiku-4.5`
 - `openai/gpt-5.5`
 
