@@ -48,8 +48,8 @@ const models: ModelRate[] = [
     cacheWrite: "$4.50/M",
   },
   {
-    name: "Claude Opus 4.7",
-    modelId: "anthropic/claude-opus-4.7",
+    name: "Claude Opus 4.8",
+    modelId: "anthropic/claude-opus-4.8",
     input: "$6.00/M",
     output: "$30.00/M",
     cacheRead: "$0.60/M",

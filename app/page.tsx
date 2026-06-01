@@ -126,7 +126,7 @@ const faqs = [
   },
   {
     q: "Which models can I use?",
-    a: "The same lineup either way — Claude Sonnet 4.6, Claude Opus 4.7, Claude Haiku 4.5, and GPT-5.5. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or use Woven-hosted models (charged from your prepaid balance). See the pricing page for per-model rates.",
+    a: "The same lineup either way — Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5, and GPT-5.5. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or use Woven-hosted models (charged from your prepaid balance). See the pricing page for per-model rates.",
   },
   {
     q: "How does the hosted-models balance work?",
