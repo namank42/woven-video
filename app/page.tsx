@@ -595,7 +595,14 @@ function FAQ() {
               Common questions.
             </h2>
             <p className="text-base text-muted-foreground">
-              Anything else?{" "}
+              Still have questions?{" "}
+              <Link
+                href="/contact"
+                className="text-foreground underline-offset-4 hover:underline"
+              >
+                Contact us
+              </Link>{" "}
+              or email{" "}
               <a
                 href="mailto:hello@woven.video"
                 className="text-foreground underline-offset-4 hover:underline"
@@ -664,6 +671,15 @@ function FinalCTA() {
           <AppleIcon className="size-4" />
           Download for Mac
         </Button>
+        <p className="text-sm text-background/60">
+          Questions before you download?{" "}
+          <Link
+            href="/contact"
+            className="text-background underline underline-offset-4"
+          >
+            Get in touch
+          </Link>
+        </p>
       </div>
     </section>
   );
