@@ -7,7 +7,8 @@
 ## Goal
 
 Give website visitors a way to reach us: a dedicated `/contact` page with a simple form,
-reachable from the footer and the landing page. Submissions flow into the **existing**
+reachable from the footer, the landing page, and the **account page** (so a paying user can ask
+for a refund within their 7-day money-back window). Submissions flow into the **existing**
 `public.feedback` → `notify_slack_on_feedback()` → Slack pipeline that the Mac app already uses,
 so all inbound feedback lands in one Slack channel with one set of tooling.
 
@@ -34,12 +35,16 @@ authenticated user whose email lives in `auth.users`.
   (exposes the table to spam) and over a route handler (`app/api/v1/**` is the external product
   API; a first-party form is what Server Actions are for).
 - **`source` column:** yes — `app` vs `web`, so the Slack footer is correct and we can filter later.
-- **Logged-in visitors:** keep contact submissions **anonymous** (no `user_id`); use the typed email.
+- **Logged-in visitors:** keep contact submissions **anonymous** (no `user_id`); use the typed
+  email. But on `/contact`, **pre-fill the email field from the session** when the visitor is logged
+  in (read-only convenience — still inserted anonymously).
 - **Spam:** honeypot + best-effort per-IP throttle now; Cloudflare Turnstile is the escalation path
   if spam appears (not built now).
 - **Form fields:** Name (optional) + Email (required) + Message (required).
-- **Placement:** footer link + a Contact CTA section near the bottom of the landing page + a
-  "Still have questions?" line at the end of the FAQ.
+- **Placement:** footer link (the footer also renders on the account page) + a Contact CTA section
+  near the bottom of the landing page + a "Still have questions?" line at the end of the FAQ + a
+  **"Need help?" support section on the account page** that links to `/contact` and notes the 7-day
+  money-back guarantee. Plain Contact link — no refund-specific pre-fill / topic.
 
 ## Tech context (from research digest)
 
@@ -121,9 +126,15 @@ Steps:
     `state.errors?._form`.
   - On `state.ok` → replace the form with a success panel
     ("Thanks — we'll get back to you at {email}.").
+  - Accepts a `prefillEmail?: string` prop; the email field uses
+    `defaultValue={state.values?.email ?? prefillEmail}` (a failed-submit value wins over the
+    prefill).
 - `app/contact/page.tsx` (RSC): `metadata` (title "Contact", canonical `/contact`); inline header
   (logo `Link` + `HeaderAuthControls`) matching pricing/changelog; intro copy; `<ContactForm/>`;
   `hello@woven.video` shown as a fallback; `<SiteFooter/>`. Add `/contact` to `app/sitemap.ts`.
+  Reads the session via `createSupabaseServerClient()` and passes
+  `prefillEmail={user?.email}` to `<ContactForm/>` (logged-in convenience; the insert stays
+  anonymous regardless).
 
 ### 4. Placement edits
 
@@ -132,6 +143,9 @@ Steps:
 - `app/page.tsx` — a short **Contact CTA** section above the footer ("Questions? Get in touch →"
   linking to `/contact`), and a **"Still have questions? Contact us →"** line after the FAQ
   accordion.
+- `app/account/page.tsx` — a **"Need help?" support section** (near the bottom, after Activity):
+  short copy noting the 7-day money-back guarantee with a link to `/contact`. No embedded form; the
+  `SiteFooter` Contact link (rendered by `app/account/layout.tsx`) is the secondary path.
 
 ## Error handling
 
