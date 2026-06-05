@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   AlertCircleIcon,
   CheckCircle2Icon,
@@ -439,6 +440,21 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             </p>
           </div>
         )}
+      </section>
+
+      <section className="flex flex-col gap-2 rounded-xl bg-card p-5 ring-1 ring-foreground/10">
+        <h2 className="font-heading text-lg font-medium">Need help?</h2>
+        <p className="text-sm text-muted-foreground">
+          Questions about your account, or want a refund within your 7-day
+          money-back window?{" "}
+          <Link
+            href="/contact"
+            className="text-foreground underline underline-offset-4 hover:no-underline"
+          >
+            Contact us
+          </Link>
+          .
+        </p>
       </section>
 
     </div>
