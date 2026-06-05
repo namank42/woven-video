@@ -30,6 +30,9 @@ export function SiteFooter() {
           <Link href="/#faq" className="hover:text-foreground">
             FAQ
           </Link>
+          <Link href="/contact" className="hover:text-foreground">
+            Contact
+          </Link>
           <a
             href="mailto:hello@woven.video"
             className="hover:text-foreground"
