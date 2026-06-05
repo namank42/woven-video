@@ -598,14 +598,14 @@ function FAQ() {
               Still have questions?{" "}
               <Link
                 href="/contact"
-                className="text-foreground underline-offset-4 hover:underline"
+                className="text-foreground underline underline-offset-4 hover:no-underline"
               >
                 Contact us
               </Link>{" "}
               or email{" "}
               <a
                 href="mailto:hello@woven.video"
-                className="text-foreground underline-offset-4 hover:underline"
+                className="text-foreground underline underline-offset-4 hover:no-underline"
               >
                 hello@woven.video
               </a>
