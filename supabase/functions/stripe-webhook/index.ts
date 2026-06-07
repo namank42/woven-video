@@ -7,9 +7,11 @@ import {
   requiredEnv,
 } from "../_shared/http.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
+import { sendLoopsEvent } from "../_shared/loops.ts";
 
 const USD_MICROS_PER_CENT = 10_000;
 const LICENSE_BONUS_USD_MICROS = 5_000_000; // $5 starter credits bundled with a paid license
+const TRIAL_CREDIT_USD_MICROS = 5_000_000; // $5 hosted credits seeded once at trial start
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -39,6 +41,18 @@ Deno.serve(async (req) => {
       );
     } else if (event.type === "charge.refunded") {
       await handleChargeRefunded(stripe, event.data.object as Stripe.Charge);
+    } else if (
+      event.type === "customer.subscription.created" ||
+      event.type === "customer.subscription.updated" ||
+      event.type === "customer.subscription.deleted"
+    ) {
+      await handleSubscriptionEvent(event.data.object as Stripe.Subscription);
+    } else if (event.type === "customer.subscription.trial_will_end") {
+      await handleTrialWillEnd(event.data.object as Stripe.Subscription);
+    } else if (event.type === "invoice.paid") {
+      await handleInvoicePaid(event.data.object as Stripe.Invoice);
+    } else if (event.type === "invoice.payment_failed") {
+      await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
     }
 
     return jsonResponse({ received: true });
@@ -192,5 +206,124 @@ async function handleChargeRefunded(stripe: Stripe, charge: Stripe.Charge) {
 
   if (error) {
     throw new HttpError(500, "failed_to_revoke_license", error);
+  }
+}
+
+function customerIdOf(
+  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null,
+): string | null {
+  if (!customer) return null;
+  return typeof customer === "string" ? customer : customer.id;
+}
+
+// Resolve { userId, email } from a Stripe customer id via profiles.
+async function resolveProfile(
+  admin: ReturnType<typeof createServiceClient>,
+  customerId: string | null,
+): Promise<{ userId: string | null; email: string | null }> {
+  if (!customerId) return { userId: null, email: null };
+  const { data } = await admin
+    .from("profiles")
+    .select("id, email")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+  return { userId: data?.id ?? null, email: data?.email ?? null };
+}
+
+async function handleSubscriptionEvent(sub: Stripe.Subscription) {
+  const admin = createServiceClient();
+  const customerId = customerIdOf(sub.customer);
+
+  // user_id is set via subscription_data.metadata at checkout; fall back to customer lookup.
+  let userId: string | null = sub.metadata?.user_id ?? null;
+  if (!userId) {
+    userId = (await resolveProfile(admin, customerId)).userId;
+  }
+  if (!userId) {
+    throw new HttpError(400, "subscription_missing_user");
+  }
+
+  // current_period_end may live on the subscription OR on its first item (API-version dependent).
+  const item = sub.items?.data?.[0];
+  const periodEndUnix = (sub as { current_period_end?: number })
+    .current_period_end ??
+    (item as { current_period_end?: number } | undefined)?.current_period_end ??
+    null;
+  const priceId = item?.price?.id ?? null;
+
+  const { error: upsertError } = await admin
+    .from("subscriptions")
+    .upsert({
+      user_id: userId,
+      stripe_subscription_id: sub.id,
+      stripe_customer_id: customerId,
+      status: sub.status,
+      price_id: priceId,
+      trial_end: sub.trial_end
+        ? new Date(sub.trial_end * 1000).toISOString()
+        : null,
+      current_period_end: periodEndUnix
+        ? new Date(periodEndUnix * 1000).toISOString()
+        : null,
+      cancel_at_period_end: sub.cancel_at_period_end ?? false,
+      metadata: { latest_event_status: sub.status },
+    }, { onConflict: "stripe_subscription_id" });
+
+  if (upsertError) {
+    throw new HttpError(500, "failed_to_upsert_subscription", upsertError);
+  }
+
+  // Seed $5 hosted credits once when the trial starts. Idempotent on
+  // (source, source_id, kind) = ('trial_bonus', subscription_id, 'promo'), so repeated
+  // trialing webhooks are a no-op.
+  if (sub.status === "trialing") {
+    const { error: creditError } = await admin.rpc("grant_balance", {
+      p_user_id: userId,
+      p_amount_usd_micros: TRIAL_CREDIT_USD_MICROS,
+      p_source: "trial_bonus",
+      p_source_id: sub.id,
+      p_kind: "promo",
+      p_metadata: { reason: "trial_bonus", stripe_subscription_id: sub.id },
+    });
+    if (creditError) {
+      throw new HttpError(500, "failed_to_grant_trial_credit", creditError);
+    }
+  }
+}
+
+async function handleTrialWillEnd(sub: Stripe.Subscription) {
+  const admin = createServiceClient();
+  const customerId = customerIdOf(sub.customer);
+  const { userId, email } = await resolveProfile(admin, customerId);
+  if (email) {
+    await sendLoopsEvent({
+      email,
+      userId: sub.metadata?.user_id ?? userId,
+      eventName: "trial_ending",
+    });
+  }
+}
+
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  // Only real charges (trial conversion + annual renewals); skip $0 trial-start invoices.
+  if ((invoice.amount_paid ?? 0) <= 0) {
+    return;
+  }
+  const admin = createServiceClient();
+  const customerId = customerIdOf(invoice.customer);
+  const { userId, email } = await resolveProfile(admin, customerId);
+  const to = invoice.customer_email ?? email;
+  if (to) {
+    await sendLoopsEvent({ email: to, userId, eventName: "subscription_paid" });
+  }
+}
+
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const admin = createServiceClient();
+  const customerId = customerIdOf(invoice.customer);
+  const { userId, email } = await resolveProfile(admin, customerId);
+  const to = invoice.customer_email ?? email;
+  if (to) {
+    await sendLoopsEvent({ email: to, userId, eventName: "payment_failed" });
   }
 }
