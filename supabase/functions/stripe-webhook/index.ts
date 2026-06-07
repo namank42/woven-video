@@ -269,6 +269,9 @@ async function handleSubscriptionEvent(sub: Stripe.Subscription, eventCreated: n
       ? new Date(periodEndUnix * 1000).toISOString()
       : null,
     p_cancel_at_period_end: sub.cancel_at_period_end ?? false,
+    p_cancel_at: sub.cancel_at
+      ? new Date(sub.cancel_at * 1000).toISOString()
+      : null,
     p_last_event_at: new Date(eventCreated * 1000).toISOString(),
     p_metadata: { latest_event_status: sub.status },
   });

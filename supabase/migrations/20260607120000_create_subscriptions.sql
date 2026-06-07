@@ -13,6 +13,7 @@ create table public.subscriptions (
   trial_end timestamptz,
   current_period_end timestamptz,
   cancel_at_period_end boolean not null default false,
+  cancel_at timestamptz,                      -- Stripe-scheduled cancel time; trial cancels set THIS, not cancel_at_period_end
   last_event_at timestamptz,                  -- Stripe event.created of the last applied event (ordering guard)
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
@@ -39,6 +40,7 @@ create or replace function public.record_subscription(
   p_current_period_end timestamptz,
   p_cancel_at_period_end boolean,
   p_last_event_at timestamptz,
+  p_cancel_at timestamptz default null,       -- defaulted so an older webhook build can't error on it
   p_metadata jsonb default '{}'::jsonb
 )
 returns public.subscriptions
@@ -51,11 +53,11 @@ declare
 begin
   insert into public.subscriptions (
     user_id, stripe_subscription_id, stripe_customer_id, status, price_id,
-    trial_end, current_period_end, cancel_at_period_end, last_event_at, metadata
+    trial_end, current_period_end, cancel_at_period_end, cancel_at, last_event_at, metadata
   )
   values (
     p_user_id, p_stripe_subscription_id, p_stripe_customer_id, p_status, p_price_id,
-    p_trial_end, p_current_period_end, p_cancel_at_period_end, p_last_event_at,
+    p_trial_end, p_current_period_end, p_cancel_at_period_end, p_cancel_at, p_last_event_at,
     coalesce(p_metadata, '{}'::jsonb)
   )
   on conflict (stripe_subscription_id) do update
@@ -66,6 +68,7 @@ begin
         trial_end = excluded.trial_end,
         current_period_end = excluded.current_period_end,
         cancel_at_period_end = excluded.cancel_at_period_end,
+        cancel_at = excluded.cancel_at,
         last_event_at = excluded.last_event_at,
         metadata = excluded.metadata
     where public.subscriptions.last_event_at is null
@@ -128,5 +131,5 @@ revoke all on function public.has_access() from public, anon;
 grant execute on function public.user_has_access(uuid) to authenticated, service_role;
 grant execute on function public.has_access() to authenticated, service_role;
 
-revoke all on function public.record_subscription(uuid, text, text, text, text, timestamptz, timestamptz, boolean, timestamptz, jsonb) from public, anon, authenticated;
-grant execute on function public.record_subscription(uuid, text, text, text, text, timestamptz, timestamptz, boolean, timestamptz, jsonb) to service_role;
+revoke all on function public.record_subscription(uuid, text, text, text, text, timestamptz, timestamptz, boolean, timestamptz, timestamptz, jsonb) from public, anon, authenticated;
+grant execute on function public.record_subscription(uuid, text, text, text, text, timestamptz, timestamptz, boolean, timestamptz, timestamptz, jsonb) to service_role;

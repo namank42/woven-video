@@ -284,7 +284,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       .eq("source", "stripe"),
     supabase
       .from("subscriptions")
-      .select("status, trial_end, current_period_end, cancel_at_period_end")
+      .select("status, trial_end, current_period_end, cancel_at_period_end, cancel_at")
       .in("status", ["trialing", "active", "past_due"])
       .order("created_at", { ascending: false })
       .limit(1),

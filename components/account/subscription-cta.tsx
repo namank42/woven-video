@@ -19,6 +19,7 @@ export type SubscriptionSummary = {
   trial_end: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
+  cancel_at: string | null;
 } | null;
 
 const trialBullets = [
@@ -45,8 +46,11 @@ export function SubscriptionCta({
 }) {
   // Active subscriber / trialing / past_due — show status + manage billing.
   if (hasAccess && subscription) {
-    const { status, trial_end, current_period_end, cancel_at_period_end } =
+    const { status, trial_end, current_period_end, cancel_at_period_end, cancel_at } =
       subscription;
+    // Stripe schedules trial cancellations via cancel_at (a timestamp), NOT
+    // cancel_at_period_end — so treat either signal as "won't renew".
+    const willCancel = cancel_at_period_end || cancel_at != null;
 
     const title =
       status === "trialing"
@@ -59,12 +63,12 @@ export function SubscriptionCta({
     const renewDay = formatDay(current_period_end);
     const description =
       status === "trialing"
-        ? cancel_at_period_end
+        ? willCancel
           ? `Your trial ends ${trialDay ?? "soon"} and won't renew.`
           : `Free until ${trialDay ?? "soon"}, then $99/year. Cancel anytime before then.`
         : status === "past_due"
           ? "We couldn't charge your card. Update your payment method to keep access."
-          : cancel_at_period_end
+          : willCancel
             ? `Active until ${renewDay ?? "the period end"} — set to cancel.`
             : `$99/year · renews ${renewDay ?? "annually"}.`;
 
