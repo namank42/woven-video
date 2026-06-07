@@ -522,7 +522,7 @@ function Pricing() {
                 "relative mt-auto h-11 w-full rounded-full text-sm font-medium",
               )}
             >
-              Start your free trial
+              Start your 7-day free trial
               <ArrowRightIcon className="size-4" />
             </Link>
             <div className="relative flex items-start justify-center gap-1.5">

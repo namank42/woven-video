@@ -238,7 +238,7 @@ function Plans() {
               "mt-auto h-11 w-full rounded-full text-sm font-medium",
             )}
           >
-            Start your free trial
+            Start your 7-day free trial
             <ArrowRightIcon className="size-4" />
           </Link>
           <div className="flex items-start justify-center gap-1.5">
