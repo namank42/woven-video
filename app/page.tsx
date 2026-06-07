@@ -85,7 +85,7 @@ const featureCards: FeatureCard[] = [
     icon: KeyIcon,
     eyebrow: "Your keys, or ours",
     title: "Your keys, ChatGPT, or Woven-hosted.",
-    body: "A $99 lifetime license unlocks the full app. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance — same lineup, no key juggling.",
+    body: "Try Woven free for 7 days, then $99/year — cancel anytime. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance — same lineup, no key juggling.",
   },
   {
     icon: LayersIcon,
@@ -110,7 +110,7 @@ const featureCards: FeatureCard[] = [
 const faqs = [
   {
     q: "How much does Woven cost?",
-    a: "Woven is a $99 one-time lifetime license — yours forever, no subscription. It includes $5 in hosted credits and a 7-day money-back guarantee. After that, bring your own provider keys, sign in with ChatGPT (GPT-5+ on your existing plan), or top up a prepaid balance for Woven-hosted models.",
+    a: "Woven is a 7-day free trial, then $99/year — cancel anytime, card required. It includes $5 in hosted credits. Bring your own provider keys, sign in with ChatGPT (GPT-5+ on your existing plan), or top up a prepaid balance for Woven-hosted models.",
   },
   {
     q: "Is Woven a desktop app or a web app?",
@@ -122,7 +122,7 @@ const faqs = [
   },
   {
     q: "Do I need a Woven account to use the app?",
-    a: "Yes. Sign in once with Google and get a $99 lifetime license. After that, run with your own Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
+    a: "Yes. Sign in once with Google and start a 7-day free trial ($99/year after). Then run with your own Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
   },
   {
     q: "Which models can I use?",
@@ -134,7 +134,7 @@ const faqs = [
   },
   {
     q: "Can I bring my own provider keys?",
-    a: "Yes. With your lifetime license, run Woven with the keys you provide — you pay providers directly at their rates and Woven takes nothing extra for inference.",
+    a: "Yes. On any active plan, run Woven with the keys you provide — you pay providers directly at their rates and Woven takes nothing extra for inference.",
   },
 ];
 
@@ -174,7 +174,7 @@ function StructuredData() {
     operatingSystem: "macOS",
     applicationCategory: "MultimediaApplication",
     description:
-      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. A $99 one-time lifetime license; bring your own provider keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
+      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. Try free for 7 days, then $99/year; bring your own provider keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
     url: SITE_URL,
     downloadUrl: DOWNLOAD_URL,
     offers: {
@@ -467,11 +467,11 @@ function Pricing() {
         <div className="flex flex-col items-center gap-4 text-center">
           <SectionLabel>Pricing</SectionLabel>
           <h2 className="max-w-3xl text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-            One price. Yours forever.
+            Try it free for 7 days.
           </h2>
         </div>
         <div className="mx-auto mt-14 w-full max-w-xl text-left">
-          {/* Required base: the lifetime license */}
+          {/* Required base: the Woven subscription */}
           <div className="group relative flex flex-col gap-6 overflow-hidden rounded-3xl bg-foreground p-8 text-background ring-1 ring-foreground transition-shadow hover:shadow-2xl md:p-10">
             <div
               aria-hidden="true"
@@ -480,36 +480,39 @@ function Pricing() {
             <div className="relative flex items-center justify-between gap-3">
               <div className="flex flex-col gap-1">
                 <h3 className="text-base font-semibold tracking-tight">
-                  Lifetime license
+                  Woven
                 </h3>
                 <p className="text-xs text-background/70">
-                  One-time — yours forever
+                  7-day free trial
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full bg-background px-3 py-1 text-xs font-medium text-foreground">
                 Required
               </span>
             </div>
-            <div className="relative flex items-baseline gap-2">
-              <span className="text-6xl font-semibold tracking-[-0.04em] md:text-7xl">
-                $99
-              </span>
-              <span className="text-sm text-background/70">once</span>
+            <div className="relative flex flex-col gap-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-6xl font-semibold tracking-[-0.04em] md:text-7xl">
+                  $99
+                </span>
+                <span className="text-sm text-background/70">/year</span>
+              </div>
+              <p className="text-sm text-background/70">
+                $8.25/mo, billed annually
+              </p>
             </div>
             <p className="relative text-sm text-background/80">
-              The full Woven app on your Mac, forever. Includes $5 in hosted
-              credits to start. 7-day money-back guarantee.
+              The full Woven app on your Mac, free for 7 days. Includes $5 in
+              hosted credits to start.
             </p>
             <ul className="relative flex flex-col gap-3 border-t border-background/15 pt-6 text-sm text-background/90">
-              <BulletItem inverse>Lifetime access — no subscription</BulletItem>
               <BulletItem inverse>
                 Bring your own Anthropic and OpenAI keys
               </BulletItem>
               <BulletItem inverse>
                 Or sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan
               </BulletItem>
-              <BulletItem inverse>$5 in Woven-hosted credits included</BulletItem>
-              <BulletItem inverse>7-day money-back guarantee</BulletItem>
+              <BulletItem inverse>$5 in Woven-hosted credits to start</BulletItem>
             </ul>
             <Link
               href="/login?next=/account"
@@ -518,9 +521,14 @@ function Pricing() {
                 "relative mt-auto h-11 w-full rounded-full text-sm font-medium",
               )}
             >
-              Get your license — $99
+              Start your free trial
               <ArrowRightIcon className="size-4" />
             </Link>
+            <p className="relative text-center text-xs text-background/70">
+              <span className="font-medium text-background">$0 due today</span> ·
+              cancel anytime before day 7 · card required. We email you 3 days
+              before your trial ends.
+            </p>
           </div>
 
           {/* Optional add-on: hosted credits, layered on top */}

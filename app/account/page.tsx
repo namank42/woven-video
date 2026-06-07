@@ -9,7 +9,10 @@ import {
 } from "lucide-react";
 
 import { BalanceTopUpForm } from "@/components/account/balance-top-up-form";
-import { LicenseCta } from "@/components/account/license-cta";
+import {
+  SubscriptionCta,
+  type SubscriptionSummary,
+} from "@/components/account/subscription-cta";
 import { Badge } from "@/components/ui/badge";
 import { formatUsdFromMicros } from "@/lib/billing/money";
 import { firstSearchParam } from "@/lib/navigation";
@@ -63,7 +66,7 @@ type AccountPageProps = {
   searchParams: Promise<{
     checkout?: string | string[];
     error?: string | string[];
-    license?: string | string[];
+    subscription?: string | string[];
   }>;
 };
 
@@ -253,7 +256,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   const params = await searchParams;
   const checkout = firstSearchParam(params.checkout);
   const error = firstSearchParam(params.error);
-  const license = firstSearchParam(params.license);
+  const subscriptionParam = firstSearchParam(params.subscription);
   const supabase = await createSupabaseServerClient();
 
   const [
@@ -261,6 +264,8 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     { data: transactions },
     { data: usageEvents },
     { data: licenseRowsForActivity },
+    { data: subscriptionRows },
+    { data: hasAccessData },
   ] = await Promise.all([
     supabase.rpc("get_billing_balance"),
     supabase
@@ -277,6 +282,13 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       .from("licenses")
       .select("id, status, source, source_id, granted_at, revoked_at, metadata")
       .eq("source", "stripe"),
+    supabase
+      .from("subscriptions")
+      .select("status, trial_end, current_period_end, cancel_at_period_end, cancel_at")
+      .in("status", ["trialing", "active", "past_due"])
+      .order("created_at", { ascending: false })
+      .limit(1),
+    supabase.rpc("has_access"),
   ]);
   const balanceUsdMicros = Array.isArray(balanceRows)
     ? Number(balanceRows[0]?.balance_usd_micros ?? 0)
@@ -287,11 +299,13 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     licenseRows: (licenseRowsForActivity ?? []) as LicenseRow[],
   }).slice(0, 10);
 
-  const { data: hasLicense } = await supabase.rpc("has_active_license");
-  const licensed = hasLicense === true;
-  // No top-up without a license once enforcement is on (same flag as the API gate).
+  const hasAccess = hasAccessData === true;
+  const subscription = (Array.isArray(subscriptionRows)
+    ? subscriptionRows[0] ?? null
+    : null) as SubscriptionSummary;
+  // No top-up without access once enforcement is on (same flag as the API gate).
   const enforceLicense = process.env.WOVEN_ENFORCE_LICENSE === "true";
-  const canTopUp = !enforceLicense || licensed;
+  const canTopUp = !enforceLicense || hasAccess;
 
   return (
     <div className="flex flex-col gap-10">
@@ -316,17 +330,23 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
 
       {error ? <Alert tone="error">{error}</Alert> : null}
 
-      {license === "success" ? (
+      {subscriptionParam === "trialing" ? (
         <Alert tone="success">
-          License purchase complete. Welcome to Woven — your $5 in starter credits
-          is on its way.
+          Your free trial is starting. Welcome to Woven — your $5 in hosted
+          credits is on its way. You won&apos;t be charged until day 7.
         </Alert>
       ) : null}
-      {license === "already" ? (
-        <Alert tone="info">You already have a lifetime license.</Alert>
+      {subscriptionParam === "already" ? (
+        <Alert tone="info">You already have an active Woven plan.</Alert>
       ) : null}
-      {license === "cancelled" ? (
-        <Alert tone="info">License checkout cancelled.</Alert>
+      {subscriptionParam === "cancelled" ? (
+        <Alert tone="info">Trial checkout cancelled. No card was charged.</Alert>
+      ) : null}
+      {subscriptionParam === "resumed" ? (
+        <Alert tone="success">
+          Your subscription is back on — it will renew as normal. Stripe may take
+          a moment to sync.
+        </Alert>
       ) : null}
 
       {(() => {
@@ -355,11 +375,11 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           </section>
         );
 
-        return licensed ? (
+        return hasAccess ? (
           <>
             {statsSection(false)}
             <section>
-              <LicenseCta licensed={licensed} />
+              <SubscriptionCta hasAccess={hasAccess} subscription={subscription} />
             </section>
             <section>
               <BalanceTopUpForm disabled={!canTopUp} />
@@ -368,7 +388,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         ) : (
           <>
             <section>
-              <LicenseCta licensed={licensed} />
+              <SubscriptionCta hasAccess={hasAccess} subscription={subscription} />
             </section>
             {statsSection(true)}
             <section>
@@ -445,8 +465,8 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       <section className="flex flex-col gap-2 rounded-xl bg-card p-5 ring-1 ring-foreground/10">
         <h2 className="font-heading text-lg font-medium">Need help?</h2>
         <p className="text-sm text-muted-foreground">
-          Questions about your account, or want a refund within your 7-day
-          money-back window?{" "}
+          Questions about your account or billing? You can cancel anytime from
+          Manage billing.{" "}
           <Link
             href="/contact"
             className="text-foreground underline underline-offset-4 hover:no-underline"

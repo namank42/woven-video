@@ -129,7 +129,7 @@ export async function createCheckoutSession(formData: FormData) {
   redirect(checkoutUrl);
 }
 
-export async function createLicenseCheckoutSession() {
+export async function createTrialCheckoutSession() {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -150,7 +150,7 @@ export async function createLicenseCheckoutSession() {
   const { url, anonKey } = getSupabaseEnv();
   let checkoutUrl: string | undefined;
   let errorMessage: string | undefined;
-  let alreadyLicensed = false;
+  let alreadySubscribed = false;
 
   try {
     const response = await fetch(`${url}/functions/v1/create-checkout-session`, {
@@ -160,26 +160,26 @@ export async function createLicenseCheckoutSession() {
         Authorization: `Bearer ${session.access_token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ purpose: "license" }),
+      body: JSON.stringify({ purpose: "subscription" }),
       cache: "no-store",
     });
 
     const payload = (await response.json().catch(() => ({}))) as {
       url?: string;
-      alreadyLicensed?: boolean;
+      alreadySubscribed?: boolean;
       error?: string;
       msg?: string;
       message?: string;
     };
 
-    if (payload.alreadyLicensed) {
-      alreadyLicensed = true;
+    if (payload.alreadySubscribed) {
+      alreadySubscribed = true;
     } else if (!response.ok) {
       errorMessage =
         payload.error ??
         payload.msg ??
         payload.message ??
-        `Unable to start license checkout. (${response.status})`;
+        `Unable to start your free trial. (${response.status})`;
     } else {
       checkoutUrl = payload.url;
     }
@@ -187,8 +187,8 @@ export async function createLicenseCheckoutSession() {
     errorMessage = "Checkout function is not reachable.";
   }
 
-  if (alreadyLicensed) {
-    redirect(searchParamUrl("/account", { license: "already" }));
+  if (alreadySubscribed) {
+    redirect(searchParamUrl("/account", { subscription: "already" }));
   }
 
   if (!checkoutUrl) {
@@ -196,4 +196,125 @@ export async function createLicenseCheckoutSession() {
   }
 
   redirect(checkoutUrl);
+}
+
+export async function createPortalSession() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?next=/account");
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    redirect("/login?next=/account");
+  }
+
+  const { url, anonKey } = getSupabaseEnv();
+  let portalUrl: string | undefined;
+  let errorMessage: string | undefined;
+
+  try {
+    const response = await fetch(`${url}/functions/v1/create-portal-session`, {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      url?: string;
+      error?: string;
+      msg?: string;
+      message?: string;
+    };
+
+    if (!response.ok) {
+      errorMessage =
+        payload.error ??
+        payload.msg ??
+        payload.message ??
+        `Unable to open the billing portal. (${response.status})`;
+    } else {
+      portalUrl = payload.url;
+    }
+  } catch {
+    errorMessage = "Billing portal is not reachable.";
+  }
+
+  if (!portalUrl) {
+    redirect(searchParamUrl("/account", { error: errorMessage }));
+  }
+
+  redirect(portalUrl);
+}
+
+export async function resumeSubscription() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?next=/account");
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    redirect("/login?next=/account");
+  }
+
+  const { url, anonKey } = getSupabaseEnv();
+  let ok = false;
+  let errorMessage: string | undefined;
+
+  try {
+    const response = await fetch(`${url}/functions/v1/reactivate-subscription`, {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+      msg?: string;
+      message?: string;
+    };
+
+    if (!response.ok || !payload.ok) {
+      errorMessage =
+        payload.error ??
+        payload.msg ??
+        payload.message ??
+        `Unable to resume your subscription. (${response.status})`;
+    } else {
+      ok = true;
+    }
+  } catch {
+    errorMessage = "Reactivation service is not reachable.";
+  }
+
+  if (!ok) {
+    redirect(searchParamUrl("/account", { error: errorMessage }));
+  }
+
+  revalidatePath("/account");
+  redirect(searchParamUrl("/account", { subscription: "resumed" }));
 }

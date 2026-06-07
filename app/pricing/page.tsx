@@ -18,7 +18,7 @@ const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Woven is a $99 one-time lifetime license — yours forever, includes $5 in hosted credits, with a 7-day money-back guarantee. Run any model your way: bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
+    "Woven is a native macOS AI video editor. Try free for 7 days, then $99/year — cancel anytime. Includes $5 in hosted credits. Run any model your way: bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -175,12 +175,11 @@ function PricingHero() {
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-6 pt-16 pb-10 text-center md:pt-20">
         <SectionLabel>Pricing</SectionLabel>
         <h1 className="mt-6 max-w-2xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-6xl">
-          One price. Yours forever.
+          Try Woven free for 7 days.
         </h1>
         <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-          $99 one-time for a lifetime license — includes $5 in hosted credits and a
-          7-day money-back guarantee. Run models your way: bring your own keys, sign
-          in with ChatGPT, or top up for Woven-hosted models.
+          Script. Shot list. Generate. Animate. Edit. Assemble.{" "}
+          <span className="font-medium text-foreground">All in one place.</span>
         </p>
       </div>
     </section>
@@ -189,34 +188,37 @@ function PricingHero() {
 
 function Plans() {
   const licenseBullets = [
-    "Lifetime access — no subscription",
     "Bring your own Anthropic and OpenAI keys",
     "Or sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan",
-    "$5 in Woven-hosted credits included",
-    "7-day money-back guarantee",
+    "$5 in Woven-hosted credits to start",
   ];
 
   return (
     <section className="pb-12">
       <div className="mx-auto w-full max-w-xl px-6">
-        {/* Required base: the lifetime license */}
+        {/* Required base: the Woven subscription */}
         <div className="flex flex-col gap-5 rounded-3xl bg-card p-8 ring-2 ring-foreground">
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
-              <h2 className="text-lg font-semibold tracking-tight">Lifetime license</h2>
-              <p className="text-xs text-muted-foreground">One-time — yours forever</p>
+              <h2 className="text-lg font-semibold tracking-tight">Woven</h2>
+              <p className="text-xs text-muted-foreground">7-day free trial</p>
             </div>
             <span className="inline-flex items-center rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background">
               Required
             </span>
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-5xl font-semibold tracking-tight">$99</span>
-            <span className="text-sm text-muted-foreground">once</span>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-baseline gap-2">
+              <span className="text-5xl font-semibold tracking-tight">$99</span>
+              <span className="text-sm text-muted-foreground">/year</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              $8.25/mo, billed annually
+            </p>
           </div>
           <p className="text-sm text-muted-foreground">
-            The full Woven app on your Mac, forever. Includes $5 in hosted credits
-            to start. 7-day money-back guarantee.
+            The full Woven app, free for 7 days. Includes $5 in hosted credits to
+            start.
           </p>
           <ul className="mt-2 flex flex-col gap-3 border-t border-border pt-6 text-sm">
             {licenseBullets.map((b) => (
@@ -235,9 +237,14 @@ function Plans() {
               "mt-auto h-11 w-full rounded-full text-sm font-medium",
             )}
           >
-            Get your license — $99
+            Start your free trial
             <ArrowRightIcon className="size-4" />
           </Link>
+          <p className="text-center text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">$0 due today</span> ·
+            cancel anytime before day 7 · card required. We email you 3 days
+            before your trial ends.
+          </p>
         </div>
 
         {/* Optional add-on: hosted credits, layered on top */}
@@ -474,10 +481,10 @@ function CtaBand() {
     <section className="border-t border-border/60">
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-6 px-6 py-20 text-center">
         <h2 className="max-w-2xl text-3xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-          Buy once. Use forever.
+          Try it free for 7 days.
         </h2>
         <p className="max-w-xl text-base text-muted-foreground md:text-lg">
-          $99 one-time, includes $5 in hosted credits, 7-day money-back guarantee.
+          Then $99/year, cancel anytime. $5 in hosted credits to start.
         </p>
         <Button
           nativeButton={false}

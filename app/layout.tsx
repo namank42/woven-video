@@ -18,7 +18,7 @@ const siteUrl = "https://www.woven.video";
 const siteName = "Woven";
 const siteTitle = "Woven — The AI Video Editor";
 const siteDescription =
-  "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. A $99 one-time lifetime license; bring your own provider keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.";
+  "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. Try free for 7 days, then $99/year; bring your own provider keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -96,8 +96,12 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
-        <Analytics />
-        <SpeedInsights />
+        {process.env.NODE_ENV === "production" && (
+          <>
+            <Analytics />
+            <SpeedInsights />
+          </>
+        )}
       </body>
     </html>
   );

@@ -191,7 +191,7 @@ export function BalanceTopUpForm({ disabled = false }: { disabled?: boolean }) {
           <div className="flex flex-col gap-3 border-t bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               {disabled
-                ? "A lifetime license is required to add credits."
+                ? "Start your free trial to add credits."
                 : "Secure checkout by Stripe."}
             </p>
             <BuyButton disabled={disabled || !canSubmit} locked={disabled} />

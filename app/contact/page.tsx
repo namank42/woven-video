@@ -10,7 +10,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Get in touch with the Woven team — questions, feedback, or a refund within your 7-day money-back window.",
+    "Get in touch with the Woven team — questions, feedback, or help with your trial or billing.",
   alternates: { canonical: "/contact" },
 };
 
@@ -66,9 +66,8 @@ export default async function ContactPage() {
                 Get in touch.
               </h1>
               <p className="text-base text-muted-foreground">
-                Questions, feedback, or a refund within your 7-day money-back
-                window — send a note and we&apos;ll get back to you. You can also
-                email{" "}
+                Questions, feedback, or help with your trial or billing — send a
+                note and we&apos;ll get back to you. You can also email{" "}
                 <a
                   href="mailto:hello@woven.video"
                   className="text-foreground underline-offset-4 hover:underline"

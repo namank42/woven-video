@@ -13,10 +13,10 @@ export async function licenseGateResponse(auth: ApiAuth): Promise<Response | nul
     return null;
   }
 
-  const { data, error } = await auth.supabase.rpc("has_active_license");
+  const { data, error } = await auth.supabase.rpc("has_access");
 
   if (error) {
-    console.error("has_active_license check failed (failing open):", error.message);
+    console.error("has_access check failed (failing open):", error.message);
     return null;
   }
 
