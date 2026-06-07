@@ -526,8 +526,8 @@ function Pricing() {
             </Link>
             <p className="relative text-center text-xs text-background/70">
               <span className="font-medium text-background">$0 due today</span> ·
-              cancel anytime before day 7 · card required. We email you 3 days
-              before your trial ends.
+              cancel anytime before day 7 · card required. We email you before
+              your trial ends.
             </p>
           </div>
 
