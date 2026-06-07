@@ -257,3 +257,64 @@ export async function createPortalSession() {
 
   redirect(portalUrl);
 }
+
+export async function resumeSubscription() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?next=/account");
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    redirect("/login?next=/account");
+  }
+
+  const { url, anonKey } = getSupabaseEnv();
+  let ok = false;
+  let errorMessage: string | undefined;
+
+  try {
+    const response = await fetch(`${url}/functions/v1/reactivate-subscription`, {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      error?: string;
+      msg?: string;
+      message?: string;
+    };
+
+    if (!response.ok || !payload.ok) {
+      errorMessage =
+        payload.error ??
+        payload.msg ??
+        payload.message ??
+        `Unable to resume your subscription. (${response.status})`;
+    } else {
+      ok = true;
+    }
+  } catch {
+    errorMessage = "Reactivation service is not reachable.";
+  }
+
+  if (!ok) {
+    redirect(searchParamUrl("/account", { error: errorMessage }));
+  }
+
+  revalidatePath("/account");
+  redirect(searchParamUrl("/account", { subscription: "resumed" }));
+}

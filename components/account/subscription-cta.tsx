@@ -3,8 +3,10 @@ import { CheckCircle2Icon, CheckIcon } from "lucide-react";
 import {
   createPortalSession,
   createTrialCheckoutSession,
+  resumeSubscription,
 } from "@/app/account/actions";
 import { ManageBillingButton } from "@/components/account/manage-billing-button";
+import { ResumeSubscriptionButton } from "@/components/account/resume-subscription-button";
 import { StartTrialButton } from "@/components/account/start-trial-button";
 import {
   Card,
@@ -23,7 +25,6 @@ export type SubscriptionSummary = {
 } | null;
 
 const trialBullets = [
-  "Full Woven app, free for 7 days",
   "$5 in Woven-hosted credits to try hosted models",
   "Bring your own Anthropic and OpenAI keys, or sign in with ChatGPT",
   "Cancel anytime before day 7 — no charge",
@@ -82,9 +83,20 @@ export function SubscriptionCta({
           <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={createPortalSession}>
-            <ManageBillingButton />
-          </form>
+          {willCancel ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <form action={resumeSubscription}>
+                <ResumeSubscriptionButton />
+              </form>
+              <form action={createPortalSession}>
+                <ManageBillingButton />
+              </form>
+            </div>
+          ) : (
+            <form action={createPortalSession}>
+              <ManageBillingButton />
+            </form>
+          )}
         </CardContent>
       </Card>
     );
@@ -113,19 +125,31 @@ export function SubscriptionCta({
     <Card className="ring-2 ring-foreground">
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <CardTitle>Start your free trial</CardTitle>
-            <CardDescription>7 days free, then $99/year</CardDescription>
-          </div>
+          <CardTitle>Start your free trial</CardTitle>
           <span className="inline-flex shrink-0 items-center rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background">
             Required
           </span>
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-0.5 rounded-xl p-4 ring-1 ring-foreground/15">
+            <span className="font-heading text-3xl font-medium tracking-tight tabular-nums">
+              7 days
+            </span>
+            <span className="text-sm text-muted-foreground">free</span>
+          </div>
+          <div className="flex flex-col gap-0.5 rounded-xl bg-foreground p-4 text-background">
+            <span className="font-heading text-3xl font-medium tracking-tight tabular-nums">
+              $0
+            </span>
+            <span className="text-sm text-background/70">due today</span>
+          </div>
+        </div>
         <p className="text-sm text-muted-foreground">
-          Card required, $0 today. We email you 3 days before your trial ends.
-          Cancel anytime before then and you won&apos;t be charged.
+          Then{" "}
+          <span className="font-medium text-foreground">$99/year</span> · cancel
+          anytime before day 7.
         </p>
         <ul className="flex flex-col gap-3 border-t pt-5 text-sm">
           {trialBullets.map((b) => (
@@ -137,9 +161,14 @@ export function SubscriptionCta({
             </li>
           ))}
         </ul>
-        <form action={createTrialCheckoutSession}>
-          <StartTrialButton />
-        </form>
+        <div className="flex flex-col gap-2">
+          <form action={createTrialCheckoutSession}>
+            <StartTrialButton />
+          </form>
+          <p className="text-xs text-muted-foreground">
+            Card required · we email you 3 days before your trial ends.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

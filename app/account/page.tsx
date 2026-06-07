@@ -342,6 +342,12 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       {subscriptionParam === "cancelled" ? (
         <Alert tone="info">Trial checkout cancelled. No card was charged.</Alert>
       ) : null}
+      {subscriptionParam === "resumed" ? (
+        <Alert tone="success">
+          Your subscription is back on — it will renew as normal. Stripe may take
+          a moment to sync.
+        </Alert>
+      ) : null}
 
       {(() => {
         const statsSection = (muted: boolean) => (
