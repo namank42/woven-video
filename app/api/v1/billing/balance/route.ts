@@ -43,20 +43,10 @@ export async function GET(request: Request) {
     license = { active: active === true, granted_at: grantedAt };
   }
 
-  // Whether there's billing to manage (a Stripe customer exists). Drives the
-  // app's "Manage billing" affordance — hidden for grandfathered users who
-  // never created a Stripe customer.
-  const { data: profileRow } = await supabase
-    .from("profiles")
-    .select("stripe_customer_id")
-    .maybeSingle();
-  const manageable = Boolean(profileRow?.stripe_customer_id);
-
   return Response.json({
     currency: row?.currency ?? "usd",
     balance_usd_micros: balanceUsdMicros,
     balance_usd: balanceUsdMicros / 1_000_000,
     ...(license ? { license } : {}),
-    manageable,
   });
 }
