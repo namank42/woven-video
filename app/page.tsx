@@ -525,17 +525,14 @@ function Pricing() {
               Start your free trial
               <ArrowRightIcon className="size-4" />
             </Link>
-            <div className="relative flex items-center justify-center gap-1.5">
-              <BadgeCheckIcon className="size-4 text-green-400" />
-              <span className="text-sm font-medium text-background">
-                7-day free trial
-              </span>
+            <div className="relative flex items-start justify-center gap-1.5">
+              <BadgeCheckIcon className="mt-0.5 size-4 shrink-0 text-green-400" />
+              <p className="max-w-xs text-xs text-background/70">
+                <span className="font-medium text-background">$0 due today</span>{" "}
+                · cancel anytime before day 7 · card required. We email you
+                before your trial ends.
+              </p>
             </div>
-            <p className="relative text-center text-xs text-background/70">
-              <span className="font-medium text-background">$0 due today</span> ·
-              cancel anytime before day 7 · card required. We email you before
-              your trial ends.
-            </p>
           </div>
 
           {/* Optional add-on: hosted credits, layered on top */}
