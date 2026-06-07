@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
 
     const { data: sub, error } = await admin
       .from("subscriptions")
-      .select("stripe_subscription_id")
+      .select("stripe_subscription_id, cancel_at, cancel_at_period_end")
       .eq("user_id", user.id)
       .in("status", ["trialing", "active", "past_due"])
       .order("created_at", { ascending: false })
@@ -48,10 +48,13 @@ Deno.serve(async (req) => {
       throw new HttpError(400, "no_active_subscription");
     }
 
-    await stripe.subscriptions.update(sub.stripe_subscription_id, {
-      cancel_at_period_end: false,
-      cancel_at: "",
-    });
+    // Stripe rejects cancel_at and cancel_at_period_end together, so clear whichever
+    // scheduled the cancellation: trials cancel via cancel_at (unset with ""), active
+    // subs via cancel_at_period_end (unset with false).
+    await stripe.subscriptions.update(
+      sub.stripe_subscription_id,
+      sub.cancel_at ? { cancel_at: "" } : { cancel_at_period_end: false },
+    );
 
     return jsonResponse({ ok: true });
   } catch (error) {
