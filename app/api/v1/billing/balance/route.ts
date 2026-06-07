@@ -21,12 +21,13 @@ export async function GET(request: Request) {
   const row = Array.isArray(data) ? data[0] : null;
   const balanceUsdMicros = Number(row?.balance_usd_micros ?? 0);
 
-  // Additive license object. RLS-scoped read of the user's own license.
-  // Omit the field on a read error so the client falls back to its own cache
-  // (fail-open within its grace window) rather than us asserting a state.
+  // Additive license object. `active` now reflects has_access (grandfathered OR
+  // legacy license OR a live subscription: trialing/active/past_due) so trialing
+  // users aren't walled. Omit the field on a read error so the client falls back
+  // to its own cache (fail-open within its grace window).
   let license: { active: boolean; granted_at: string | null } | undefined;
   const { data: active, error: licenseError } = await supabase.rpc(
-    "has_active_license",
+    "has_access",
   );
 
   if (!licenseError) {
@@ -42,10 +43,20 @@ export async function GET(request: Request) {
     license = { active: active === true, granted_at: grantedAt };
   }
 
+  // Whether there's billing to manage (a Stripe customer exists). Drives the
+  // app's "Manage billing" affordance — hidden for grandfathered users who
+  // never created a Stripe customer.
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id")
+    .maybeSingle();
+  const manageable = Boolean(profileRow?.stripe_customer_id);
+
   return Response.json({
     currency: row?.currency ?? "usd",
     balance_usd_micros: balanceUsdMicros,
     balance_usd: balanceUsdMicros / 1_000_000,
     ...(license ? { license } : {}),
+    manageable,
   });
 }
