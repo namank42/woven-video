@@ -66,7 +66,6 @@ type AccountPageProps = {
   searchParams: Promise<{
     checkout?: string | string[];
     error?: string | string[];
-    license?: string | string[];
     subscription?: string | string[];
   }>;
 };
@@ -266,6 +265,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     { data: usageEvents },
     { data: licenseRowsForActivity },
     { data: subscriptionRows },
+    { data: hasAccessData },
   ] = await Promise.all([
     supabase.rpc("get_billing_balance"),
     supabase
@@ -285,8 +285,10 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     supabase
       .from("subscriptions")
       .select("status, trial_end, current_period_end, cancel_at_period_end")
+      .in("status", ["trialing", "active", "past_due"])
       .order("created_at", { ascending: false })
       .limit(1),
+    supabase.rpc("has_access"),
   ]);
   const balanceUsdMicros = Array.isArray(balanceRows)
     ? Number(balanceRows[0]?.balance_usd_micros ?? 0)
@@ -297,7 +299,6 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     licenseRows: (licenseRowsForActivity ?? []) as LicenseRow[],
   }).slice(0, 10);
 
-  const { data: hasAccessData } = await supabase.rpc("has_access");
   const hasAccess = hasAccessData === true;
   const subscription = (Array.isArray(subscriptionRows)
     ? subscriptionRows[0] ?? null
