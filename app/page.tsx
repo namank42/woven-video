@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   ArrowRightIcon,
   AppleIcon,
+  BadgeCheckIcon,
   CheckIcon,
   KeyIcon,
   LaptopIcon,
@@ -524,6 +525,12 @@ function Pricing() {
               Start your free trial
               <ArrowRightIcon className="size-4" />
             </Link>
+            <div className="relative flex items-center justify-center gap-1.5">
+              <BadgeCheckIcon className="size-4 text-green-400" />
+              <span className="text-sm font-medium text-background">
+                7-day free trial
+              </span>
+            </div>
             <p className="relative text-center text-xs text-background/70">
               <span className="font-medium text-background">$0 due today</span> ·
               cancel anytime before day 7 · card required. We email you before

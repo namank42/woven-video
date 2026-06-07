@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   AppleIcon,
   ArrowRightIcon,
+  BadgeCheckIcon,
   CheckIcon,
   WalletIcon,
 } from "lucide-react";
@@ -240,6 +241,10 @@ function Plans() {
             Start your free trial
             <ArrowRightIcon className="size-4" />
           </Link>
+          <div className="flex items-center justify-center gap-1.5">
+            <BadgeCheckIcon className="size-4 text-green-600" />
+            <span className="text-sm font-medium">7-day free trial</span>
+          </div>
           <p className="text-center text-xs text-muted-foreground">
             <span className="font-medium text-foreground">$0 due today</span> ·
             cancel anytime before day 7 · card required. We email you before
