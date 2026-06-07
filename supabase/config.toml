@@ -382,6 +382,9 @@ deno_version = 2
 [functions.create-checkout-session]
 verify_jwt = true
 
+[functions.create-portal-session]
+verify_jwt = true
+
 [functions.stripe-webhook]
 verify_jwt = false
 
