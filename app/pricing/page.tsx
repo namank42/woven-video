@@ -241,15 +241,14 @@ function Plans() {
             Start your free trial
             <ArrowRightIcon className="size-4" />
           </Link>
-          <div className="flex items-center justify-center gap-1.5">
-            <BadgeCheckIcon className="size-4 text-green-600" />
-            <span className="text-sm font-medium">7-day free trial</span>
+          <div className="flex items-start justify-center gap-1.5">
+            <BadgeCheckIcon className="mt-0.5 size-4 shrink-0 text-green-600" />
+            <p className="max-w-xs text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">$0 due today</span> ·
+              cancel anytime before day 7 · card required. We email you before
+              your trial ends.
+            </p>
           </div>
-          <p className="text-center text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">$0 due today</span> ·
-            cancel anytime before day 7 · card required. We email you before
-            your trial ends.
-          </p>
         </div>
 
         {/* Optional add-on: hosted credits, layered on top */}
