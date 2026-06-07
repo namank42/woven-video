@@ -27,7 +27,6 @@ export type SubscriptionSummary = {
 const trialBullets = [
   "$5 in Woven-hosted credits to try hosted models",
   "Bring your own Anthropic and OpenAI keys, or sign in with ChatGPT",
-  "Cancel anytime before day 7 — no charge",
 ];
 
 function formatDay(value: string | null) {
@@ -132,25 +131,17 @@ export function SubscriptionCta({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-0.5 rounded-xl p-4 ring-1 ring-foreground/15">
-            <span className="font-heading text-3xl font-medium tracking-tight tabular-nums">
-              7 days
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-heading text-4xl font-medium tracking-tight tabular-nums">
+              $99
             </span>
-            <span className="text-sm text-muted-foreground">free</span>
+            <span className="text-sm text-muted-foreground">/year</span>
           </div>
-          <div className="flex flex-col gap-0.5 rounded-xl bg-foreground p-4 text-background">
-            <span className="font-heading text-3xl font-medium tracking-tight tabular-nums">
-              $0
-            </span>
-            <span className="text-sm text-background/70">due today</span>
-          </div>
+          <span className="text-sm text-muted-foreground">
+            $8.25/mo, billed annually
+          </span>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Then{" "}
-          <span className="font-medium text-foreground">$99/year</span> · cancel
-          anytime before day 7.
-        </p>
         <ul className="flex flex-col gap-3 border-t pt-5 text-sm">
           {trialBullets.map((b) => (
             <li key={b} className="flex items-start gap-2.5">
@@ -166,7 +157,9 @@ export function SubscriptionCta({
             <StartTrialButton />
           </form>
           <p className="text-xs text-muted-foreground">
-            Card required · we email you 3 days before your trial ends.
+            <span className="font-medium text-foreground">$0 due today</span> ·
+            cancel anytime before day 7 · card required. We email you 3 days
+            before your trial ends.
           </p>
         </div>
       </CardContent>

@@ -490,18 +490,22 @@ function Pricing() {
                 Required
               </span>
             </div>
-            <div className="relative flex items-baseline gap-2">
-              <span className="text-6xl font-semibold tracking-[-0.04em] md:text-7xl">
-                $99
-              </span>
-              <span className="text-sm text-background/70">/year</span>
+            <div className="relative flex flex-col gap-1">
+              <div className="flex items-baseline gap-2">
+                <span className="text-6xl font-semibold tracking-[-0.04em] md:text-7xl">
+                  $99
+                </span>
+                <span className="text-sm text-background/70">/year</span>
+              </div>
+              <p className="text-sm text-background/70">
+                $8.25/mo, billed annually
+              </p>
             </div>
             <p className="relative text-sm text-background/80">
-              The full Woven app on your Mac. Free for 7 days, then $99/year.
-              Includes $5 in hosted credits to start.
+              The full Woven app on your Mac, free for 7 days. Includes $5 in
+              hosted credits to start.
             </p>
             <ul className="relative flex flex-col gap-3 border-t border-background/15 pt-6 text-sm text-background/90">
-              <BulletItem inverse>7 days free, then $99/year — cancel anytime</BulletItem>
               <BulletItem inverse>
                 Bring your own Anthropic and OpenAI keys
               </BulletItem>
@@ -509,7 +513,6 @@ function Pricing() {
                 Or sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan
               </BulletItem>
               <BulletItem inverse>$5 in Woven-hosted credits to start</BulletItem>
-              <BulletItem inverse>Card required — we email you 3 days before your trial ends</BulletItem>
             </ul>
             <Link
               href="/login?next=/account"
@@ -521,6 +524,11 @@ function Pricing() {
               Start your free trial
               <ArrowRightIcon className="size-4" />
             </Link>
+            <p className="relative text-center text-xs text-background/70">
+              <span className="font-medium text-background">$0 due today</span> ·
+              cancel anytime before day 7 · card required. We email you 3 days
+              before your trial ends.
+            </p>
           </div>
 
           {/* Optional add-on: hosted credits, layered on top */}
