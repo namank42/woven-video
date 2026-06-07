@@ -56,6 +56,14 @@ Deno.serve(async (req) => {
       sub.cancel_at ? { cancel_at: "" } : { cancel_at_period_end: false },
     );
 
+    // Optimistically clear our mirror so the account card updates immediately —
+    // the customer.subscription.updated webhook reconciles the same state shortly after.
+    // Best-effort: a failure here is recovered by that webhook, so don't fail the request.
+    await admin
+      .from("subscriptions")
+      .update({ cancel_at: null, cancel_at_period_end: false })
+      .eq("stripe_subscription_id", sub.stripe_subscription_id);
+
     return jsonResponse({ ok: true });
   } catch (error) {
     return errorResponse(error);
