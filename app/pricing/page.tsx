@@ -242,8 +242,8 @@ function Plans() {
           </Link>
           <p className="text-center text-xs text-muted-foreground">
             <span className="font-medium text-foreground">$0 due today</span> ·
-            cancel anytime before day 7 · card required. We email you 3 days
-            before your trial ends.
+            cancel anytime before day 7 · card required. We email you before
+            your trial ends.
           </p>
         </div>
 
