@@ -46,7 +46,10 @@ Deno.serve(async (req) => {
       event.type === "customer.subscription.updated" ||
       event.type === "customer.subscription.deleted"
     ) {
-      await handleSubscriptionEvent(event.data.object as Stripe.Subscription);
+      await handleSubscriptionEvent(
+        event.data.object as Stripe.Subscription,
+        event.created,
+      );
     } else if (event.type === "customer.subscription.trial_will_end") {
       await handleTrialWillEnd(event.data.object as Stripe.Subscription);
     } else if (event.type === "invoice.paid") {
@@ -230,7 +233,7 @@ async function resolveProfile(
   return { userId: data?.id ?? null, email: data?.email ?? null };
 }
 
-async function handleSubscriptionEvent(sub: Stripe.Subscription) {
+async function handleSubscriptionEvent(sub: Stripe.Subscription, eventCreated: number) {
   const admin = createServiceClient();
   const customerId = customerIdOf(sub.customer);
 
@@ -240,7 +243,9 @@ async function handleSubscriptionEvent(sub: Stripe.Subscription) {
     userId = (await resolveProfile(admin, customerId)).userId;
   }
   if (!userId) {
-    throw new HttpError(400, "subscription_missing_user");
+    // 5xx (not 4xx) so Stripe retries: this is usually a race with the profile-creation
+    // trigger, not a permanent client error.
+    throw new HttpError(500, "subscription_missing_user");
   }
 
   // current_period_end may live on the subscription OR on its first item (API-version dependent).
@@ -251,23 +256,22 @@ async function handleSubscriptionEvent(sub: Stripe.Subscription) {
     null;
   const priceId = item?.price?.id ?? null;
 
-  const { error: upsertError } = await admin
-    .from("subscriptions")
-    .upsert({
-      user_id: userId,
-      stripe_subscription_id: sub.id,
-      stripe_customer_id: customerId,
-      status: sub.status,
-      price_id: priceId,
-      trial_end: sub.trial_end
-        ? new Date(sub.trial_end * 1000).toISOString()
-        : null,
-      current_period_end: periodEndUnix
-        ? new Date(periodEndUnix * 1000).toISOString()
-        : null,
-      cancel_at_period_end: sub.cancel_at_period_end ?? false,
-      metadata: { latest_event_status: sub.status },
-    }, { onConflict: "stripe_subscription_id" });
+  const { error: upsertError } = await admin.rpc("record_subscription", {
+    p_user_id: userId,
+    p_stripe_subscription_id: sub.id,
+    p_stripe_customer_id: customerId,
+    p_status: sub.status,
+    p_price_id: priceId,
+    p_trial_end: sub.trial_end
+      ? new Date(sub.trial_end * 1000).toISOString()
+      : null,
+    p_current_period_end: periodEndUnix
+      ? new Date(periodEndUnix * 1000).toISOString()
+      : null,
+    p_cancel_at_period_end: sub.cancel_at_period_end ?? false,
+    p_last_event_at: new Date(eventCreated * 1000).toISOString(),
+    p_metadata: { latest_event_status: sub.status },
+  });
 
   if (upsertError) {
     throw new HttpError(500, "failed_to_upsert_subscription", upsertError);
@@ -301,6 +305,8 @@ async function handleTrialWillEnd(sub: Stripe.Subscription) {
       userId: sub.metadata?.user_id ?? userId,
       eventName: "trial_ending",
     });
+  } else {
+    console.warn(`trial_will_end: no email for subscription ${sub.id}`);
   }
 }
 
@@ -325,5 +331,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   const to = invoice.customer_email ?? email;
   if (to) {
     await sendLoopsEvent({ email: to, userId, eventName: "payment_failed" });
+  } else {
+    console.warn(`invoice.payment_failed: no email for invoice ${invoice.id}`);
   }
 }

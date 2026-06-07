@@ -13,6 +13,7 @@ create table public.subscriptions (
   trial_end timestamptz,
   current_period_end timestamptz,
   cancel_at_period_end boolean not null default false,
+  last_event_at timestamptz,                  -- Stripe event.created of the last applied event (ordering guard)
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -24,6 +25,64 @@ create index subscriptions_user_status_idx on public.subscriptions(user_id, stat
 create trigger set_subscriptions_updated_at
 before update on public.subscriptions
 for each row execute function public.set_updated_at();
+
+-- Order-safe upsert called by the stripe-webhook (service role). Stripe delivers events
+-- out of order; we only apply an event whose event.created (p_last_event_at) is >= the last
+-- applied one, so a late older event can't regress a newer status (e.g. revive a canceled sub).
+create or replace function public.record_subscription(
+  p_user_id uuid,
+  p_stripe_subscription_id text,
+  p_stripe_customer_id text,
+  p_status text,
+  p_price_id text,
+  p_trial_end timestamptz,
+  p_current_period_end timestamptz,
+  p_cancel_at_period_end boolean,
+  p_last_event_at timestamptz,
+  p_metadata jsonb default '{}'::jsonb
+)
+returns public.subscriptions
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_row public.subscriptions%rowtype;
+begin
+  insert into public.subscriptions (
+    user_id, stripe_subscription_id, stripe_customer_id, status, price_id,
+    trial_end, current_period_end, cancel_at_period_end, last_event_at, metadata
+  )
+  values (
+    p_user_id, p_stripe_subscription_id, p_stripe_customer_id, p_status, p_price_id,
+    p_trial_end, p_current_period_end, p_cancel_at_period_end, p_last_event_at,
+    coalesce(p_metadata, '{}'::jsonb)
+  )
+  on conflict (stripe_subscription_id) do update
+    set user_id = excluded.user_id,
+        stripe_customer_id = excluded.stripe_customer_id,
+        status = excluded.status,
+        price_id = excluded.price_id,
+        trial_end = excluded.trial_end,
+        current_period_end = excluded.current_period_end,
+        cancel_at_period_end = excluded.cancel_at_period_end,
+        last_event_at = excluded.last_event_at,
+        metadata = excluded.metadata
+    where public.subscriptions.last_event_at is null
+       or excluded.last_event_at >= public.subscriptions.last_event_at
+  returning * into v_row;
+
+  -- If the conflict update was skipped (older/stale event), no row is returned —
+  -- fetch and return the existing row unchanged.
+  if v_row.id is null then
+    select * into v_row
+    from public.subscriptions
+    where stripe_subscription_id = p_stripe_subscription_id;
+  end if;
+
+  return v_row;
+end;
+$$;
 
 -- Access = grandfathered OR legacy active license OR a live subscription.
 -- Reuses user_has_active_license (grandfather + legacy lifetime) from the licenses migration.
@@ -68,3 +127,6 @@ revoke all on function public.user_has_access(uuid) from public, anon;
 revoke all on function public.has_access() from public, anon;
 grant execute on function public.user_has_access(uuid) to authenticated, service_role;
 grant execute on function public.has_access() to authenticated, service_role;
+
+revoke all on function public.record_subscription(uuid, text, text, text, text, timestamptz, timestamptz, boolean, timestamptz, jsonb) from public, anon, authenticated;
+grant execute on function public.record_subscription(uuid, text, text, text, text, timestamptz, timestamptz, boolean, timestamptz, jsonb) to service_role;
