@@ -197,3 +197,132 @@ export async function createLicenseCheckoutSession() {
 
   redirect(checkoutUrl);
 }
+
+export async function createTrialCheckoutSession() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?next=/account");
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    redirect("/login?next=/account");
+  }
+
+  const { url, anonKey } = getSupabaseEnv();
+  let checkoutUrl: string | undefined;
+  let errorMessage: string | undefined;
+  let alreadySubscribed = false;
+
+  try {
+    const response = await fetch(`${url}/functions/v1/create-checkout-session`, {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ purpose: "subscription" }),
+      cache: "no-store",
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      url?: string;
+      alreadySubscribed?: boolean;
+      error?: string;
+      msg?: string;
+      message?: string;
+    };
+
+    if (payload.alreadySubscribed) {
+      alreadySubscribed = true;
+    } else if (!response.ok) {
+      errorMessage =
+        payload.error ??
+        payload.msg ??
+        payload.message ??
+        `Unable to start your free trial. (${response.status})`;
+    } else {
+      checkoutUrl = payload.url;
+    }
+  } catch {
+    errorMessage = "Checkout function is not reachable.";
+  }
+
+  if (alreadySubscribed) {
+    redirect(searchParamUrl("/account", { subscription: "already" }));
+  }
+
+  if (!checkoutUrl) {
+    redirect(searchParamUrl("/account", { error: errorMessage }));
+  }
+
+  redirect(checkoutUrl);
+}
+
+export async function createPortalSession() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?next=/account");
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    redirect("/login?next=/account");
+  }
+
+  const { url, anonKey } = getSupabaseEnv();
+  let portalUrl: string | undefined;
+  let errorMessage: string | undefined;
+
+  try {
+    const response = await fetch(`${url}/functions/v1/create-portal-session`, {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      url?: string;
+      error?: string;
+      msg?: string;
+      message?: string;
+    };
+
+    if (!response.ok) {
+      errorMessage =
+        payload.error ??
+        payload.msg ??
+        payload.message ??
+        `Unable to open the billing portal. (${response.status})`;
+    } else {
+      portalUrl = payload.url;
+    }
+  } catch {
+    errorMessage = "Billing portal is not reachable.";
+  }
+
+  if (!portalUrl) {
+    redirect(searchParamUrl("/account", { error: errorMessage }));
+  }
+
+  redirect(portalUrl);
+}
