@@ -215,7 +215,7 @@ function StructuredData() {
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
       <StructuredData />
       <SiteHeader />
       <main className="flex-1">
