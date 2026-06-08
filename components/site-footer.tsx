@@ -17,7 +17,7 @@ export function SiteFooter() {
             © {new Date().getFullYear()} Woven Labs. All rights reserved.
           </span>
         </div>
-        <div className="flex items-center gap-6 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
           <Link href="/#features" className="hover:text-foreground">
             Features
           </Link>
