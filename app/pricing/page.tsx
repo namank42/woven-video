@@ -19,7 +19,7 @@ const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Woven is a native macOS AI video editor. Try free for 7 days, then $99/year — cancel anytime. Includes $5 in hosted credits. Run any model your way: bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
+    "Woven is a native macOS AI video editor. Try free for 7 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Includes $5 in hosted credits. Run any model your way: bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -210,11 +210,11 @@ function Plans() {
           </div>
           <div className="flex flex-col gap-1">
             <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-semibold tracking-tight">$99</span>
-              <span className="text-sm text-muted-foreground">/year</span>
+              <span className="text-5xl font-semibold tracking-tight">$8.25</span>
+              <span className="text-sm text-muted-foreground">/mo</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              $8.25/mo, billed annually
+              billed annually at $99/yr
             </p>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -488,7 +488,7 @@ function CtaBand() {
           Try it free for 7 days.
         </h2>
         <p className="max-w-xl text-base text-muted-foreground md:text-lg">
-          Then $99/year, cancel anytime. $5 in hosted credits to start.
+          Then $8.25/mo, billed annually ($99/yr). Cancel anytime. $5 in hosted credits to start.
         </p>
         <Button
           nativeButton={false}
