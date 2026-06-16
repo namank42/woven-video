@@ -86,7 +86,7 @@ const featureCards: FeatureCard[] = [
     icon: KeyIcon,
     eyebrow: "Your keys, or ours",
     title: "Your keys, ChatGPT, or Woven-hosted.",
-    body: "Try Woven free for 7 days, then $99/year — cancel anytime. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance — same lineup, no key juggling.",
+    body: "Try Woven free for 7 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance — same lineup, no key juggling.",
   },
   {
     icon: LayersIcon,
@@ -111,7 +111,7 @@ const featureCards: FeatureCard[] = [
 const faqs = [
   {
     q: "How much does Woven cost?",
-    a: "Woven is a 7-day free trial, then $99/year — cancel anytime, card required. It includes $5 in hosted credits. Bring your own provider keys, sign in with ChatGPT (GPT-5+ on your existing plan), or top up a prepaid balance for Woven-hosted models.",
+    a: "Woven is a 7-day free trial, then $8.25/mo, billed annually ($99/yr) — cancel anytime, card required. It includes $5 in hosted credits. Bring your own provider keys, sign in with ChatGPT (GPT-5+ on your existing plan), or top up a prepaid balance for Woven-hosted models.",
   },
   {
     q: "Is Woven a desktop app or a web app?",
@@ -123,7 +123,7 @@ const faqs = [
   },
   {
     q: "Do I need a Woven account to use the app?",
-    a: "Yes. Sign in once with Google and start a 7-day free trial ($99/year after). Then run with your own Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
+    a: "Yes. Sign in once with Google and start a 7-day free trial ($8.25/mo, billed annually — $99/yr after). Then run with your own Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
   },
   {
     q: "Which models can I use?",
@@ -175,7 +175,7 @@ function StructuredData() {
     operatingSystem: "macOS",
     applicationCategory: "MultimediaApplication",
     description:
-      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. Try free for 7 days, then $99/year; bring your own provider keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
+      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. Try free for 7 days, then $8.25/mo, billed annually ($99/yr); bring your own provider keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
     url: SITE_URL,
     downloadUrl: DOWNLOAD_URL,
     offers: {
@@ -494,12 +494,12 @@ function Pricing() {
             <div className="relative flex flex-col gap-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-6xl font-semibold tracking-[-0.04em] md:text-7xl">
-                  $99
+                  $8.25
                 </span>
-                <span className="text-sm text-background/70">/year</span>
+                <span className="text-sm text-background/70">/mo</span>
               </div>
               <p className="text-sm text-background/70">
-                $8.25/mo, billed annually
+                billed annually at $99/yr
               </p>
             </div>
             <p className="relative text-sm text-background/80">
