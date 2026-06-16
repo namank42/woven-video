@@ -65,7 +65,7 @@ export function SubscriptionCta({
       status === "trialing"
         ? willCancel
           ? `Your trial ends ${trialDay ?? "soon"} and won't renew.`
-          : `Free until ${trialDay ?? "soon"}, then $99/year. Cancel anytime before then.`
+          : `Free until ${trialDay ?? "soon"}, then $8.25/mo, billed annually ($99/yr). Cancel anytime before then.`
         : status === "past_due"
           ? "We couldn't charge your card. Update your payment method to keep access."
           : willCancel
@@ -134,12 +134,12 @@ export function SubscriptionCta({
         <div className="flex flex-col gap-0.5">
           <div className="flex items-baseline gap-1.5">
             <span className="font-heading text-4xl font-medium tracking-tight tabular-nums">
-              $99
+              $8.25
             </span>
-            <span className="text-sm text-muted-foreground">/year</span>
+            <span className="text-sm text-muted-foreground">/mo</span>
           </div>
           <span className="text-sm text-muted-foreground">
-            $8.25/mo, billed annually
+            billed annually at $99/yr
           </span>
         </div>
         <ul className="flex flex-col gap-3 border-t pt-5 text-sm">
