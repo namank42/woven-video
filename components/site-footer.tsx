@@ -33,6 +33,12 @@ export function SiteFooter() {
           <Link href="/contact" className="hover:text-foreground">
             Contact
           </Link>
+          <Link href="/privacy" className="hover:text-foreground">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-foreground">
+            Terms
+          </Link>
           <a
             href="mailto:hello@woven.video"
             className="hover:text-foreground"

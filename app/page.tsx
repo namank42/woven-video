@@ -22,12 +22,17 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ReelTile } from "@/components/reel-tile";
+import { JsonLd } from "@/components/seo/json-ld";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { SiteFooter } from "@/components/site-footer";
 import { WhatsNewLink } from "@/components/whats-new-link";
+import {
+  ANSWER_FIRST_HOMEPAGE,
+  DOWNLOAD_URL,
+} from "@/lib/seo/constants";
+import { homepageFaqs } from "@/lib/seo/faqs";
+import { homePageGraph } from "@/lib/seo/schema";
 import { cn } from "@/lib/utils";
-
-const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
 
 const reels = [
   {
@@ -108,115 +113,10 @@ const featureCards: FeatureCard[] = [
   },
 ];
 
-const faqs = [
-  {
-    q: "How much does Woven cost?",
-    a: "Woven is a 7-day free trial, then $8.25/mo, billed annually ($99/yr) — cancel anytime, card required. It includes $5 in hosted credits. Bring your own provider keys, sign in with ChatGPT (GPT-5+ on your existing plan), or top up a prepaid balance for Woven-hosted models.",
-  },
-  {
-    q: "Is Woven a desktop app or a web app?",
-    a: "Woven is a native macOS app. The website handles sign-in, hosted-model billing, and downloads. You do the work in the desktop app.",
-  },
-  {
-    q: "What platforms does Woven support?",
-    a: "macOS today. Windows and Linux are not yet supported.",
-  },
-  {
-    q: "Do I need a Woven account to use the app?",
-    a: "Yes. Sign in once with Google and start a 7-day free trial ($8.25/mo, billed annually — $99/yr after). Then run with your own Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
-  },
-  {
-    q: "Which models can I use?",
-    a: "The same lineup either way — Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5, and GPT-5.5. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or use Woven-hosted models (charged from your prepaid balance). See the pricing page for per-model rates.",
-  },
-  {
-    q: "How does the hosted-models balance work?",
-    a: "Top up a USD balance from $5. Each request is charged against your balance using published per-model rates. The balance is prepaid, so there are no surprise bills.",
-  },
-  {
-    q: "Can I bring my own provider keys?",
-    a: "Yes. On any active plan, run Woven with the keys you provide — you pay providers directly at their rates and Woven takes nothing extra for inference.",
-  },
-];
-
-const SITE_URL = "https://www.woven.video";
-
-function StructuredData() {
-  const organization = {
-    "@type": "Organization",
-    "@id": `${SITE_URL}/#organization`,
-    name: "Woven",
-    url: SITE_URL,
-    logo: {
-      "@type": "ImageObject",
-      url: `${SITE_URL}/woven-logo.png`,
-      width: 1024,
-      height: 1024,
-    },
-    description:
-      "Woven is the AI Video Editor — a native macOS app for making and editing short-form video by asking.",
-    slogan: "The AI Video Editor",
-  };
-
-  const website = {
-    "@type": "WebSite",
-    "@id": `${SITE_URL}/#website`,
-    url: SITE_URL,
-    name: "Woven",
-    description: "The AI Video Editor",
-    inLanguage: "en-US",
-    publisher: { "@id": `${SITE_URL}/#organization` },
-  };
-
-  const application = {
-    "@type": "SoftwareApplication",
-    "@id": `${SITE_URL}/#app`,
-    name: "Woven",
-    operatingSystem: "macOS",
-    applicationCategory: "MultimediaApplication",
-    description:
-      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. Try free for 7 days, then $8.25/mo, billed annually ($99/yr); bring your own provider keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
-    url: SITE_URL,
-    downloadUrl: DOWNLOAD_URL,
-    offers: {
-      "@type": "Offer",
-      price: "99.00",
-      priceCurrency: "USD",
-    },
-    publisher: { "@id": `${SITE_URL}/#organization` },
-  };
-
-  const faqPage = {
-    "@type": "FAQPage",
-    "@id": `${SITE_URL}/#faq`,
-    mainEntity: faqs.map((item) => ({
-      "@type": "Question",
-      name: item.q,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.a,
-      },
-    })),
-  };
-
-  const graph = {
-    "@context": "https://schema.org",
-    "@graph": [organization, website, application, faqPage],
-  };
-
-  return (
-    <script
-      type="application/ld+json"
-      // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }}
-    />
-  );
-}
-
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <StructuredData />
+      <JsonLd data={homePageGraph(homepageFaqs)} />
       <SiteHeader />
       <main className="flex-1">
         <Hero />
@@ -308,10 +208,10 @@ function Hero() {
           The AI Video Editor
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-          Script. Shot list. Generate. Animate. Edit. Assemble.
-          <span className="mt-1 block font-medium text-foreground">
-            All in one place.
-          </span>
+          {ANSWER_FIRST_HOMEPAGE}
+        </p>
+        <p className="mt-3 max-w-xl text-sm text-muted-foreground">
+          Script. Shot list. Generate. Animate. Edit. Assemble — all in one place.
         </p>
         <Button
           nativeButton={false}
@@ -625,7 +525,7 @@ function FAQ() {
           </div>
           <div className="flex flex-col gap-3">
             <Accordion>
-              {faqs.map((item) => (
+              {homepageFaqs.map((item) => (
                 <AccordionItem
                   key={item.q}
                   value={item.q}

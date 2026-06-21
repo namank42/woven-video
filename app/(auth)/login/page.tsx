@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
@@ -15,6 +16,11 @@ import { Field, FieldDescription, FieldError } from "@/components/ui/field";
 import { firstSearchParam, safeNextPath } from "@/lib/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+  title: "Sign in",
+  robots: { index: false, follow: false },
+};
 
 type LoginPageProps = {
   searchParams: Promise<{

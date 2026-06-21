@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
@@ -5,6 +6,11 @@ import { redirect } from "next/navigation";
 import { AccountUserMenu } from "@/components/account/user-menu";
 import { SiteFooter } from "@/components/site-footer";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Account",
+  robots: { index: false, follow: false },
+};
 
 export default async function AccountLayout({
   children,

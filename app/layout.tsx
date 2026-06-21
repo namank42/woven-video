@@ -3,6 +3,13 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import {
+  SITE_DESCRIPTION_LONG,
+  SITE_DESCRIPTION_SHORT,
+  SITE_NAME,
+  SITE_TAGLINE,
+  SITE_URL,
+} from "@/lib/seo/constants";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,11 +21,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = "https://www.woven.video";
-const siteName = "Woven";
-const siteTitle = "Woven — The AI Video Editor";
-const siteDescription =
-  "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. Try free for 7 days, then $8.25/mo, billed annually ($99/yr); bring your own provider keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.";
+const siteUrl = SITE_URL;
+const siteName = SITE_NAME;
+const siteTitle = `${SITE_NAME} — ${SITE_TAGLINE}`;
+const siteDescription = SITE_DESCRIPTION_SHORT;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -53,13 +59,13 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName,
     title: siteTitle,
-    description: siteDescription,
+    description: SITE_DESCRIPTION_LONG,
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
     title: siteTitle,
-    description: siteDescription,
+    description: SITE_DESCRIPTION_LONG,
   },
   robots: {
     index: true,
