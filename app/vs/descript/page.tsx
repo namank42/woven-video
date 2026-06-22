@@ -9,8 +9,10 @@ import {
   LastUpdated,
   MarketingCta,
   RelatedLinks,
+  SeeAlso,
   Verdict,
 } from "@/components/marketing/page-sections";
+import { siblingComparisonLinks } from "@/lib/seo/internal-links";
 import { descriptComparison } from "@/lib/seo/landing-pages";
 import { landingPageGraph } from "@/lib/seo/schema";
 
@@ -41,6 +43,12 @@ export default function DescriptComparisonPage() {
         <LastUpdated />
       </div>
       <Verdict>{content.verdict}</Verdict>
+      <SeeAlso
+        links={[
+          { href: "/compare", label: "all comparisons" },
+          ...siblingComparisonLinks(content.path),
+        ]}
+      />
       <ComparisonTable competitorName={content.competitorName} rows={content.rows} />
       <ChooseLists
         competitorName={content.competitorName}
@@ -49,7 +57,7 @@ export default function DescriptComparisonPage() {
       />
       <FaqSection faqs={content.faqs} />
       <MarketingCta />
-      <RelatedLinks />
+      <RelatedLinks currentPath={content.path} />
     </LandingLayout>
   );
 }

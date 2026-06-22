@@ -53,7 +53,7 @@ export default function BestAiVideoEditorPage() {
       <RoundupTable entries={content.entries} />
       <FaqSection faqs={content.faqs} />
       <MarketingCta />
-      <RelatedLinks />
+      <RelatedLinks currentPath={content.path} />
     </LandingLayout>
   );
 }

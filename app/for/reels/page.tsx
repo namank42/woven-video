@@ -7,8 +7,10 @@ import {
   LastUpdated,
   MarketingCta,
   RelatedLinks,
+  SeeAlso,
   WorkflowSteps,
 } from "@/components/marketing/page-sections";
+import { siblingUseCaseLinks } from "@/lib/seo/internal-links";
 import { reelsUseCase } from "@/lib/seo/landing-pages";
 import { landingPageGraph } from "@/lib/seo/schema";
 
@@ -38,13 +40,19 @@ export default function ReelsPage() {
         <AnswerFirst>{content.answerFirst}</AnswerFirst>
         <LastUpdated />
       </div>
+      <SeeAlso
+        links={[
+          { href: "/for", label: "all use cases" },
+          ...siblingUseCaseLinks(content.path),
+        ]}
+      />
       <section className="flex flex-col gap-4">
         <h2 className="text-2xl font-semibold tracking-tight">How it works</h2>
         <WorkflowSteps steps={content.workflow} />
       </section>
       <FaqSection faqs={content.faqs} />
       <MarketingCta />
-      <RelatedLinks />
+      <RelatedLinks currentPath={content.path} />
     </LandingLayout>
   );
 }

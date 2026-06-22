@@ -10,6 +10,8 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DOWNLOAD_URL, SITE_CONTENT_UPDATED } from "@/lib/seo/constants";
 import type { FaqItem } from "@/lib/seo/faqs";
+import type { InternalLink } from "@/lib/seo/internal-links";
+import { relatedLinksForPage } from "@/lib/seo/internal-links";
 import type { ComparisonRow, RoundupEntry } from "@/lib/seo/landing-pages";
 import { cn } from "@/lib/utils";
 
@@ -221,21 +223,36 @@ export function MarketingCta({
   );
 }
 
-export function RelatedLinks() {
-  const links = [
-    { href: "/vs/capcut", label: "CapCut alternative" },
-    { href: "/vs/descript", label: "Descript alternative" },
-    { href: "/ai-video-editor-mac", label: "AI video editor for Mac" },
-    { href: "/for/reels", label: "AI Reels maker" },
-    { href: "/pricing", label: "Pricing" },
-  ];
+export function SeeAlso({ links }: { links: InternalLink[] }) {
+  if (links.length === 0) return null;
+
+  return (
+    <p className="text-sm text-muted-foreground">
+      See also:{" "}
+      {links.map((link, index) => (
+        <span key={link.href}>
+          <Link
+            href={link.href}
+            className="text-foreground underline underline-offset-4 hover:no-underline"
+          >
+            {link.label}
+          </Link>
+          {index < links.length - 1 ? ", " : ""}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+export function RelatedLinks({ currentPath }: { currentPath: string }) {
+  const links = relatedLinksForPage(currentPath);
 
   return (
     <section className="flex flex-col gap-3 border-t border-border/60 pt-10">
       <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
         Related
       </h2>
-      <div className="flex flex-wrap gap-4 text-sm">
+      <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
         {links.map((link) => (
           <Link
             key={link.href}

@@ -5,6 +5,8 @@ import { SITE_CONTENT_UPDATED, SITE_URL } from "@/lib/seo/constants";
 const contentUpdated = new Date(SITE_CONTENT_UPDATED);
 
 const marketingPages: MetadataRoute.Sitemap = [
+  { path: "/compare", priority: 0.9, changeFrequency: "monthly" as const },
+  { path: "/for", priority: 0.9, changeFrequency: "monthly" as const },
   { path: "/vs/capcut", priority: 0.85, changeFrequency: "monthly" as const },
   { path: "/ai-video-editor-mac", priority: 0.85, changeFrequency: "monthly" as const },
   { path: "/vs/descript", priority: 0.75, changeFrequency: "monthly" as const },

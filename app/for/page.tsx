@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { HubCards } from "@/components/marketing/hub-cards";
 import { LandingLayout } from "@/components/marketing/landing-layout";
 import {
   AnswerFirst,
@@ -7,14 +8,11 @@ import {
   LastUpdated,
   MarketingCta,
   RelatedLinks,
-  SeeAlso,
-  WorkflowSteps,
 } from "@/components/marketing/page-sections";
-import { siblingUseCaseLinks } from "@/lib/seo/internal-links";
-import { tiktokUseCase } from "@/lib/seo/landing-pages";
+import { useCaseHub } from "@/lib/seo/hubs";
 import { landingPageGraph } from "@/lib/seo/schema";
 
-const content = tiktokUseCase;
+const content = useCaseHub;
 
 export const metadata: Metadata = {
   title: content.title,
@@ -22,7 +20,7 @@ export const metadata: Metadata = {
   alternates: { canonical: content.path },
 };
 
-export default function TiktokPage() {
+export default function UseCaseHubPage() {
   return (
     <LandingLayout
       schema={landingPageGraph({
@@ -30,7 +28,7 @@ export default function TiktokPage() {
         name: content.h1,
         description: content.description,
         faqs: content.faqs,
-        breadcrumbLabel: "TikTok",
+        breadcrumbLabel: "Use cases",
       })}
     >
       <div className="flex flex-col gap-4">
@@ -40,16 +38,7 @@ export default function TiktokPage() {
         <AnswerFirst>{content.answerFirst}</AnswerFirst>
         <LastUpdated />
       </div>
-      <SeeAlso
-        links={[
-          { href: "/for", label: "all use cases" },
-          ...siblingUseCaseLinks(content.path),
-        ]}
-      />
-      <section className="flex flex-col gap-4">
-        <h2 className="text-2xl font-semibold tracking-tight">How it works</h2>
-        <WorkflowSteps steps={content.workflow} />
-      </section>
+      <HubCards cards={content.cards} />
       <FaqSection faqs={content.faqs} />
       <MarketingCta />
       <RelatedLinks currentPath={content.path} />

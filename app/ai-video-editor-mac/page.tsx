@@ -41,7 +41,7 @@ export default function MacEditorPage() {
       <HighlightCards items={content.highlights} />
       <FaqSection faqs={content.faqs} />
       <MarketingCta />
-      <RelatedLinks />
+      <RelatedLinks currentPath={content.path} />
     </LandingLayout>
   );
 }

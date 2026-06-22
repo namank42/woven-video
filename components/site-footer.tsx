@@ -24,8 +24,11 @@ export function SiteFooter() {
           <Link href="/pricing" className="hover:text-foreground">
             Pricing
           </Link>
-          <Link href="/vs/capcut" className="hover:text-foreground">
-            vs CapCut
+          <Link href="/compare" className="hover:text-foreground">
+            Compare
+          </Link>
+          <Link href="/for" className="hover:text-foreground">
+            Use cases
           </Link>
           <Link href="/ai-video-editor-mac" className="hover:text-foreground">
             Mac editor
