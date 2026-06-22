@@ -9,12 +9,15 @@ import {
   WalletIcon,
 } from "lucide-react";
 
+import { FaqSection, LastUpdated } from "@/components/marketing/page-sections";
+import { JsonLd } from "@/components/seo/json-ld";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { SiteFooter } from "@/components/site-footer";
+import { ANSWER_FIRST_PRICING, DOWNLOAD_URL } from "@/lib/seo/constants";
+import { pricingFaqs } from "@/lib/seo/faqs";
+import { pricingPageGraph } from "@/lib/seo/schema";
 import { cn } from "@/lib/utils";
-
-const DOWNLOAD_URL = "https://release.woven.video/Woven.dmg";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -115,6 +118,7 @@ const otherFeatures: FeatureRate[] = [
 export default function PricingPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <JsonLd data={pricingPageGraph(pricingFaqs)} />
       <SiteHeader />
       <main className="flex-1">
         <PricingHero />
@@ -122,6 +126,14 @@ export default function PricingPage() {
         <ModelsTable />
         <ToolsTable />
         <Notes />
+        <section className="border-t border-border/60 py-16">
+          <div className="mx-auto w-full max-w-3xl px-6">
+            <FaqSection faqs={pricingFaqs} title="Pricing FAQs" />
+            <div className="mt-6">
+              <LastUpdated />
+            </div>
+          </div>
+        </section>
         <CtaBand />
       </main>
       <SiteFooter />
@@ -178,9 +190,8 @@ function PricingHero() {
         <h1 className="mt-6 max-w-2xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-6xl">
           Try Woven free for 7 days.
         </h1>
-        <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-          Script. Shot list. Generate. Animate. Edit. Assemble.{" "}
-          <span className="font-medium text-foreground">All in one place.</span>
+        <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
+          {ANSWER_FIRST_PRICING}
         </p>
       </div>
     </section>

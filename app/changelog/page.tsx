@@ -3,10 +3,13 @@ import type { ComponentType } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
+import { LastUpdated } from "@/components/marketing/page-sections";
+import { JsonLd } from "@/components/seo/json-ld";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { SiteFooter } from "@/components/site-footer";
 import { getReleases, type Release } from "@/lib/changelog";
 import { changelogEntries } from "@/lib/changelog-content";
+import { changelogPageGraph } from "@/lib/seo/schema";
 
 export const revalidate = 3600;
 
@@ -47,14 +50,27 @@ async function resolveEntries(releases: Release[]): Promise<ResolvedEntry[]> {
 export default async function ChangelogPage() {
   const releases = await getReleases();
   const entries = await resolveEntries(releases);
+  const schemaReleases = releases.map((release) => ({
+    version: release.version,
+    date: release.date?.toISOString().slice(0, 10) ?? null,
+  }));
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <JsonLd data={changelogPageGraph(schemaReleases)} />
       <SiteHeader />
       <main className="flex-1">
-        <h1 className="sr-only">Changelog</h1>
         <section className="pb-24 pt-16 md:pt-20">
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-14 px-6">
+            <div className="flex flex-col gap-3">
+              <h1 className="text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
+                Changelog
+              </h1>
+              <p className="text-base text-muted-foreground">
+                Every update to the Woven app — newest first.
+              </p>
+              <LastUpdated />
+            </div>
             {entries.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 The changelog is unavailable right now. Please check back soon.

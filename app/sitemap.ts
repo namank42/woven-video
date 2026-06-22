@@ -4,6 +4,22 @@ import { SITE_CONTENT_UPDATED, SITE_URL } from "@/lib/seo/constants";
 
 const contentUpdated = new Date(SITE_CONTENT_UPDATED);
 
+const marketingPages: MetadataRoute.Sitemap = [
+  { path: "/vs/capcut", priority: 0.85, changeFrequency: "monthly" as const },
+  { path: "/ai-video-editor-mac", priority: 0.85, changeFrequency: "monthly" as const },
+  { path: "/vs/descript", priority: 0.75, changeFrequency: "monthly" as const },
+  { path: "/vs/opus-clip", priority: 0.75, changeFrequency: "monthly" as const },
+  { path: "/for/reels", priority: 0.75, changeFrequency: "monthly" as const },
+  { path: "/best-ai-video-editor", priority: 0.75, changeFrequency: "monthly" as const },
+  { path: "/for/tiktok", priority: 0.7, changeFrequency: "monthly" as const },
+  { path: "/for/youtube-shorts", priority: 0.7, changeFrequency: "monthly" as const },
+].map((page) => ({
+  url: `${SITE_URL}${page.path}`,
+  lastModified: contentUpdated,
+  changeFrequency: page.changeFrequency,
+  priority: page.priority,
+}));
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
@@ -18,6 +34,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    ...marketingPages,
     {
       url: `${SITE_URL}/changelog`,
       lastModified: contentUpdated,

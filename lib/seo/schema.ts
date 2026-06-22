@@ -146,3 +146,86 @@ export function homePageGraph(faqs: FaqItem[]) {
   );
 }
 
+export function landingPageGraph({
+  path,
+  name,
+  description,
+  faqs,
+  breadcrumbLabel,
+}: {
+  path: string;
+  name: string;
+  description: string;
+  faqs: FaqItem[];
+  breadcrumbLabel: string;
+}) {
+  const url = `${SITE_URL}${path}`;
+  return jsonLdGraph(
+    organizationSchema(),
+    webPageSchema({ path, name, description }),
+    breadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: breadcrumbLabel, path },
+    ]),
+    faqPageSchema(faqs, `${url}#faq`),
+  );
+}
+
+export function pricingPageGraph(faqs: FaqItem[]) {
+  return jsonLdGraph(
+    organizationSchema(),
+    softwareApplicationSchema(),
+    webPageSchema({
+      path: "/pricing",
+      name: "Woven Pricing",
+      description:
+        "Woven pricing — 7-day free trial, then $99/year. Hosted AI model rates and optional prepaid credits.",
+    }),
+    faqPageSchema(faqs, `${SITE_URL}/pricing#faq`),
+  );
+}
+
+export function contactPageGraph() {
+  return jsonLdGraph(
+    organizationSchema(),
+    {
+      "@type": "ContactPage",
+      "@id": `${SITE_URL}/contact#contactpage`,
+      url: `${SITE_URL}/contact`,
+      name: "Contact Woven",
+      description: "Contact Woven Labs for support, billing, and product questions.",
+      inLanguage: "en-US",
+      dateModified: SITE_CONTENT_UPDATED,
+      isPartOf: { "@id": `${SITE_URL}/#website` },
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+    breadcrumbSchema([
+      { name: "Home", path: "/" },
+      { name: "Contact", path: "/contact" },
+    ]),
+  );
+}
+
+export function changelogPageGraph(
+  releases: { version: string; date: string | null }[],
+) {
+  return jsonLdGraph(
+    organizationSchema(),
+    webPageSchema({
+      path: "/changelog",
+      name: "Woven Changelog",
+      description: "Every update to the Woven app — features, improvements, and fixes.",
+    }),
+    {
+      "@type": "ItemList",
+      "@id": `${SITE_URL}/changelog#releases`,
+      itemListElement: releases.map((release, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: `Woven ${release.version}`,
+        ...(release.date ? { datePublished: release.date } : {}),
+      })),
+    },
+  );
+}
+

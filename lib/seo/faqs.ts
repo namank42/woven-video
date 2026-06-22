@@ -65,3 +65,26 @@ export const homepageFaqs: FaqItem[] = [
     a: "Woven is made by Woven Labs. Contact hello@woven.video for support or visit woven.video.",
   },
 ];
+
+export const pricingFaqs: FaqItem[] = [
+  {
+    q: "How much does Woven cost after the trial?",
+    a: "Woven is $99/year ($8.25/month billed annually) after a 7-day free trial. Cancel anytime before day 7 to avoid being charged.",
+  },
+  {
+    q: "What is included in the free trial?",
+    a: "The full Mac app for 7 days plus $5 in Woven-hosted credits. Bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or use the included credits.",
+  },
+  {
+    q: "Do I need hosted credits?",
+    a: "No. Hosted credits are optional — only needed for Woven-hosted Claude and GPT models. You can use your own API keys or ChatGPT sign-in without topping up.",
+  },
+  {
+    q: "How do hosted model rates work?",
+    a: "Each request is charged per token from your prepaid balance at the published rates on this page. Auto captions are $0.01/min. There are no surprise bills.",
+  },
+  {
+    q: "Can I bring my own API keys?",
+    a: "Yes. Your subscription covers the full app whether you bring your own keys (pay providers directly) or use Woven-hosted models on a prepaid balance.",
+  },
+];
