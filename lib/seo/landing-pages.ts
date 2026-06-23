@@ -68,7 +68,7 @@ export const capcutComparison: ComparisonPageContent = {
   verdict:
     "CapCut is a capable free mobile editor; Woven is a native Mac app for creating short-form video with AI from a script — not just editing clips you already have.",
   answerFirst:
-    "Woven is a CapCut alternative built natively for macOS — and a practical alternative to CapCut if you work on a Mac. Instead of manually editing on a timeline, you script, generate footage and voice, and assemble vertical video by chatting — built for Reels, TikTok, and YouTube Shorts. Start with a 7-day free trial (a CapCut alternative free to try), then $99/year.",
+    "Woven is a CapCut alternative built natively for macOS — and a practical alternative to CapCut if you work on a Mac. Instead of manually editing on a timeline, you script, generate footage and voice, and assemble vertical video by chatting — built for Reels, TikTok, and YouTube Shorts.",
   competitorName: "CapCut",
   rows: [
     { feature: "Platform", woven: "Native macOS app", competitor: "Web, iOS, Android, desktop" },
@@ -134,7 +134,7 @@ export const descriptComparison: ComparisonPageContent = {
   verdict:
     "Both tools work with podcast footage. Descript excels at transcript-first editing of full episodes; Woven clips podcasts and interviews into Reels, TikToks, and Shorts on Mac — or helps you create new vertical video from scratch by chatting.",
   answerFirst:
-    "Woven is a Descript alternative for short-form video on Mac. Clip podcast and interview episodes into Reels, TikToks, and Shorts, or create new vertical video from a script — all by chatting. Try free for 7 days.",
+    "Woven is a Descript alternative for short-form video on Mac. Clip podcast and interview episodes into Reels, TikToks, and Shorts, or create new vertical video from a script — all by chatting.",
   competitorName: "Descript",
   rows: [
     { feature: "Primary use case", woven: "Short-form vertical video", competitor: "Long-form podcast and transcription editing" },
@@ -188,7 +188,7 @@ export const opusClipComparison: ComparisonPageContent = {
   verdict:
     "Opus Clip auto-extracts clips from uploaded long-form video; Woven clips podcasts and recordings into shorts on Mac by chatting — and can create new vertical video from a script too.",
   answerFirst:
-    "Woven is an Opus Clip alternative for Mac creators. Clip podcast and interview episodes into Reels, TikToks, and Shorts, or create new vertical video from a script — guided by chat instead of batch auto-extraction. Try free for 7 days.",
+    "Woven is an Opus Clip alternative for Mac creators. Clip podcast and interview episodes into Reels, TikToks, and Shorts, or create new vertical video from a script — guided by chat instead of batch auto-extraction.",
   competitorName: "Opus Clip",
   rows: [
     { feature: "Starting point", woven: "Recording, script, or brief", competitor: "Long-form video upload" },
@@ -234,7 +234,7 @@ export const macEditorPage: FeaturePageContent = {
     "Woven is the AI video editor for Mac. Native app, local projects, chat-driven editing for Reels, TikTok, and YouTube Shorts. Try free for 7 days.",
   h1: "AI Video Editor for Mac",
   answerFirst:
-    "Woven is a native AI video editor for Mac. Your projects and media stay local, you script and generate short-form video by chatting, and you export vertical cuts for Reels, TikTok, and YouTube Shorts. Try free for 7 days, then $99/year.",
+    "Woven is a native AI video editor for Mac. Your projects and media stay local, you script and generate short-form video by chatting, and you export vertical cuts for Reels, TikTok, and YouTube Shorts.",
   highlights: [
     {
       title: "Native macOS",
@@ -276,7 +276,7 @@ export const reelsUseCase: UseCasePageContent = {
     "AI Reels maker and AI Reels generator for Mac. Make Instagram Reels with AI — script, generate footage and voice, and assemble vertical video by chatting. Free to try for 7 days.",
   h1: "AI Reels Maker & Generator for Mac",
   answerFirst:
-    "Woven is an AI Reels maker and AI Reels generator for Mac. Describe the reel you want — or say make Reels with AI — and Woven writes the script, generates footage and voice, and assembles a vertical cut ready for Instagram Reels. Try free for 7 days.",
+    "Woven is an AI Reels maker and AI Reels generator for Mac. Describe the reel you want — or say make Reels with AI — and Woven writes the script, generates footage and voice, and assembles a vertical cut ready for Instagram Reels.",
   workflow: [
     "Open Woven on your Mac and start from your assets or a blank reel",
     "Chat the concept — hook, pacing, shots, and voiceover",
@@ -318,7 +318,7 @@ export const tiktokUseCase: UseCasePageContent = {
     "Create TikTok videos with AI on Mac. Woven scripts, generates footage and voice, and assembles vertical cuts by chatting. 7-day free trial.",
   h1: "AI TikTok Video Editor for Mac",
   answerFirst:
-    "Woven is an AI TikTok video editor for Mac. Script your video, generate footage and voice, and assemble a vertical cut by chatting — built for TikTok's format. Try free for 7 days.",
+    "Woven is an AI TikTok video editor for Mac. Script your video, generate footage and voice, and assemble a vertical cut by chatting — built for TikTok's format.",
   workflow: [
     "Start a new reel project in Woven on your Mac",
     "Describe the TikTok concept — hook, beats, and tone",
@@ -344,7 +344,7 @@ export const shortsUseCase: UseCasePageContent = {
     "Make YouTube Shorts with AI on Mac. Woven scripts, generates, and assembles vertical video by chatting. 7-day free trial.",
   h1: "AI YouTube Shorts Editor for Mac",
   answerFirst:
-    "Woven is an AI YouTube Shorts editor for Mac. Describe the short you want, generate footage and voice, and assemble a vertical cut by chatting. Try free for 7 days.",
+    "Woven is an AI YouTube Shorts editor for Mac. Describe the short you want, generate footage and voice, and assemble a vertical cut by chatting.",
   workflow: [
     "Create a reel project in Woven",
     "Chat your Short concept — opening hook, pacing, and CTA",
