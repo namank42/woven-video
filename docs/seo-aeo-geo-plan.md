@@ -4,8 +4,8 @@
 **Primary goal:** Get cited by answer engines (ChatGPT, Perplexity, Grok, Gemini, Claude, Copilot).  
 **Secondary goal:** Rank on Google/Bing for winnable keywords in the AI video / short-form niche.  
 **Created:** June 21, 2026  
-**Last updated:** June 21, 2026  
-**Status:** Planning — not yet implemented
+**Last updated:** June 22, 2026 (keyword expansion fold-in)
+**Status:** Sprint 1–2 implemented on `seo-aeo-foundation`; hub-and-spoke live. Keyword data validated via DataForSEO MCP.
 
 ---
 
@@ -52,56 +52,124 @@ The gaps are:
 
 **Core principle:** woven.video should be the **canonical fact source** for anything an AI or search engine might say about Woven — pricing, models, platform support, features, comparisons.
 
-**Keyword insight:** Real volume data shows clear winnable targets (KD 6–27) alongside head terms (KD 50+) that are a long game. Build for the winnable terms first.
+**Keyword insight:** DataForSEO (June 2026) confirms comparison + use-case pages are the right bet. Several original KD estimates were wrong — Google Ads `competition_index` is not SEO keyword difficulty. Use DataForSEO Labs KD for ranking decisions.
 
 ---
 
 ## Keyword research
 
-*Source: external keyword research, June 2026. KD = Keyword Difficulty (0–100 scale, lower = easier to rank).*
+*Validated via DataForSEO MCP, US/en, June 22, 2026.*  
+*KD = DataForSEO Labs keyword difficulty (0–100, lower = easier to rank).*  
+*AI vol = estimated monthly usage in LLMs (DataForSEO AI Optimization API).*
+
+### ⚠️ Metric correction
+
+| Source | What it measures | Pitfall |
+|--------|------------------|---------|
+| Google Ads `competition_index` | Paid search competition | **Not** SEO ranking difficulty |
+| DataForSEO Labs KD | Organic top-10 difficulty | Use this for "winnable" calls |
+
+Example: `ai voiceover generator` shows Google Ads competition **6** but Labs KD **98** — a head term for SEO, not an easy win.
 
 ### Head terms — high value, hard (long game)
 
-| Keyword | Volume/mo | KD | Notes |
-|---------|-----------|-----|-------|
-| `ai video generator` | 246,000 | — | Huge, broad, very competitive |
-| `ai video editor` | 27,100 | 50 | Core category term |
-| `text to video ai` | 9,900 | — | Broad generative intent |
-| `free ai video editor` | 3,600 | — | Lean on 7-day trial messaging if targeted |
+| Keyword | Google vol/mo | KD | AI vol/mo | Notes |
+|---------|---------------|-----|-----------|-------|
+| `ai video generator` | 246,000 | 69 | — | Far too broad |
+| `ai video editor` | 27,100 | 50 | — | Crowded category |
+| `ai video editing software` | 1,900 | **50** | 9 | Homepage anchor; not "winnable" for Google |
+| `text to video ai` | 9,900 | 49 | — | Generative intent, not editor intent |
+| `free ai video editor` | 3,600 | 42 | — | Trial messaging only |
 
-### Winnable now — prioritize these
+### Winnable now — prioritize these (Labs KD ≤ 27 or tiny SERP)
 
-| Keyword | Volume/mo | KD | Page |
-|---------|-----------|-----|------|
-| `capcut alternative` | 2,400 | **27** | `/vs/capcut` |
-| `best ai video editor` | 2,400 | **27** | `/best-ai-video-editor` |
-| `ai voiceover generator` | 2,400 | **6** | `/ai-voiceover` ⚠️ |
-| `ai video editing software` | 1,900 | **22** | `/` + `/about` |
-| `ai reels maker` | 880 | — | `/for/reels` |
-| `opus clip alternative` | 480 | — | `/vs/opus-clip` |
+| Keyword | Google vol/mo | KD | AI vol/mo | Page | Notes |
+|---------|---------------|-----|-----------|------|-------|
+| `capcut alternative` | 2,400 | n/a* | **109** | `/vs/capcut` | #1 AEO target; -33% YoY trend |
+| `best ai video editor` | 2,400 | **27** | 61 | `/best-ai-video-editor` | Confirmed winnable |
+| `ai reels maker` | 880 | **11** | 11 | `/for/reels` | Best vol+KD use-case page |
+| `alternative to capcut` | 720 | n/a | — | `/vs/capcut` | Secondary keyword |
+| `opus clip alternative` | 480 | n/a | 11 | `/vs/opus-clip` | -46% YoY; podcast angle helps |
+| `descript alternative` | 170 | n/a | 16 | `/vs/descript` | CPC **$17.62**; ~0.7 ref domains avg |
+| `descript vs capcut` | 110 | n/a | — | `/vs/capcut` | Secondary FAQ/H2 target |
+| `capcut alternative free` | 390 | n/a | — | `/vs/capcut` | ~1.4 avg ref domains — very rankable |
+| `best capcut alternative` | 170 | n/a | — | `/vs/capcut` or `/best-ai-video-editor` | Commercial intent |
+| `capcut vs descript` | 110 | n/a | — | `/vs/capcut` | Cross-comparison FAQ |
+| `opus clip vs descript` | 70 | n/a | — | `/vs/descript`, `/vs/opus-clip` | CPC $22.63 |
+| `chatgpt video editor` | 320 | n/a | 4 | `/` | +181% YoY; homepage FAQ if accurate |
+| `content repurposing tool` | 110 | **3** | — | `/best-ai-video-editor` | High CPC ($9.56) |
+| `ai content repurposing` | 90 | **10** | — | `/best-ai-video-editor` | Fold into copy |
+| `make reels ai` | 590 | **6** | **80** | `/for/reels` | #2 AEO target after capcut cluster |
+| `ai reels generator` | 880 | **4** | 10 | `/for/reels` | Co-primary with ai reels maker |
+| `ai clip maker` | 1,900 | 43 | 24 | `/vs/opus-clip` | Mention in copy; KD too high for primary |
+| `ai video clipper` | 390 | 49 | 4 | `/vs/opus-clip` | Clip-competitor angle |
 
-### Comparison / switcher intent — low volume, high purchase intent + AEO gold
+\*DataForSEO bulk KD returned no score for some comparison terms; keyword overview shows low avg backlinks (e.g. descript alt rank 4.7, capcut alt ~51).
 
-| Keyword | Volume/mo | KD | CPC | Page |
-|---------|-----------|-----|-----|------|
-| `descript alternative` | 170 | — | **$17.62** | `/vs/descript` |
-| `descript vs capcut` | 110 | 22 | — | `/vs/capcut` or `/vs/descript` |
-| `alternative to descript` | — | — | — | `/vs/descript` |
-| `capcut alternative` | 2,400 | 27 | — | `/vs/capcut` |
-| `opus clip alternative` | 480 | — | — | `/vs/opus-clip` |
+### Fold-in only — do not create new pages
 
-### Niche but ownable — Mac wedge
+| Keyword | Google vol/mo | KD | Page | Verdict |
+|---------|---------------|-----|------|---------|
+| `ai reels editor` | 210 | 12 | `/for/reels` | H2 / FAQ |
+| `create reels with ai` | 140 | 7 | `/for/reels` | Body copy |
+| `free ai reels generator` | 260 | 5 | `/for/reels` | Trial angle |
+| `capcut alternative for mac` | 20 | n/a | `/vs/capcut` → `/ai-video-editor-mac` | Cross-link |
+| `capcut alternative reddit` | 140 | n/a | — | Distribution (Reddit seeding), not on-page |
+| `ai podcast clips` | 20 | 12 | `/vs/descript`, `/vs/opus-clip` | Copy ✅ done |
+| `podcast clipper` | 30 | 26 | `/vs/descript`, `/vs/opus-clip` | Copy only |
 
-| Keyword | Volume/mo | KD | Page |
-|---------|-----------|-----|------|
-| `ai video editor for mac` | ~10–20 | — | `/ai-video-editor-mac` |
-| `best ai video editor for mac` | ~10–20 | — | `/ai-video-editor-mac` |
+### Future comparison pages (Phase 3 — optional)
 
-Low traffic individually, but Mac-native is Woven's unique positioning — near-instant win, worth a dedicated page.
+| Keyword | Google vol/mo | Notes | Verdict |
+|---------|---------------|-------|---------|
+| `veed alternative` | 90 | ~1.4 ref domains | Rankable; `/vs/veed` if expanding cluster |
+| `submagic alternative` | 40 | rank ~8 | Fold into opus/descript, not new page |
+| `vizard alternative` | 10 | — | Too small; mention on `/vs/opus-clip` |
+| `klap alternative` | 10 | — | Skip dedicated page |
+| `munch alternative` | 10 | — | Skip dedicated page |
+| `2short ai alternative` | 10 | — | Skip dedicated page |
 
-### ⚠️ AI voiceover gate
+### Explicitly skip
 
-`ai voiceover generator` (2,400/mo, **KD 6**) is the easiest win in the dataset — but only build `/ai-voiceover` if Woven **actually generates voice from script** in the app today.
+| Keyword | Google vol/mo | KD | Why |
+|---------|---------------|-----|-----|
+| `faceless reels ai` | 1,300 | 41 | Different use case (faceless automation) |
+| `premiere pro alternative` | 390 | n/a | Pro NLE seekers, not Woven ICP |
+| `vizard ai video editor` | 590 | 13 | Navigational to Vizard, not alt intent |
+| `runway ai video editor` | 2,400 | 30 | Generative video, not editor |
+| `ai short form video editor` | — | 72 | Too hard |
+| `ai voiceover generator` | 2,400 | **98** | Deferred — feature gate + SEO nearly impossible |
+
+### Use-case spokes — validated
+
+| Keyword | Google vol/mo | KD | AI vol/mo | Page |
+|---------|---------------|-----|-----------|------|
+| `ai tiktok editor` | 90 | **8** | — | `/for/tiktok` ← **primary** |
+| `ai video editor for tiktok` | 90 | 14 | — | `/for/tiktok` secondary |
+| `ai youtube shorts editor` | 20 | n/a | — | `/for/youtube-shorts` |
+| `ai video editor for youtube shorts` | 30 | n/a | — | `/for/youtube-shorts` secondary |
+
+### Mac wedge — positioning, not volume
+
+| Keyword | Google vol/mo | KD | Page |
+|---------|---------------|-----|------|
+| `ai video editor for mac` | 20 | **54** | `/ai-video-editor-mac` |
+| `best ai video editor for mac` | 10 | n/a | `/ai-video-editor-mac` secondary |
+
+Tiny volume; page exists for Mac-native positioning and AEO ("best AI video editor for Mac"), not Google traffic.
+
+### Podcast clipping — content angle, not new pages
+
+| Keyword | Google vol/mo | KD | Action |
+|---------|---------------|-----|--------|
+| `ai podcast clips` | 20 | **12** | Fold into `/vs/descript`, `/vs/opus-clip` copy ✅ done |
+| `podcast clipper` | 30 | 26 | Same — don't create standalone page |
+
+### ⚠️ AI voiceover — deprioritize for SEO
+
+`ai voiceover generator`: 2,400/mo Google volume but **KD 98**, AI vol only **3/mo**.
+
+Only build `/ai-voiceover` if Woven **actually generates voice from script** in the app — and even then, treat it as a **feature page**, not a "winnable SEO" play.
 
 | What exists today | Evidence |
 |-------------------|----------|
@@ -119,49 +187,52 @@ Low traffic individually, but Mac-native is Woven's unique positioning — near-
 
 ## Keyword tiers & page map
 
-### Tier 1 — Build first (winnable + high AEO value)
+*Re-tiered after DataForSEO validation, June 22, 2026.*
 
-| Page | Primary keyword | Vol | KD | AEO prompt |
-|------|-----------------|-----|-----|------------|
-| `/vs/capcut` | capcut alternative | 2,400 | 27 | "CapCut alternative for Mac" |
-| `/ai-voiceover` | ai voiceover generator | 2,400 | 6 | "AI voiceover for short-form video" |
-| `/ai-video-editor-mac` | ai video editor for mac | ~20 | — | "Best AI video editor for Mac" |
+### Tier 1 — Live, highest leverage (AEO + winnable SEO)
 
-### Tier 2 — High intent, smaller volume
+| Page | Primary keyword | Google vol | AI vol | KD | Status |
+|------|-----------------|------------|--------|-----|--------|
+| `/vs/capcut` | capcut alternative | 2,400 | **109** | low SERP | ✅ live |
+| `/best-ai-video-editor` | best ai video editor | 2,400 | 61 | **27** | ✅ live |
+| `/for/reels` | ai reels maker (+ ai reels generator) | 880 | 11 (80 via make reels ai) | **4–11** | ✅ live — on-page fold-in pending |
+| `/compare` | (hub) | — | — | — | ✅ live |
 
-| Page | Primary keyword | Vol | KD | AEO prompt |
-|------|-----------------|-----|-----|------------|
-| `/vs/descript` | descript alternative | 170 | — | "Descript alternative" |
-| `/vs/opus-clip` | opus clip alternative | 480 | — | "Opus Clip alternative" |
-| `/for/reels` | ai reels maker | 880 | — | "AI Reels maker" |
+### Tier 2 — Live, high intent / commercial
 
-### Tier 3 — Broader, needs careful execution
+| Page | Primary keyword | Google vol | AI vol | Notes | Status |
+|------|-----------------|------------|--------|-------|--------|
+| `/vs/opus-clip` | opus clip alternative | 480 | 11 | Podcast clipping angle | ✅ live |
+| `/vs/descript` | descript alternative | 170 | 16 | $17.62 CPC; very rankable | ✅ live |
+| `/for` | (hub) | — | — | Use-case discovery | ✅ live |
+| `/for/tiktok` | ai tiktok editor | 90 | — | KD **8** | ✅ live |
 
-| Page | Primary keyword | Vol | KD | AEO prompt |
-|------|-----------------|-----|-----|------------|
-| `/best-ai-video-editor` | best ai video editor | 2,400 | 27 | "What's the best AI video editor?" |
-| `/` + `/about` | ai video editing software | 1,900 | 22 | "What is Woven?" |
-| `/for/tiktok` | — | — | — | "AI video editor for TikTok on Mac" |
-| `/for/youtube-shorts` | — | — | — | "AI YouTube Shorts editor" |
+### Tier 3 — Live, positioning / low volume
 
-### Tier 4 — Foundation (not keyword-driven, but required)
+| Page | Primary keyword | Google vol | KD | Status |
+|------|-----------------|------------|-----|--------|
+| `/ai-video-editor-mac` | ai video editor for mac | 20 | 54 | ✅ live — AEO, not volume |
+| `/for/youtube-shorts` | ai youtube shorts editor | 20 | — | ✅ live |
+| `/` | ai video editing software | 1,900 | **50** | ✅ live — entity anchor |
 
-| Page | Purpose |
-|------|---------|
-| `/` | Branded + entity anchor |
-| `/pricing` | Commercial intent: "How much does Woven cost?" |
-| `/about` | Fact sheet / entity page for AI extraction |
-| `/changelog` | Freshness signal |
-| `/contact` | Trust + support |
-| `/privacy`, `/terms` | E-E-A-T trust |
+### Tier 4 — Foundation (required, not keyword-driven)
 
-### Tier 5 — Long game (do not start here)
+| Page | Purpose | Status |
+|------|---------|--------|
+| `/pricing` | "How much does Woven cost?" | ✅ upgraded |
+| `/changelog` | Freshness signal | ✅ upgraded |
+| `/contact` | Trust + support | ✅ upgraded |
+| `/privacy`, `/terms` | E-E-A-T trust | ✅ live |
 
-| Keyword | Volume | KD | Why wait |
-|---------|--------|-----|----------|
-| `ai video editor` | 27,100 | 50 | Crowded; CapCut, Descript, Runway dominate |
-| `ai video generator` | 246,000 | — | Far too broad and competitive |
-| `free ai video editor` | 3,600 | — | Only if trial messaging is central |
+### Tier 5 — Deferred
+
+| Page/keyword | Google vol | KD | Why wait |
+|--------------|------------|-----|----------|
+| `/ai-voiceover` | 2,400 | **98** | Feature gate + SEO nearly impossible |
+| `/about` | — | — | Removed — homepage + schema carry entity |
+| `ai video editor` | 27,100 | 50 | Head term |
+| `ai video generator` | 246,000 | 69 | Far too broad |
+| PDF guide | — | — | Low AEO ROI vs landing pages |
 
 ---
 
@@ -179,15 +250,15 @@ SEO and AEO timelines differ. KD estimates apply to **Google ranking**; AI citat
 | Correct branded answers | ~2–6 weeks after Sprint 1–2 |
 | woven.video cited as source | ~1–3 months with consistent freshness |
 
-### Winnable keywords (KD 6–27)
+### Winnable keywords (Labs KD ≤ 27)
 
-*`capcut alternative`, `ai voiceover generator`, `best ai video editor`*
+*`capcut alternative`, `best ai video editor`, `ai reels maker`* — **not** `ai voiceover generator` (KD 98)
 
 | Milestone | Timing |
 |-----------|--------|
-| Pages indexed | ~2–4 weeks after publish |
-| Google ranking traction | ~1–3 months (KD 6 faster, KD 27 slower) |
-| AI citations for comparison queries | ~1–3 months |
+| Pages indexed | ~2–4 weeks after deploy |
+| Google ranking traction | ~1–3 months (KD 11 faster, KD 27 slower) |
+| AI citations for comparison queries | ~1–3 months — capcut alt leads at 109 AI vol/mo |
 | Reliable citations | ~3–6 months |
 
 ### Mac wedge + use-case pages
@@ -291,14 +362,17 @@ AI systems evaluate content based on:
 
 ## Priority stack
 
+*Updated post-DataForSEO validation.*
+
 | Priority | Focus | Why |
 |----------|--------|-----|
-| **P0** | Foundation + crawl hygiene | Trust, schema, FAQs — everything else builds on this |
-| **P1** | Winnable keyword pages | `/vs/capcut`, `/ai-voiceover`, `/ai-video-editor-mac` |
-| **P2** | Comparison + use-case pages | `/vs/descript`, `/vs/opus-clip`, `/for/reels` |
-| **P3** | Freshness loops | Changelog, "last updated" dates |
-| **P4** | Distribution | Reddit, YouTube, X — secondary citation sources |
-| Deprioritize | Head terms, keyword stuffing | KD 50+ and -10% GEO penalty |
+| **Done** | Foundation + landing pages + hubs | Sprint 1–2 shipped on branch |
+| **P0** | Deploy + Search Console | Get pages indexed; baseline metrics |
+| **P1** | AEO optimization on Tier 1 pages | `capcut alternative` (109 AI vol), `best ai video editor` (61) |
+| **P2** | On-page fold-in from expansion research | `/for/reels`: `ai reels generator`, `make reels ai` (80 AI vol); `/vs/capcut`: `capcut alternative free`; `/`: `chatgpt video editor` FAQ; cross-comparison FAQs |
+| **P3** | Freshness loops | Changelog every release, `last updated` dates |
+| **P4** | Distribution | Reddit (`capcut alternative reddit` 140/mo), YouTube demos |
+| Deprioritize | `/ai-voiceover`, head terms, `/about` | Voiceover KD 98; homepage KD 50; about removed |
 
 ---
 
@@ -720,6 +794,11 @@ Data-driven priority: winnable terms with highest volume.
 | hreflang / international SEO | Single-locale site |
 | Blocking AI training crawlers | Reduces citation visibility |
 | `/compare/runway` | Lower priority than Opus Clip (480/mo) and CapCut (2,400/mo) |
+| `faceless reels ai` (1,300/mo) | Different product category |
+| `premiere pro alternative` (390/mo) | Pro NLE audience, not short-form Mac editor |
+| `vizard ai video editor` (590/mo) | Branded/navigational to competitor |
+| `ai clip maker` as primary target | 1,900/mo but KD 43 — mention on vs pages only |
+| Dedicated podcast-to-shorts pages | All ~10–30/mo volume |
 
 ---
 
@@ -739,7 +818,7 @@ Data-driven priority: winnable terms with highest volume.
 | Signal | How to measure | 90-day target |
 |--------|---------------|---------------|
 | `capcut alternative` ranking | GSC + manual Google check | Top 20 → Top 10 |
-| `ai voiceover generator` ranking | GSC + manual check | Top 10 (KD 6) |
+| `make reels ai` AI citations | Monthly prompt check | woven.video cited (80 AI vol/mo) |
 | `ai video editor for mac` ranking | GSC + manual check | Top 3 |
 | `descript alternative` ranking | GSC + manual check | Top 10 |
 | Branded search impressions | GSC | Growth |
@@ -771,6 +850,10 @@ Google search (incognito) for Tier 1–2 keywords:
 4. `descript alternative`
 5. `best ai video editor`
 6. `ai reels maker`
+7. `ai reels generator`
+8. `make reels ai`
+9. `capcut alternative free`
+10. `chatgpt video editor`
 
 ---
 
@@ -778,7 +861,7 @@ Google search (incognito) for Tier 1–2 keywords:
 
 | # | Question | Blocks |
 |---|----------|--------|
-| 1 | **Does Woven generate AI voiceover from script today?** | `/ai-voiceover` page (2,400/mo, KD 6) |
+| 1 | **Does Woven generate AI voiceover from script today?** | `/ai-voiceover` page (2,400/mo, KD **98** — deprioritized for SEO) |
 | 2 | Social profiles for `sameAs` — Twitter/X, LinkedIn, GitHub URLs? | Organization schema |
 | 3 | Comparison page tone — how directly to name competitors? | `/vs/*` pages |
 | 4 | Legal pages — generator/template or custom? | `/privacy`, `/terms` |

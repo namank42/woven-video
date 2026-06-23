@@ -63,12 +63,12 @@ export const capcutComparison: ComparisonPageContent = {
   path: "/vs/capcut",
   title: "CapCut Alternative for Mac",
   description:
-    "Looking for a CapCut alternative on Mac? Woven is a native AI video editor for short-form video — script, generate, and assemble Reels and TikToks by chatting. 7-day free trial.",
+    "Looking for a CapCut alternative or alternative to CapCut on Mac? Woven is a native AI video editor for short-form video — a strong CapCut alternative free to try for 7 days. Script, generate, and assemble Reels and TikToks by chatting.",
   h1: "CapCut Alternative for Mac",
   verdict:
     "CapCut is a capable free mobile editor; Woven is a native Mac app for creating short-form video with AI from a script — not just editing clips you already have.",
   answerFirst:
-    "Woven is a CapCut alternative built natively for macOS. Instead of manually editing on a timeline, you script, generate footage and voice, and assemble vertical video by chatting — built for Reels, TikTok, and YouTube Shorts. Try free for 7 days, then $99/year.",
+    "Woven is a CapCut alternative built natively for macOS — and a practical alternative to CapCut if you work on a Mac. Instead of manually editing on a timeline, you script, generate footage and voice, and assemble vertical video by chatting — built for Reels, TikTok, and YouTube Shorts. Start with a 7-day free trial (a CapCut alternative free to try), then $99/year.",
   competitorName: "CapCut",
   rows: [
     { feature: "Platform", woven: "Native macOS app", competitor: "Web, iOS, Android, desktop" },
@@ -106,6 +106,22 @@ export const capcutComparison: ComparisonPageContent = {
       q: "Can Woven export vertical video for TikTok and Reels?",
       a: "Yes. Woven is built for short-form vertical video — Reels, TikTok, and YouTube Shorts.",
     },
+    {
+      q: "Is Woven a free CapCut alternative?",
+      a: "Woven offers a 7-day free trial — so you can try it as a CapCut alternative free before paying. After the trial, Woven is $99/year. CapCut has a popular free tier for mobile template edits; Woven is built for Mac creators who want AI-driven scripting and assembly.",
+    },
+    {
+      q: "What is the best CapCut alternative for Mac?",
+      a: "For creating new short-form video on Mac with AI, Woven is among the best CapCut alternatives: native macOS, local projects, chat-driven scripting and assembly. CapCut remains stronger for free mobile template editing from existing clips.",
+    },
+    {
+      q: "CapCut vs Descript — where does Woven fit?",
+      a: "CapCut is a free mobile editor for template-based cuts. Descript is transcript-first for full podcast episodes. Woven sits between them for Mac creators who clip podcasts or create new Reels, TikToks, and Shorts by chatting — without a manual timeline or full transcript workflow.",
+    },
+    {
+      q: "Is there a CapCut alternative for Mac with a free trial?",
+      a: "Yes. Woven is a CapCut alternative for Mac with a 7-day free trial and full app access. Your projects stay local on your Mac. See woven.video/pricing for details after the trial.",
+    },
   ],
 };
 
@@ -113,43 +129,52 @@ export const descriptComparison: ComparisonPageContent = {
   path: "/vs/descript",
   title: "Descript Alternative",
   description:
-    "Descript alternative for short-form video on Mac. Woven is chat-driven AI video editing for Reels, TikTok, and Shorts — script, generate, and assemble by asking.",
+    "Descript alternative for short-form video on Mac. Clip podcasts and interviews into Reels, TikTok, and Shorts — or create new vertical video — with chat-driven AI editing.",
   h1: "Descript Alternative for Short-Form Video",
   verdict:
-    "Descript is excellent for podcast-style transcription editing; Woven is built for creating and assembling new short-form vertical video on Mac by chatting.",
+    "Both tools work with podcast footage. Descript excels at transcript-first editing of full episodes; Woven clips podcasts and interviews into Reels, TikToks, and Shorts on Mac — or helps you create new vertical video from scratch by chatting.",
   answerFirst:
-    "Woven is a Descript alternative focused on short-form video on Mac. Describe the reel you want, and Woven writes the script, generates footage and voice, and assembles the cut — built for Reels, TikTok, and Shorts. Try free for 7 days.",
+    "Woven is a Descript alternative for short-form video on Mac. Clip podcast and interview episodes into Reels, TikToks, and Shorts, or create new vertical video from a script — all by chatting. Try free for 7 days.",
   competitorName: "Descript",
   rows: [
-    { feature: "Primary use case", woven: "Short-form vertical video", competitor: "Podcasts, talking-head, transcription" },
-    { feature: "Workflow", woven: "Chat-driven create + assemble", competitor: "Text-based edit of recorded audio/video" },
+    { feature: "Primary use case", woven: "Short-form vertical video", competitor: "Long-form podcast and transcription editing" },
+    { feature: "Podcast clipping", woven: "Yes — chat-driven shorts from recordings", competitor: "Yes — export clips from transcript edits" },
+    { feature: "Workflow", woven: "Chat-driven clip + create + assemble", competitor: "Text-based edit of recorded audio/video" },
     { feature: "Platform", woven: "Native macOS", competitor: "macOS and Windows" },
     { feature: "AI models", woven: "Claude, GPT, BYOK, or hosted", competitor: "Descript's AI suite + Underlord" },
     { feature: "Generation", woven: "Script → footage + voice → timeline", competitor: "Overdub, eye contact, studio sound" },
-    { feature: "Best for", woven: "New Reels/TikToks/Shorts on Mac", competitor: "Editing recorded long-form content" },
+    { feature: "Best for", woven: "Reels/TikToks/Shorts — new or from recordings", competitor: "Full-episode transcript editing" },
   ],
   chooseWoven: [
-    "You make Reels, TikToks, or Shorts — not podcasts",
-    "You want to generate and assemble, not just edit recordings",
-    "You prefer a chat-driven Mac workflow",
+    "You clip podcasts, interviews, or webinars into Reels, TikToks, and Shorts",
+    "You want to create new vertical video or repurpose recordings with a chat-driven Mac workflow",
+    "You prefer a native Mac app over a cross-platform editor",
   ],
   chooseCompetitor: [
-    "You edit podcasts or interview footage",
-    "Transcript-based editing of existing recordings is your core workflow",
+    "Your daily workflow is transcript-first editing of full podcast episodes",
+    "You need Descript-specific features like Overdub, Studio Sound, or Underlord",
     "You need Windows support",
   ],
   faqs: [
     {
       q: "Is Woven a Descript alternative?",
-      a: "For short-form video on Mac, yes. Woven is built to script, generate, and assemble vertical video by chatting. Descript is stronger for transcript-first editing of recorded long-form content.",
+      a: "For short-form video on Mac, yes. Woven clips podcasts and interviews into vertical shorts and can create new video from a script — all by chatting. Descript is stronger when your daily workflow is transcript-first editing of full long-form episodes.",
     },
     {
-      q: "Does Woven do transcript editing like Descript?",
-      a: "Woven is not a podcast editor. It focuses on creating and assembling short-form video with AI — script, generation, voice, and timeline assembly in one Mac app.",
+      q: "Can Woven clip podcasts?",
+      a: "Yes. Woven clips podcast and interview recordings into Reels, TikToks, and Shorts on Mac. Ask for the moments you want, refine the cut by chatting, and export vertical video. Descript is the better fit if you need to edit entire episodes line-by-line in a transcript.",
     },
     {
       q: "Which is better for TikTok and Reels?",
-      a: "Woven is purpose-built for vertical short-form output. Descript can export short clips, but its core workflow is transcript editing of longer recordings.",
+      a: "Woven is built for vertical short-form output on Mac — clipping podcasts and interviews or creating from scratch. Descript can export short clips too, but its core workflow is editing full episodes via the transcript.",
+    },
+    {
+      q: "Opus Clip vs Descript — how is Woven different?",
+      a: "Opus Clip auto-extracts clips from uploaded long-form video. Descript edits full episodes via transcript. Woven is a Mac-native alternative for clipping podcasts into Reels, TikToks, and Shorts by chatting — or creating new vertical video from a script.",
+    },
+    {
+      q: "Can Woven make AI podcast clips?",
+      a: "Yes. Woven clips podcast and interview recordings into vertical shorts on Mac. Ask for the moments you want, refine by chatting, and export for Reels, TikTok, or YouTube Shorts. Descript is the better fit for line-by-line transcript editing of full episodes.",
     },
   ],
 };
@@ -158,38 +183,46 @@ export const opusClipComparison: ComparisonPageContent = {
   path: "/vs/opus-clip",
   title: "Opus Clip Alternative",
   description:
-    "Opus Clip alternative for Mac creators. Woven creates and assembles short-form video with AI — not just clipping long videos. Native macOS, 7-day free trial.",
+    "Opus Clip alternative for Mac creators. Clip podcasts and long-form video into Reels, TikTok, and Shorts — or create new vertical video — with chat-driven AI editing.",
   h1: "Opus Clip Alternative",
   verdict:
-    "Opus Clip turns long videos into short clips automatically; Woven helps you create and assemble new short-form video from a script on your Mac.",
+    "Opus Clip auto-extracts clips from uploaded long-form video; Woven clips podcasts and recordings into shorts on Mac by chatting — and can create new vertical video from a script too.",
   answerFirst:
-    "Woven is an Opus Clip alternative for creators who start from an idea, not a long recording. On Mac, you script, generate footage and voice, and assemble Reels, TikToks, and Shorts by chatting — instead of auto-clipping existing long-form video.",
+    "Woven is an Opus Clip alternative for Mac creators. Clip podcast and interview episodes into Reels, TikToks, and Shorts, or create new vertical video from a script — guided by chat instead of batch auto-extraction. Try free for 7 days.",
   competitorName: "Opus Clip",
   rows: [
-    { feature: "Starting point", woven: "Script or creative brief", competitor: "Long-form video upload" },
-    { feature: "Output", woven: "New assembled short-form cut", competitor: "Auto-extracted clips" },
+    { feature: "Starting point", woven: "Recording, script, or brief", competitor: "Long-form video upload" },
+    { feature: "Output", woven: "Clipped or assembled short-form cut", competitor: "Auto-extracted clips" },
     { feature: "Platform", woven: "Native macOS app", competitor: "Web-based" },
-    { feature: "Workflow", woven: "Chat-driven generation + edit", competitor: "AI clipping + captions" },
+    { feature: "Workflow", woven: "Chat-driven clip + create + edit", competitor: "AI clipping + captions" },
     { feature: "Local files", woven: "Full Mac file system", competitor: "Upload-first" },
-    { feature: "Best for", woven: "Creating new vertical video", competitor: "Repurposing long video" },
+    { feature: "Best for", woven: "Clipping podcasts + creating shorts on Mac", competitor: "Batch auto-clipping at scale" },
   ],
   chooseWoven: [
-    "You create new short-form content from scratch",
-    "You work on Mac with local assets",
-    "You want generation and assembly, not just clipping",
+    "You clip podcasts, interviews, or webinars into Reels, TikToks, and Shorts on Mac",
+    "You want chat-guided clipping and editing, not just automated extraction",
+    "You also create new short-form video from a script",
   ],
   chooseCompetitor: [
-    "You have long webinars or podcasts to repurpose",
-    "Auto-clip extraction from existing video is your main need",
+    "You want fully automated batch clipping with minimal editing",
+    "You repurpose dozens of long videos at once via web upload",
   ],
   faqs: [
     {
       q: "Is Woven an Opus Clip alternative?",
-      a: "For creating new short-form video on Mac, yes. Opus Clip repurposes long video into clips; Woven scripts, generates, and assembles new vertical cuts by chatting.",
+      a: "For short-form video on Mac, yes. Woven clips podcasts and long recordings into vertical shorts by chatting. Opus Clip auto-extracts clips from uploaded long-form video at scale.",
     },
     {
-      q: "Can Woven clip long videos like Opus Clip?",
-      a: "Woven is not a long-to-short clipping tool. It is an AI video editor for making new Reels, TikToks, and Shorts from a script on your Mac.",
+      q: "Can Woven clip podcasts and long videos?",
+      a: "Yes. Woven clips podcast and interview recordings into Reels, TikToks, and Shorts on Mac. Opus Clip is built for automated batch extraction from web uploads; Woven gives you a chat-driven Mac workflow for clipping and refining cuts.",
+    },
+    {
+      q: "Opus Clip vs Descript — which is Woven closer to?",
+      a: "Woven overlaps with both: like Opus Clip, it turns long recordings into shorts; like Descript, it works with podcast footage. Woven differs by offering a native Mac, chat-driven workflow for clipping and creating vertical video — not batch web extraction or full transcript editing.",
+    },
+    {
+      q: "Is Woven an AI clip maker?",
+      a: "Yes, for short-form video on Mac. Woven acts as an AI clip maker when you pull moments from podcasts, interviews, or long recordings into Reels, TikToks, and Shorts — and when you generate new vertical cuts from a script. Opus Clip focuses on automated batch clipping from web uploads.",
     },
   ],
 };
@@ -238,12 +271,12 @@ export const macEditorPage: FeaturePageContent = {
 
 export const reelsUseCase: UseCasePageContent = {
   path: "/for/reels",
-  title: "AI Reels Maker for Mac",
+  title: "AI Reels Maker & Generator for Mac",
   description:
-    "Make Instagram Reels with AI on Mac. Woven scripts, generates, and assembles vertical video by chatting. 7-day free trial.",
-  h1: "AI Reels Maker for Mac",
+    "AI Reels maker and AI Reels generator for Mac. Make Instagram Reels with AI — script, generate footage and voice, and assemble vertical video by chatting. Free to try for 7 days.",
+  h1: "AI Reels Maker & Generator for Mac",
   answerFirst:
-    "Woven is an AI Reels maker for Mac. Describe the reel you want, and Woven writes the script, generates footage and voice, and assembles a vertical cut — ready for Instagram Reels. Try free for 7 days.",
+    "Woven is an AI Reels maker and AI Reels generator for Mac. Describe the reel you want — or say make Reels with AI — and Woven writes the script, generates footage and voice, and assembles a vertical cut ready for Instagram Reels. Try free for 7 days.",
   workflow: [
     "Open Woven on your Mac and start from your assets or a blank reel",
     "Chat the concept — hook, pacing, shots, and voiceover",
@@ -254,6 +287,22 @@ export const reelsUseCase: UseCasePageContent = {
     {
       q: "Can Woven make Instagram Reels?",
       a: "Yes. Woven is built for vertical short-form video including Instagram Reels. You script, generate, and assemble by chatting on your Mac.",
+    },
+    {
+      q: "What is the best AI Reels generator for Mac?",
+      a: "Woven is an AI Reels generator built natively for macOS. You describe the reel, and Woven generates the script, footage, voice, and timeline assembly by chat — designed for Instagram Reels, not general desktop editing.",
+    },
+    {
+      q: "How do I make Reels with AI?",
+      a: "In Woven on your Mac: describe the reel concept in chat, let Woven write the script and generate footage and voice, revise by chatting, then export a vertical cut for Instagram Reels. No timeline editing experience required.",
+    },
+    {
+      q: "Is there a free AI Reels generator?",
+      a: "Woven offers a 7-day free trial with full app access — try it as a free AI Reels generator before subscribing. After the trial, Woven is $99/year. See woven.video/pricing for details.",
+    },
+    {
+      q: "Is Woven an AI Reels editor?",
+      a: "Yes. Woven is an AI Reels editor for Mac creators who want to script, generate, and assemble vertical video by chatting — not just trim clips on a manual timeline.",
     },
     {
       q: "Do I need video editing experience?",
@@ -314,10 +363,10 @@ export const bestEditorRoundup: RoundupPageContent = {
   path: "/best-ai-video-editor",
   title: "Best AI Video Editor",
   description:
-    "Compare the best AI video editors for short-form video in 2026 — Woven, CapCut, Descript, and Opus Clip. Find the right tool for Mac, mobile, and repurposing.",
+    "Compare the best AI video editors and content repurposing tools for short-form video in 2026 — Woven, CapCut, Descript, and Opus Clip. Find the right tool for Mac, mobile, and repurposing.",
   h1: "Best AI Video Editor for Short-Form Video",
   answerFirst:
-    "The best AI video editor depends on your workflow: Woven for creating new short-form video on Mac by chatting, CapCut for free mobile template edits, Descript for transcript-based podcast editing, and Opus Clip for clipping long video into shorts.",
+    "The best AI video editor depends on your workflow: Woven for clipping podcasts and creating short-form video on Mac by chatting, CapCut for free mobile template edits (and as a best CapCut alternative on Mac), Descript for transcript-based full-episode editing, and Opus Clip for automated batch clipping. For content repurposing, Woven and Opus Clip turn long recordings into Reels, TikToks, and Shorts.",
   criteria: [
     "Platform (Mac-native vs web/mobile)",
     "Workflow (create vs edit vs clip)",
@@ -328,10 +377,10 @@ export const bestEditorRoundup: RoundupPageContent = {
   entries: [
     {
       name: "Woven",
-      bestFor: "Creating new short-form video on Mac",
+      bestFor: "Clipping podcasts and creating shorts on Mac",
       platform: "macOS (native)",
       pricing: "7-day trial, then $99/yr",
-      highlight: "Chat-driven script → generate → assemble",
+      highlight: "Chat-driven clip, create, and assemble",
     },
     {
       name: "CapCut",
@@ -358,7 +407,7 @@ export const bestEditorRoundup: RoundupPageContent = {
   faqs: [
     {
       q: "What is the best AI video editor for Mac?",
-      a: "For creating new short-form video on Mac, Woven is built natively for that workflow — chat-driven script, generation, and assembly. CapCut and Descript are stronger for other use cases.",
+      a: "For clipping podcasts and creating short-form video on Mac, Woven is built natively for that workflow — chat-driven clipping, generation, and assembly. CapCut and Descript are stronger for other use cases.",
     },
     {
       q: "What is the best free AI video editor?",
@@ -366,7 +415,15 @@ export const bestEditorRoundup: RoundupPageContent = {
     },
     {
       q: "Which AI video editor is best for TikTok and Reels?",
-      a: "Woven and CapCut are common choices. Woven suits Mac creators starting from a script; CapCut suits quick mobile edits from existing clips.",
+      a: "Woven and CapCut are common choices. Woven suits Mac creators clipping podcasts or starting from a script; CapCut suits quick mobile edits from existing clips.",
+    },
+    {
+      q: "What is the best content repurposing tool for video?",
+      a: "For Mac creators, Woven is a strong content repurposing tool: clip podcasts and interviews into Reels, TikToks, and Shorts, or create new vertical video from a script — all by chatting. Opus Clip suits automated batch clipping from web uploads; Descript suits transcript-first full-episode editing.",
+    },
+    {
+      q: "What is the best CapCut alternative?",
+      a: "On Mac, Woven is a top CapCut alternative for creators who want to script, generate, and assemble new short-form video with AI — not just edit existing clips on mobile. CapCut remains best for free template-based mobile edits.",
     },
   ],
 };

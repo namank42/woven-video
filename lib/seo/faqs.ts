@@ -45,6 +45,10 @@ export const homepageFaqs: FaqItem[] = [
     a: "Yes. Sign in with ChatGPT to run GPT-5+ on your existing Plus, Pro, or Team plan — no separate OpenAI API key required. You can also bring your own OpenAI key or use Woven-hosted models.",
   },
   {
+    q: "Is Woven a ChatGPT video editor?",
+    a: "Woven is a native Mac AI video editor that works with ChatGPT — sign in with your OpenAI account to run GPT-5+ on your existing plan while scripting, generating, and assembling short-form video by chat. It is not a browser-based ChatGPT plugin; it is a desktop app built for Reels, TikTok, and YouTube Shorts.",
+  },
+  {
     q: "How does the hosted-models balance work?",
     a: "Top up a USD balance from $5. Each request is charged against your balance using published per-model rates. The balance is prepaid, so there are no surprise bills.",
   },

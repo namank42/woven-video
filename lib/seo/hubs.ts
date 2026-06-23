@@ -29,19 +29,19 @@ export const compareHub: HubPageContent = {
       href: "/vs/capcut",
       title: "Woven vs CapCut",
       description:
-        "CapCut alternative for Mac — create new Reels and TikToks with AI instead of template editing.",
+        "CapCut alternative for Mac — free 7-day trial, then create new Reels and TikToks with AI instead of template editing.",
     },
     {
       href: "/vs/descript",
       title: "Woven vs Descript",
       description:
-        "Descript alternative for short-form video — chat-driven creation vs transcript editing.",
+        "Descript alternative — clip podcasts into shorts on Mac vs full transcript editing.",
     },
     {
       href: "/vs/opus-clip",
       title: "Woven vs Opus Clip",
       description:
-        "Opus Clip alternative — create new vertical video from a script, not just clip long-form.",
+        "Opus Clip alternative — clip podcasts on Mac with chat vs automated batch extraction.",
     },
     {
       href: "/best-ai-video-editor",
@@ -57,7 +57,7 @@ export const compareHub: HubPageContent = {
     },
     {
       q: "Is Woven a Descript alternative?",
-      a: "For short-form video on Mac, yes. Descript excels at podcast and transcript editing; Woven focuses on creating new Reels, TikToks, and Shorts.",
+      a: "For short-form video on Mac, yes. Woven clips podcasts and interviews into Reels, TikToks, and Shorts by chatting. Descript is stronger for transcript-first editing of full long-form episodes.",
     },
   ],
 };
@@ -74,7 +74,7 @@ export const useCaseHub: HubPageContent = {
     {
       href: "/for/reels",
       title: "Instagram Reels",
-      description: "AI Reels maker — script, generate, and assemble on your Mac.",
+      description: "AI Reels maker and generator — script, generate, and assemble on your Mac.",
     },
     {
       href: "/for/tiktok",
