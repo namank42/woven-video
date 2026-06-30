@@ -36,10 +36,7 @@ export function SiteFooter() {
           <Link href="/changelog" className="hover:text-foreground">
             Changelog
           </Link>
-          <a
-            href="https://sfx.woven.video"
-            className="hover:text-foreground"
-          >
+          <a href="/sfx" className="hover:text-foreground">
             Woven SFX
           </a>
           <Link href="/#faq" className="hover:text-foreground">
