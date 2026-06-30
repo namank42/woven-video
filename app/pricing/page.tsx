@@ -3,7 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   AppleIcon,
-  ArrowRightIcon,
   BadgeCheckIcon,
   CheckIcon,
   WalletIcon,
@@ -11,13 +10,12 @@ import {
 
 import { FaqSection, LastUpdated } from "@/components/marketing/page-sections";
 import { JsonLd } from "@/components/seo/json-ld";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { SiteFooter } from "@/components/site-footer";
 import { ANSWER_FIRST_PRICING, DOWNLOAD_URL } from "@/lib/seo/constants";
 import { pricingFaqs } from "@/lib/seo/faqs";
 import { pricingPageGraph } from "@/lib/seo/schema";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -242,16 +240,14 @@ function Plans() {
               </li>
             ))}
           </ul>
-          <Link
-            href="/login?next=/account"
-            className={cn(
-              buttonVariants(),
-              "mt-auto h-11 w-full rounded-full text-sm font-medium",
-            )}
+          <Button
+            nativeButton={false}
+            className="mt-auto h-11 w-full rounded-full text-sm font-medium"
+            render={<a href={DOWNLOAD_URL} download />}
           >
-            Start your 7-day free trial
-            <ArrowRightIcon className="size-4" />
-          </Link>
+            <AppleIcon className="size-4" />
+            Download for Mac
+          </Button>
           <div className="flex items-start justify-center gap-1.5">
             <BadgeCheckIcon className="mt-0.5 size-4 shrink-0 text-green-600" />
             <p className="max-w-xs text-xs text-muted-foreground">

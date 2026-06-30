@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowRightIcon,
   AppleIcon,
   BadgeCheckIcon,
+  CalendarIcon,
   CheckIcon,
   KeyIcon,
   LaptopIcon,
@@ -14,7 +14,7 @@ import {
   WalletIcon,
 } from "lucide-react";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
@@ -33,6 +33,8 @@ import {
 import { homepageFaqs } from "@/lib/seo/faqs";
 import { homePageGraph } from "@/lib/seo/schema";
 import { cn } from "@/lib/utils";
+
+const BOOK_DEMO_URL = "https://cal.com/naman-woven/45min";
 
 const reels = [
   {
@@ -213,14 +215,31 @@ function Hero() {
         <p className="mt-3 max-w-xl text-sm text-muted-foreground">
           Script. Shot list. Generate. Animate. Edit. Assemble — all in one place.
         </p>
-        <Button
-          nativeButton={false}
-          className="mt-8 h-12 rounded-full px-7 text-base font-medium shadow-lg shadow-foreground/10"
-          render={<a href={DOWNLOAD_URL} download />}
-        >
-          <AppleIcon className="size-4" />
-          Download for Mac
-        </Button>
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
+          <Button
+            nativeButton={false}
+            className="h-12 rounded-full px-7 text-base font-medium shadow-lg shadow-foreground/10"
+            render={<a href={DOWNLOAD_URL} download />}
+          >
+            <AppleIcon className="size-4" />
+            Download for Mac
+          </Button>
+          <Button
+            nativeButton={false}
+            variant="outline"
+            className="h-12 rounded-full px-6 text-base font-medium"
+            render={
+              <a
+                href={BOOK_DEMO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
+          >
+            <CalendarIcon className="size-4" />
+            Book a demo
+          </Button>
+        </div>
         <HeroMedia />
       </div>
     </section>
@@ -415,16 +434,15 @@ function Pricing() {
               </BulletItem>
               <BulletItem inverse>$5 in Woven-hosted credits to start</BulletItem>
             </ul>
-            <Link
-              href="/login?next=/account"
-              className={cn(
-                buttonVariants({ variant: "secondary" }),
-                "relative mt-auto h-11 w-full rounded-full text-sm font-medium",
-              )}
+            <Button
+              nativeButton={false}
+              variant="secondary"
+              className="relative mt-auto h-11 w-full rounded-full text-sm font-medium"
+              render={<a href={DOWNLOAD_URL} download />}
             >
-              Start your 7-day free trial
-              <ArrowRightIcon className="size-4" />
-            </Link>
+              <AppleIcon className="size-4" />
+              Download for Mac
+            </Button>
             <div className="relative flex items-start justify-center gap-1.5">
               <BadgeCheckIcon className="mt-0.5 size-4 shrink-0 text-green-400" />
               <p className="max-w-xs text-xs text-background/70">
