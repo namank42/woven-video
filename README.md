@@ -35,6 +35,9 @@ Supabase files live under `supabase/`:
 
 Architecture details are in [docs/billing-architecture.md](docs/billing-architecture.md).
 
+Landing-page media workflow details are in
+[docs/landing-page-media.md](docs/landing-page-media.md).
+
 ## Scripts
 
 ```bash
