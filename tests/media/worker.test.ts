@@ -9,6 +9,8 @@ import type { MediaModel } from "@/lib/media/types";
 const mocks = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
   getMediaModel: vi.fn(),
+  getMediaEnv: vi.fn(),
+  signMediaToken: vi.fn(),
   createOutputAssetRows: vi.fn(),
   failOutputAssetRowsForAttempt: vi.fn(),
 }));
@@ -19,6 +21,14 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 vi.mock("@/lib/media/model-registry", () => ({
   getMediaModel: mocks.getMediaModel,
+}));
+
+vi.mock("@/lib/media/env", () => ({
+  getMediaEnv: mocks.getMediaEnv,
+}));
+
+vi.mock("@/lib/media/tokens", () => ({
+  signMediaToken: mocks.signMediaToken,
 }));
 
 vi.mock("@/lib/media/output-assets", () => ({
@@ -58,8 +68,21 @@ describe("drainOneMediaJob", () => {
   beforeEach(() => {
     mocks.createSupabaseAdminClient.mockReset();
     mocks.getMediaModel.mockReset();
+    mocks.getMediaEnv.mockReset();
+    mocks.signMediaToken.mockReset();
     mocks.createOutputAssetRows.mockReset();
     mocks.failOutputAssetRowsForAttempt.mockReset();
+    mocks.getMediaEnv.mockReturnValue({
+      baseUrl: "https://media.example.test",
+      tokenSecret: "token-secret",
+      workerSharedSecret: "worker-secret",
+      maxUploadBytes: 1000,
+      uploadUrlTtlSeconds: 900,
+      downloadUrlTtlSeconds: 900,
+    });
+    mocks.signMediaToken.mockImplementation(async (payload: { assetId?: string }) =>
+      `token-for-${payload.assetId}`
+    );
     mocks.createOutputAssetRows.mockImplementation(async () => materializedOutputs());
     mocks.failOutputAssetRowsForAttempt.mockResolvedValue(undefined);
   });
@@ -151,6 +174,104 @@ describe("drainOneMediaJob", () => {
         percent: null,
         message: "Waiting on provider",
       },
+    });
+  });
+
+  it("passes signed uploaded input URLs to providers on initial submit", async () => {
+    mocks.getMediaModel.mockResolvedValue({
+      ...model,
+      supportsUploadedInputs: true,
+      supportedInputTypes: ["image"],
+    });
+    const inputAssetRows = [
+      { id: "asset_1", storage_key: "users/user_1/media/tmp/asset_1/input.png" },
+      { id: "asset_2", storage_key: "users/user_1/media/tmp/asset_2/input.png" },
+    ];
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow({
+        input: {
+          media_model_id: "fal:frontier-video",
+          parameters: { prompt: "animate this" },
+          input_asset_ids: ["asset_2", "asset_1"],
+        },
+      })],
+      inputAssetRows,
+    });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "waiting_provider" as const,
+        providerJobId: "provider_new",
+      })),
+    } satisfies MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toEqual({
+      claimed: true,
+      jobId: "job_1",
+      status: "waiting_provider",
+    });
+
+    expect(admin.tables).toEqual(["media_assets"]);
+    expect(mocks.signMediaToken).toHaveBeenNthCalledWith(1, {
+      kind: "download",
+      sub: "user_1",
+      key: "users/user_1/media/tmp/asset_2/input.png",
+      assetId: "asset_2",
+      jobId: "job_1",
+      exp: expect.any(Number),
+    }, "token-secret");
+    expect(mocks.signMediaToken).toHaveBeenNthCalledWith(2, {
+      kind: "download",
+      sub: "user_1",
+      key: "users/user_1/media/tmp/asset_1/input.png",
+      assetId: "asset_1",
+      jobId: "job_1",
+      exp: expect.any(Number),
+    }, "token-secret");
+    expect(adapter.run).toHaveBeenCalledWith({
+      model: expect.objectContaining({ id: "fal:frontier-video" }),
+      parameters: { prompt: "animate this" },
+      inputUrls: [
+        "https://media.example.test/objects/asset_2?token=token-for-asset_2",
+        "https://media.example.test/objects/asset_1?token=token-for-asset_1",
+      ],
+      providerJobId: null,
+      signal: undefined,
+    });
+  });
+
+  it("releases the job when attached input assets are unavailable", async () => {
+    mocks.getMediaModel.mockResolvedValue({
+      ...model,
+      supportsUploadedInputs: true,
+      supportedInputTypes: ["image"],
+    });
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow({
+        input: {
+          media_model_id: "fal:frontier-video",
+          parameters: { prompt: "animate this" },
+          input_asset_ids: ["asset_1"],
+        },
+      })],
+      inputAssetRows: [],
+    });
+    const adapter = {
+      run: vi.fn(),
+    } as unknown as MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toEqual({
+      claimed: true,
+      jobId: "job_1",
+      status: "failed",
+    });
+
+    expect(adapter.run).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_claimed_media_job", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_status: "failed",
+      p_error: "media_input_unavailable",
+      p_metadata: { reason: "media_input_unavailable" },
     });
   });
 
@@ -708,14 +829,26 @@ function materializedOutputs() {
 
 function mockAdminWith({
   claimedJobs,
+  inputAssetRows = [],
   rpcResults = {},
 }: {
   claimedJobs: unknown[];
+  inputAssetRows?: Array<{ id: string; storage_key: string }>;
   rpcResults?: Record<string, SupabaseResult<unknown>>;
 }) {
   const tables: string[] = [];
   const from = vi.fn((table: string) => {
     tables.push(table);
+    if (table === "media_assets") {
+      const chain = {
+        eq: vi.fn(() => chain),
+        in: vi.fn(() => Promise.resolve({ data: inputAssetRows, error: null })),
+        select: vi.fn(() => chain),
+      };
+      return {
+        select: vi.fn(() => chain),
+      };
+    }
     throw new Error(`Unexpected Supabase table: ${table}`);
   });
   const rpc: ReturnType<typeof vi.fn> = vi.fn(async (name: string, args: Record<string, unknown>) => {

@@ -36,10 +36,7 @@ export async function GET(request: Request) {
       { headers: { "cache-control": "no-store" } },
     );
   } catch (error) {
-    return apiError(
-      error instanceof Error ? error.message : "Unable to list media models.",
-      500,
-      "internal_server_error",
-    );
+    console.error("Failed to list media models", error);
+    return apiError("Unable to list media models.", 500, "media_models_failed");
   }
 }

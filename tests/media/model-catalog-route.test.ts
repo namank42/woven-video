@@ -85,7 +85,8 @@ describe("media model catalog route", () => {
     });
   });
 
-  it("returns an internal_server_error response when model listing fails", async () => {
+  it("returns a safe error response when model listing fails", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.doMock("@/lib/api/auth", () => ({
       requireApiAuth: vi.fn(async () => ({
         ok: true,
@@ -105,9 +106,13 @@ describe("media model catalog route", () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toMatchObject({
       error: {
-        code: "internal_server_error",
-        message: "database unavailable",
+        code: "media_models_failed",
+        message: "Unable to list media models.",
       },
     });
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to list media models",
+      expect.any(Error),
+    );
   });
 });

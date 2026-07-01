@@ -79,6 +79,7 @@ export async function POST(request: Request) {
       return apiError("Upload is too large.", 413, "upload_too_large");
     }
 
-    return apiError(message, 500, "media_upload_failed");
+    console.error("Failed to create media upload slot", error);
+    return apiError("Unable to create media upload.", 500, "media_upload_failed");
   }
 }

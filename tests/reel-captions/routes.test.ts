@@ -216,6 +216,69 @@ describe("reel captions routes", () => {
     expect(admin.rpc).not.toHaveBeenCalled();
   });
 
+  it("logs caption process job lookup errors and returns a safe public error", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const admin = mockProcessAdmin({
+      asset: null,
+      jobLookupError: { message: "database failure with private details" },
+    });
+
+    mockCaptionRouteDependencies({ admin });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "caption_job_lookup_failed",
+        message: "Unable to load caption job.",
+      },
+    });
+    expect(admin.claimUpdate).not.toHaveBeenCalled();
+    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to load caption job for processing",
+      expect.any(Error),
+    );
+  });
+
+  it("logs caption input asset lookup errors and returns a safe public error", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const admin = mockProcessAdmin({
+      asset: null,
+      assetLookupError: { message: "asset query failed with private details" },
+    });
+
+    mockCaptionRouteDependencies({ admin });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "caption_asset_lookup_failed",
+        message: "Unable to load caption upload.",
+      },
+    });
+    expect(admin.claimUpdate).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to load caption input asset",
+      expect.any(Error),
+    );
+  });
+
   it("returns a running conflict without transcription or usage insertion for already-running caption jobs", async () => {
     const transcribeWithElevenLabs = vi.fn(async () => ({
       text: "Hello",
@@ -304,6 +367,45 @@ describe("reel captions routes", () => {
     expect(admin.usageInsert).not.toHaveBeenCalled();
   });
 
+  it("logs caption claim errors and returns a safe public error", async () => {
+    const transcribeWithElevenLabs = vi.fn();
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const admin = mockProcessAdmin({
+      claimError: { message: "claim failed with private details" },
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/wav",
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "caption_job_claim_failed",
+        message: "Unable to claim caption job.",
+      },
+    });
+    expect(transcribeWithElevenLabs).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to claim caption job",
+      expect.any(Error),
+    );
+  });
+
   it("transcribes caption jobs through a signed Woven media URL and deletes the input asset", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
@@ -361,6 +463,40 @@ describe("reel captions routes", () => {
     expect(transcribeWithElevenLabs).toHaveBeenCalledWith({
       cloudStorageUrl: `https://media.example.test/objects/${ASSET_ID}?token=download.token`,
       signal: expect.any(AbortSignal),
+    });
+    expect(admin.rpc).toHaveBeenCalledWith("record_and_settle_reel_caption_job", {
+      p_job_id: JOB_ID,
+      p_final_cost_usd_micros: 100_000,
+      p_output: expect.objectContaining({
+        id: JOB_ID,
+        status: "succeeded",
+        text: "Hello",
+        chargedAmountUsdMicros: 100_000,
+      }),
+      p_metadata: {
+        duration_seconds: 12,
+        raw_provider_cost: expect.any(Number),
+        charged_amount_usd_micros: 100_000,
+        caption_count: 1,
+      },
+      p_usage_event: {
+        user_id: USER_ID,
+        job_id: JOB_ID,
+        provider: "elevenlabs",
+        model: "scribe_v2",
+        operation: "reel_captions",
+        input_units: 12,
+        output_units: 1,
+        raw_provider_cost: expect.any(Number),
+        charged_amount_usd_micros: 100_000,
+        markup_amount_usd_micros: expect.any(Number),
+        metadata: {
+          duration_seconds: 12,
+          language_code: "en",
+          language_probability: 0.98,
+          caption_count: 1,
+        },
+      },
     });
     expect(admin.deletedAssetUpdate).toMatchObject({
       status: "deleted",
@@ -574,11 +710,17 @@ function mockProcessAdmin({
   jobStatus = "queued",
   mediaAssetId = ASSET_ID,
   claimResult = { id: JOB_ID },
+  jobLookupError = null,
+  assetLookupError = null,
+  claimError = null,
 }: {
   asset: Record<string, unknown> | null;
   jobStatus?: string;
   mediaAssetId?: unknown;
   claimResult?: { id: string } | null;
+  jobLookupError?: { message: string } | null;
+  assetLookupError?: { message: string } | null;
+  claimError?: { message: string } | null;
 }) {
   const generationJob = {
     id: JOB_ID,
@@ -596,18 +738,20 @@ function mockProcessAdmin({
     reserved_amount_usd_micros: 100_000,
   };
 
-  const usageInsert = vi.fn(async () => ({ data: null, error: null }));
   const admin = {
     deletedAssetUpdate: null as unknown,
     claimUpdate: vi.fn(),
-    usageInsert,
+    usageInsert: vi.fn(),
     from: vi.fn((table: string) => {
       if (table === "generation_jobs") {
         return {
           select: vi.fn(() => {
             const chain = {
               eq: vi.fn(() => chain),
-              maybeSingle: vi.fn(async () => ({ data: generationJob, error: null })),
+              maybeSingle: vi.fn(async () => ({
+                data: jobLookupError ? null : generationJob,
+                error: jobLookupError,
+              })),
             };
             return chain;
           }),
@@ -617,7 +761,10 @@ function mockProcessAdmin({
               eq: vi.fn(() => chain),
               in: vi.fn(async () => ({ data: claimResult, error: null })),
               select: vi.fn(() => ({
-                maybeSingle: vi.fn(async () => ({ data: claimResult, error: null })),
+                maybeSingle: vi.fn(async () => ({
+                  data: claimError ? null : claimResult,
+                  error: claimError,
+                })),
               })),
             };
             return chain;
@@ -630,7 +777,10 @@ function mockProcessAdmin({
           select: vi.fn(() => {
             const chain = {
               eq: vi.fn(() => chain),
-              maybeSingle: vi.fn(async () => ({ data: asset, error: null })),
+              maybeSingle: vi.fn(async () => ({
+                data: assetLookupError ? null : asset,
+                error: assetLookupError,
+              })),
             };
             return chain;
           }),
@@ -645,7 +795,7 @@ function mockProcessAdmin({
 
       if (table === "usage_events") {
         return {
-          insert: usageInsert,
+          insert: admin.usageInsert,
         };
       }
 

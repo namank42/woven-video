@@ -265,6 +265,48 @@ describe("media upload routes", () => {
     expect(createInputAssetUpload).not.toHaveBeenCalled();
   });
 
+  it("returns a safe JSON error when public upload setup fails", async () => {
+    const createInputAssetUpload = vi.fn(async () => {
+      throw new Error("database details");
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: {
+          user: { id: "user_1" },
+        },
+      })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({
+      licenseGateResponse: vi.fn(async () => null),
+    }));
+    vi.doMock("@/lib/media/assets", () => ({
+      createInputAssetUpload,
+    }));
+
+    const { POST } = await import("@/app/api/v1/media/uploads/route");
+    const response = await POST(jsonRequest("/api/v1/media/uploads", {
+      purpose: "media_input",
+      filename: "input.png",
+      content_type: "image/png",
+      size_bytes: 12,
+    }));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "media_upload_failed",
+        message: "Unable to create media upload.",
+      },
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to create media upload slot",
+      expect.any(Error),
+    );
+  });
+
   it("rejects non-number size_bytes values in internal completion requests", async () => {
     const markInputAssetUploaded = vi.fn(async () => undefined);
     mocks.getMediaEnv.mockReturnValue(mediaEnv);

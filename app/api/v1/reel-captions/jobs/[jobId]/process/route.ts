@@ -49,7 +49,13 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const admin = createSupabaseAdminClient();
-  const job = await loadJob(admin, jobId, authResult.auth.user.id);
+  let job: CaptionJob | null;
+  try {
+    job = await loadJob(admin, jobId, authResult.auth.user.id);
+  } catch (error) {
+    console.error("Failed to load caption job for processing", error);
+    return apiError("Unable to load caption job.", 500, "caption_job_lookup_failed");
+  }
 
   if (!job) {
     return apiError("Caption job not found.", 404, "caption_job_not_found");
@@ -95,7 +101,13 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const asset = await loadInputAsset(admin, mediaAssetId, job.user_id);
+  let asset: CaptionInputAsset | null;
+  try {
+    asset = await loadInputAsset(admin, mediaAssetId, job.user_id);
+  } catch (error) {
+    console.error("Failed to load caption input asset", error);
+    return apiError("Unable to load caption upload.", 500, "caption_asset_lookup_failed");
+  }
   if (!isAssetReadyForCaptioning(asset)) {
     return apiError(
       "Voiceover upload is not ready yet.",
@@ -104,7 +116,13 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const claim = await claimQueuedJob(admin, job.id);
+  let claim: boolean;
+  try {
+    claim = await claimQueuedJob(admin, job.id);
+  } catch (error) {
+    console.error("Failed to claim caption job", error);
+    return apiError("Unable to claim caption job.", 500, "caption_job_claim_failed");
+  }
   if (!claim) {
     return apiError(
       "Caption job is already running.",
@@ -155,7 +173,7 @@ export async function POST(request: Request, context: RouteContext) {
       chargedAmountUsdMicros,
     };
 
-    const { error: usageError } = await admin.from("usage_events").insert({
+    const usageEvent = {
       user_id: authResult.auth.user.id,
       job_id: job.id,
       provider: rule.provider,
@@ -172,14 +190,10 @@ export async function POST(request: Request, context: RouteContext) {
         language_probability: transcription.languageProbability,
         caption_count: transcription.captions.length,
       },
-    });
-
-    if (usageError) {
-      throw new Error(usageError.message);
-    }
+    };
 
     const { error: settleError } = await admin.rpc(
-      "settle_balance_reservation",
+      "record_and_settle_reel_caption_job",
       {
         p_job_id: job.id,
         p_final_cost_usd_micros: chargedAmountUsdMicros,
@@ -190,6 +204,7 @@ export async function POST(request: Request, context: RouteContext) {
           charged_amount_usd_micros: chargedAmountUsdMicros,
           caption_count: transcription.captions.length,
         },
+        p_usage_event: usageEvent,
       },
     );
 

@@ -102,11 +102,8 @@ export async function POST(request: Request) {
     .single();
 
   if (jobError || !job?.id) {
-    return apiError(
-      jobError?.message ?? "Unable to create caption job.",
-      500,
-      "caption_job_create_failed",
-    );
+    console.error("Failed to create caption job", jobError);
+    return apiError("Unable to create caption job.", 500, "caption_job_create_failed");
   }
 
   const jobId = String(job.id);
@@ -123,12 +120,19 @@ export async function POST(request: Request) {
   });
 
   if (reserveError) {
-    await markJobFailed(admin, jobId, reserveError.message);
     const insufficient = reserveError.message === "insufficient_balance";
+    await markJobFailed(
+      admin,
+      jobId,
+      insufficient ? "insufficient_balance" : "caption_reservation_failed",
+    );
+    if (!insufficient) {
+      console.error("Failed to reserve caption balance", reserveError);
+    }
     return apiError(
       insufficient
         ? "Insufficient balance. Add funds before generating captions."
-        : reserveError.message,
+        : "Unable to reserve caption credits.",
       insufficient ? 402 : 500,
       insufficient ? "insufficient_balance" : "caption_reservation_failed",
     );
@@ -144,24 +148,18 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create upload URL.";
-    await releaseReservation(
-      admin,
-      jobId,
-      message,
-    );
-
     if (message === "invalid_media_input") {
+      await releaseReservation(admin, jobId, "invalid_media_input");
       return apiError("Invalid media input.", 400, "invalid_media_input");
     }
     if (message === "upload_too_large") {
+      await releaseReservation(admin, jobId, "upload_too_large");
       return apiError("Upload is too large.", 413, "upload_too_large");
     }
 
-    return apiError(
-      message,
-      500,
-      "caption_upload_url_failed",
-    );
+    console.error("Failed to create caption media upload", error);
+    await releaseReservation(admin, jobId, "caption_upload_url_failed");
+    return apiError("Unable to create caption upload.", 500, "caption_upload_url_failed");
   }
 
   const input = {
@@ -176,13 +174,10 @@ export async function POST(request: Request) {
     .eq("id", jobId);
 
   if (updateError) {
-    await releaseReservation(admin, jobId, updateError.message);
+    console.error("Failed to attach caption media asset to job", updateError);
+    await releaseReservation(admin, jobId, "caption_job_update_failed");
     await markInputAssetDeleted(admin, upload.asset.id, jobId, "caption_job_update_failed");
-    return apiError(
-      updateError.message,
-      500,
-      "caption_job_update_failed",
-    );
+    return apiError("Unable to update caption job.", 500, "caption_job_update_failed");
   }
 
   return Response.json(

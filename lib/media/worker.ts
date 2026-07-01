@@ -5,6 +5,8 @@ import {
 } from "@/lib/media/output-assets";
 import type { MediaProviderAdapter, ProviderOutput } from "@/lib/media/provider";
 import { chargeMediaUsdMicros } from "@/lib/media/pricing";
+import { getMediaEnv } from "@/lib/media/env";
+import { signMediaToken } from "@/lib/media/tokens";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 type SupabaseAdminClient = ReturnType<typeof createSupabaseAdminClient>;
@@ -14,6 +16,10 @@ type ClaimedMediaJobRow = {
   input?: unknown;
   provider_job_id?: unknown;
   claim_token?: unknown;
+};
+type MediaInputAssetRow = {
+  id: string;
+  storage_key: string;
 };
 type DrainOneMediaJobResult =
   | { claimed: false }
@@ -73,10 +79,25 @@ export async function drainOneMediaJob({
     return { claimed: true, jobId: job.id, status };
   }
 
+  let inputUrls: string[];
+  try {
+    inputUrls = job.providerJobId
+      ? []
+      : await signedInputAssetUrls({ admin, job });
+  } catch (error) {
+    if (isStaleClaimError(error)) {
+      return { claimed: true, jobId: job.id, status: "stale_claim" };
+    }
+
+    const status = await releaseJob(admin, job, "media_input_unavailable");
+    return { claimed: true, jobId: job.id, status };
+  }
+
   const result = await runProviderAdapter({
     adapter,
     model,
     parameters: objectValue(job.input.parameters),
+    inputUrls,
     providerJobId: job.providerJobId,
     signal,
   });
@@ -196,6 +217,7 @@ function normalizeClaimedJob(job: ClaimedMediaJobRow) {
     userId,
     input,
     mediaModelId: stringValue(input.media_model_id),
+    inputAssetIds: stringArrayValue(input.input_asset_ids),
     providerJobId: stringValue(job.provider_job_id),
     claimToken: stringValue(job.claim_token),
   };
@@ -205,12 +227,14 @@ async function runProviderAdapter({
   adapter,
   model,
   parameters,
+  inputUrls,
   providerJobId,
   signal,
 }: {
   adapter: MediaProviderAdapter;
   model: Parameters<MediaProviderAdapter["run"]>[0]["model"];
   parameters: Record<string, unknown>;
+  inputUrls: string[];
   providerJobId: string | null;
   signal?: AbortSignal;
 }) {
@@ -222,7 +246,7 @@ async function runProviderAdapter({
     return await adapter.run({
       model,
       parameters,
-      inputUrls: [],
+      inputUrls,
       providerJobId,
       signal,
     });
@@ -237,6 +261,62 @@ async function runProviderAdapter({
 
     return { status: "provider_failed" as const };
   }
+}
+
+async function signedInputAssetUrls({
+  admin,
+  job,
+}: {
+  admin: SupabaseAdminClient;
+  job: {
+    id: string;
+    userId: string;
+    inputAssetIds: string[];
+  };
+}): Promise<string[]> {
+  if (job.inputAssetIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await admin
+    .from("media_assets")
+    .select("id, storage_key")
+    .eq("user_id", job.userId)
+    .eq("job_id", job.id)
+    .eq("kind", "input")
+    .eq("status", "attached")
+    .in("id", job.inputAssetIds);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const rows = (data ?? []) as MediaInputAssetRow[];
+  if (rows.length !== job.inputAssetIds.length) {
+    throw new Error("media_input_unavailable");
+  }
+
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const env = getMediaEnv();
+  const exp = Math.floor(Date.now() / 1000) + env.downloadUrlTtlSeconds;
+
+  return Promise.all(job.inputAssetIds.map(async (assetId) => {
+    const asset = byId.get(assetId);
+    if (!asset?.storage_key) {
+      throw new Error("media_input_unavailable");
+    }
+
+    const token = await signMediaToken({
+      kind: "download",
+      sub: job.userId,
+      key: asset.storage_key,
+      assetId,
+      jobId: job.id,
+      exp,
+    }, env.tokenSecret);
+
+    return `${env.baseUrl}/objects/${assetId}?token=${encodeURIComponent(token)}`;
+  }));
 }
 
 async function updateWaitingProviderJob({
@@ -277,6 +357,7 @@ async function releaseJob(
   job: { id: string; claimToken: string | null },
   reason:
     | "model_not_enabled"
+    | "media_input_unavailable"
     | "media_output_materialization_failed"
     | "provider_failed"
     | "provider_not_configured",
@@ -354,6 +435,12 @@ function objectValue(value: unknown): Record<string, unknown> {
 
 function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function stringArrayValue(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
