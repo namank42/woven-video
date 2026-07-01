@@ -3,7 +3,7 @@
 ## Dependencies Checked
 
 - Installed: `next@16.2.3`, `@supabase/supabase-js@2.105.1`.
-- Not installed yet: Fal JS SDK, ElevenLabs JS SDK, AWS S3 SDK/R2 signing SDK, queue/worker package.
+- Not installed yet: `@fal-ai/client`, `@elevenlabs/elevenlabs-js`, `vitest`, AWS S3 SDK/R2 signing SDK, queue/worker package.
 - Design implication: keep Next routes as control-plane endpoints and either add small provider/storage dependencies deliberately or call provider REST APIs with `fetch`.
 
 ## Next.js (local docs: `node_modules/next/dist/docs`) - v16.2.3 installed
@@ -48,6 +48,12 @@
 
 ## Fal (context7: `/websites/fal_ai`)
 
+- JavaScript/TypeScript install/import:
+  - Install with `npm install --save @fal-ai/client` or pnpm equivalent.
+  - Import with `import { fal } from "@fal-ai/client";`.
+- Server-side Node authentication:
+  - Set `FAL_KEY` as an environment variable.
+  - Fal docs say the server-side client reads `FAL_KEY` from the environment automatically.
 - Fal supports async queue submission from JavaScript:
   - `fal.queue.submit(endpointId, { input, webhookUrl? })` returns `{ request_id }`.
   - `fal.queue.status(endpointId, { requestId, logs: true })` reads queue/job status and logs.
@@ -60,13 +66,28 @@
   - `documentation/development/calling-your-endpoints`
   - model API reference snippets for queued model submission
   - MCP upload-file docs for Fal CDN behavior
+- Source: official Fal docs opened 2026-07-01:
+  - `https://fal.ai/docs/documentation/model-apis/inference/client-setup`
 
 ## ElevenLabs (context7: `/websites/elevenlabs_io`)
 
+- JavaScript/TypeScript SDK package is `@elevenlabs/elevenlabs-js`.
+- Import/instantiate:
+  - `import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";`
+  - `const client = new ElevenLabsClient({ apiKey: process.env.ELEVENLABS_API_KEY });`
 - Text-to-speech can be generated with the JS SDK:
   - `new ElevenLabsClient({ apiKey })`
   - `client.textToSpeech.convert(voiceId, { modelId, text, outputFormat, voiceSettings })`
   - response is stream-like audio bytes that can be piped/written.
+- Streaming text-to-speech can be generated with:
+  - `client.textToSpeech.stream(voiceId, { modelId, text, outputFormat, voiceSettings? })`
+  - return shape is `Promise<AsyncIterable<Uint8Array>>`, so workers can collect or stream chunks into R2.
+- Sound effects REST endpoint:
+  - `POST https://api.elevenlabs.io/v1/sound-generation`
+  - header `xi-api-key`, JSON body includes required `text`, optional `loop`, `duration_seconds`, `prompt_influence`, and `model_id`; response is generated MP3 bytes.
+- Music REST endpoint:
+  - `POST https://api.elevenlabs.io/v1/music`
+  - header `xi-api-key`, optional query `output_format`, JSON body includes `prompt` or `composition_plan`, optional `music_length_ms`, `model_id`, `seed`, `force_instrumental`, and related options; response is generated audio bytes.
 - Text-to-speech with timestamps is available at:
   - `POST /v1/text-to-speech/{voice_id}/stream/with-timestamps?output_format=...`
   - body includes `text` and `model_id`; response streams audio with timestamp information.
@@ -81,6 +102,27 @@
   - text-to-speech stream-with-timestamps API reference
   - speech-to-text convert API reference
 - Source: official pricing page opened 2026-07-01: `https://elevenlabs.io/pricing`
+- Source: official ElevenLabs docs opened 2026-07-01:
+  - `https://elevenlabs.io/docs/api-reference/text-to-sound-effects/convert`
+  - `https://elevenlabs.io/docs/api-reference/music/compose`
+
+## Vitest (context7: `/vitest-dev/vitest`) - not installed
+
+- Vitest supports TypeScript test files directly with `.test.ts`.
+- For projects without Vite config, create `vitest.config.ts` and import `defineConfig` from `vitest/config`.
+- Vite/Vitest aliases are configured at top level with `resolve.alias`, not inside the `test` property.
+- Test imports use:
+  - `import { beforeEach, describe, expect, it, vi } from "vitest";`
+- Function mocks use `vi.fn()`, `mockReturnValueOnce`, and call matchers like `toHaveBeenCalled()`.
+- Module mocks use `vi.mock("./module")`; the mock is hoisted before test execution.
+- `beforeEach` is the standard hook for clearing mocks and resetting test data.
+- Package scripts can run tests with `pnpm run test` when `"test": "vitest run"` is added.
+- Source: Context7 Vitest docs:
+  - `docs/guide/learn/writing-tests.md`
+  - `docs/api/vi.md`
+  - `docs/api/hooks.md`
+- Source: official Vitest docs opened 2026-07-01:
+  - `https://vitest.dev/config/`
 
 ## Design Constraints From Docs
 
