@@ -41,8 +41,11 @@ export function mediaOutputKey({
 }
 
 export function extensionFor(filename: string, contentType: string): string {
+  const safeExtension = SAFE_EXTENSIONS[contentType];
+  if (safeExtension) return safeExtension;
+
   const lower = filename.toLowerCase();
   const match = lower.match(/\.[a-z0-9]{1,8}$/);
   if (match) return match[0];
-  return SAFE_EXTENSIONS[contentType] ?? ".bin";
+  return ".bin";
 }

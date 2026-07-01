@@ -7,6 +7,8 @@ export type MediaEnv = {
   downloadUrlTtlSeconds: number;
 };
 
+const PLACEHOLDER_SECRET = "replace_with_32_plus_random_bytes";
+
 function integerEnv(name: string, fallback: number): number {
   const raw = process.env[name];
   if (!raw) return fallback;
@@ -17,11 +19,21 @@ function integerEnv(name: string, fallback: number): number {
   return parsed;
 }
 
+function secretEnv(name: string): string {
+  const secret = process.env[name];
+  if (!secret) throw new Error(`Missing ${name}.`);
+  if (secret === PLACEHOLDER_SECRET) {
+    throw new Error(`${name} must not use the placeholder value.`);
+  }
+  if (secret.length < 32) {
+    throw new Error(`${name} must be at least 32 characters.`);
+  }
+  return secret;
+}
+
 export function getMediaEnv(): MediaEnv {
-  const tokenSecret = process.env.MEDIA_TOKEN_SECRET;
-  const workerSharedSecret = process.env.MEDIA_WORKER_SHARED_SECRET;
-  if (!tokenSecret) throw new Error("Missing MEDIA_TOKEN_SECRET.");
-  if (!workerSharedSecret) throw new Error("Missing MEDIA_WORKER_SHARED_SECRET.");
+  const tokenSecret = secretEnv("MEDIA_TOKEN_SECRET");
+  const workerSharedSecret = secretEnv("MEDIA_WORKER_SHARED_SECRET");
 
   return {
     baseUrl: (process.env.MEDIA_BASE_URL ?? "https://media.woven.video").replace(/\/$/, ""),

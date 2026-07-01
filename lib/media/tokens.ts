@@ -30,16 +30,14 @@ export async function verifyMediaToken(
   const expected = await hmacSha256(body, secret);
   if (!timingSafeEqual(signature, expected)) return null;
 
-  let payload: MediaTokenPayload;
+  let payload: unknown;
   try {
-    payload = JSON.parse(base64UrlDecode(body)) as MediaTokenPayload;
+    payload = JSON.parse(base64UrlDecode(body));
   } catch {
     return null;
   }
 
-  if (payload.exp < nowSeconds) return null;
-  if (payload.kind !== "upload" && payload.kind !== "download") return null;
-  if (!payload.sub || !payload.key) return null;
+  if (!isMediaTokenPayload(payload, nowSeconds)) return null;
   return payload;
 }
 
@@ -74,4 +72,34 @@ function timingSafeEqual(left: string, right: string): boolean {
     diff |= left.charCodeAt(index) ^ right.charCodeAt(index);
   }
   return diff === 0;
+}
+
+function isMediaTokenPayload(
+  payload: unknown,
+  nowSeconds: number,
+): payload is MediaTokenPayload {
+  if (!payload || typeof payload !== "object") return false;
+
+  const token = payload as Record<string, unknown>;
+  if (token.kind !== "upload" && token.kind !== "download") return false;
+  if (!isNonEmptyString(token.sub)) return false;
+  if (!isNonEmptyString(token.key)) return false;
+  if (typeof token.exp !== "number" || !Number.isInteger(token.exp) || token.exp < nowSeconds) return false;
+
+  const sizeBytes = token.sizeBytes;
+  if (sizeBytes !== undefined && (typeof sizeBytes !== "number" || !Number.isInteger(sizeBytes) || sizeBytes <= 0)) {
+    return false;
+  }
+  if (!isOptionalString(token.assetId)) return false;
+  if (!isOptionalString(token.jobId)) return false;
+  if (!isOptionalString(token.contentType)) return false;
+  return true;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === "string";
 }

@@ -19,4 +19,13 @@ describe("media storage keys", () => {
       contentType: "video/mp4",
     })).toBe("users/user_1/media/outputs/job_1/out_1.mp4");
   });
+
+  it("prefers safe content-type extensions over filename extensions", () => {
+    expect(mediaInputKey({
+      userId: "user_1",
+      assetId: "asset_1",
+      filename: "photo.html",
+      contentType: "image/png",
+    })).toBe("users/user_1/media/tmp/asset_1/input.png");
+  });
 });
