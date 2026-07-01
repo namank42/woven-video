@@ -16,8 +16,9 @@ describe("media storage keys", () => {
       userId: "user_1",
       jobId: "job_1",
       outputId: "out_1",
+      attemptId: "attempt_1",
       contentType: "video/mp4",
-    })).toBe("users/user_1/media/outputs/job_1/out_1.mp4");
+    })).toBe("users/user_1/media/outputs/job_1/out_1/attempts/attempt_1/output.mp4");
   });
 
   it("prefers safe content-type extensions over filename extensions", () => {
@@ -54,6 +55,7 @@ describe("media storage keys", () => {
       userId: "",
       jobId: "job_1",
       outputId: "out_1",
+      attemptId: "attempt_1",
       contentType: "video/mp4",
     })).toThrow("userId must be a safe path segment.");
 
@@ -61,6 +63,7 @@ describe("media storage keys", () => {
       userId: "user_1",
       jobId: "job/1",
       outputId: "out_1",
+      attemptId: "attempt_1",
       contentType: "video/mp4",
     })).toThrow("jobId must be a safe path segment.");
 
@@ -68,7 +71,16 @@ describe("media storage keys", () => {
       userId: "user_1",
       jobId: "job_1",
       outputId: "out/1",
+      attemptId: "attempt_1",
       contentType: "video/mp4",
     })).toThrow("outputId must be a safe path segment.");
+
+    expect(() => mediaOutputKey({
+      userId: "user_1",
+      jobId: "job_1",
+      outputId: "out_1",
+      attemptId: "attempt/1",
+      contentType: "video/mp4",
+    })).toThrow("attemptId must be a safe path segment.");
   });
 });

@@ -487,10 +487,12 @@ describe("drainOneMediaJob", () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const attemptAssets = [{
       id: "attempt_output_1",
+      outputAttemptId: "attempt_id_1",
       metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "remote_url",
+        output_attempt_id: "attempt_id_1",
       },
     }];
     mocks.createOutputAssetRows.mockResolvedValueOnce({
@@ -531,7 +533,6 @@ describe("drainOneMediaJob", () => {
     expect(mocks.failOutputAssetRowsForAttempt).toHaveBeenCalledWith({
       userId: "user_1",
       jobId: "job_1",
-      claimToken,
       attemptAssets,
       reason: "media_output_materialization_failed",
     });
@@ -631,6 +632,21 @@ describe("claim-aware media finalization migration", () => {
   });
 });
 
+describe("claim-aware media output asset migration", () => {
+  it("adds stale cleanup scoped by output attempt metadata", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260701124000_fail_media_output_asset_attempt.sql",
+      "utf8",
+    );
+
+    expect(sql).toContain("create or replace function public.fail_media_output_asset_attempt");
+    expect(sql).toContain("metadata->>'output_attempt_id' = p_output_attempt_id");
+    expect(sql).toContain("raise exception 'media_output_asset_attempt_not_found'");
+    expect(sql).toContain("to service_role");
+    expect(sql).not.toContain("claim_token =");
+  });
+});
+
 function jobRow(overrides: Record<string, unknown> = {}) {
   return {
     id: "job_1",
@@ -660,10 +676,12 @@ function materializedOutputs() {
     outputs: [wovenOutput()],
     attemptAssets: [{
       id: "output_asset_1",
+      outputAttemptId: "attempt_id_1",
       metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "remote_url",
+        output_attempt_id: "attempt_id_1",
       },
     }],
   };

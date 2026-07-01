@@ -127,9 +127,9 @@ describe("media Worker", () => {
     );
   });
 
-  it("writes valid output uploads to R2 when the token key matches the job output asset", async () => {
+  it("writes valid output uploads to R2 without calling the completion endpoint", async () => {
     const env = testEnv();
-    const outputKey = "users/user_1/media/outputs/job_1/output_1.mp4";
+    const outputKey = "users/user_1/media/outputs/job_1/output_1/attempts/attempt_1/output.mp4";
     const token = await uploadToken({
       assetId: "output_1",
       contentType: "video/mp4",
@@ -159,19 +159,68 @@ describe("media Worker", () => {
       text: "video bytes!",
       options: {
         httpMetadata: { contentType: "video/mp4" },
-        customMetadata: { user_id: "user_1", asset_id: "output_1" },
+        customMetadata: { user_id: "user_1", asset_id: "output_1", job_id: "job_1" },
       },
     }]);
-    expect(completionFetch).toHaveBeenCalledWith(
-      "https://app.example.test/api/internal/media/uploads/complete",
-      expect.objectContaining({
-        body: JSON.stringify({
-          asset_id: "output_1",
-          storage_key: outputKey,
-          size_bytes: 12,
-        }),
-      }),
-    );
+    expect(completionFetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects output uploads using the old final-key shape", async () => {
+    const env = testEnv();
+    const token = await uploadToken({
+      assetId: "output_1",
+      contentType: "video/mp4",
+      key: "users/user_1/media/outputs/job_1/output_1.mp4",
+      jobId: "job_1",
+      sizeBytes: 5,
+    });
+    const completionFetch = vi.fn();
+    vi.stubGlobal("fetch", completionFetch);
+
+    const response = await mediaWorker.fetch(new Request(
+      `https://media.example.test/uploads/output_1?token=${token}`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "video/mp4",
+          "content-length": "5",
+        },
+        body: "video",
+      },
+    ), env);
+
+    expect(response.status).toBe(401);
+    expect(env.MEDIA_BUCKET.puts).toEqual([]);
+    expect(completionFetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects output uploads with unsafe attempt key segments", async () => {
+    const env = testEnv();
+    const token = await uploadToken({
+      assetId: "output_1",
+      contentType: "video/mp4",
+      key: "users/user_1/media/outputs/job_1/output_1/attempts/attempt.1/output.mp4",
+      jobId: "job_1",
+      sizeBytes: 5,
+    });
+    const completionFetch = vi.fn();
+    vi.stubGlobal("fetch", completionFetch);
+
+    const response = await mediaWorker.fetch(new Request(
+      `https://media.example.test/uploads/output_1?token=${token}`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "video/mp4",
+          "content-length": "5",
+        },
+        body: "video",
+      },
+    ), env);
+
+    expect(response.status).toBe(401);
+    expect(env.MEDIA_BUCKET.puts).toEqual([]);
+    expect(completionFetch).not.toHaveBeenCalled();
   });
 
   it("rejects output uploads when the key does not match the token job output path", async () => {
@@ -179,7 +228,7 @@ describe("media Worker", () => {
     const token = await uploadToken({
       assetId: "output_1",
       contentType: "video/mp4",
-      key: "users/user_1/media/outputs/job_2/output_1.mp4",
+      key: "users/user_1/media/outputs/job_2/output_1/attempts/attempt_1/output.mp4",
       jobId: "job_1",
       sizeBytes: 5,
     });

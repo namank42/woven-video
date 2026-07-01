@@ -157,7 +157,6 @@ export async function drainOneMediaJob({
         await failOutputAssetRowsForAttempt({
           userId: job.userId,
           jobId: job.id,
-          claimToken: job.claimToken,
           attemptAssets: materializedOutputs.attemptAssets,
           reason: "media_output_materialization_failed",
         });

@@ -93,8 +93,13 @@ async function handleUpload(
     customMetadata: {
       user_id: payload.sub,
       asset_id: payload.assetId,
+      ...(payload.jobId ? { job_id: payload.jobId } : {}),
     },
   });
+
+  if (payload.jobId) {
+    return jsonResponse({ ok: true });
+  }
 
   try {
     const completionResponse = await fetch(
@@ -294,13 +299,17 @@ function isValidOutputUploadKey(payload: UploadTokenPayload): boolean {
     return false;
   }
 
-  const outputPrefix = `users/${payload.sub}/media/outputs/${payload.jobId}/${payload.assetId}`;
+  const outputPrefix = `users/${payload.sub}/media/outputs/${payload.jobId}/${payload.assetId}/attempts/`;
   if (!payload.key.startsWith(outputPrefix)) {
     return false;
   }
 
-  const extension = payload.key.slice(outputPrefix.length);
-  return /^\.[A-Za-z0-9]+$/.test(extension);
+  const rest = payload.key.slice(outputPrefix.length);
+  const parts = rest.split("/");
+  if (parts.length !== 2) return false;
+
+  const [attemptId, filename] = parts;
+  return /^[A-Za-z0-9_-]+$/.test(attemptId) && /^output\.[A-Za-z0-9]+$/.test(filename);
 }
 
 function parsePositiveInteger(value: string | null): number | null {

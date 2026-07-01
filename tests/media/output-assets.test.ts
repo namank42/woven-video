@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MediaEnv } from "@/lib/media/env";
 import {
   createOutputAssetRows,
+  deterministicOutputAttemptId,
   deterministicOutputAssetId,
   failOutputAssetRowsForAttempt,
 } from "@/lib/media/output-assets";
@@ -66,7 +67,14 @@ describe("createOutputAssetRows", () => {
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
     const outputId = deterministicOutputAssetId("job_1", 0);
-    const storageKey = `users/user_1/media/outputs/job_1/${outputId}.mp3`;
+    const outputAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
+    const storageKey = outputAttemptStorageKey({
+      userId: "user_1",
+      jobId: "job_1",
+      outputId,
+      outputAttemptId,
+      extension: "mp3",
+    });
     const existingStep = selectQuery({ data: null, error: null });
     const admin = mockAdminWith({
       selectSteps: [existingStep],
@@ -112,9 +120,11 @@ describe("createOutputAssetRows", () => {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "inline_data",
+        output_attempt_id: outputAttemptId,
       },
     });
-    expect(JSON.stringify(admin.rpc.mock.calls[0][1])).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain(claimToken);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [uploadUrl, uploadInit] = fetchMock.mock.calls[0];
@@ -148,16 +158,19 @@ describe("createOutputAssetRows", () => {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "inline_data",
+        output_attempt_id: outputAttemptId,
         copied_to_r2_at: "2026-07-01T12:00:00.000Z",
       },
     });
 
     expect(result.attemptAssets).toEqual([{
       id: outputId,
+      outputAttemptId,
       metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "inline_data",
+        output_attempt_id: outputAttemptId,
       },
     }]);
     expect(result.outputs).toHaveLength(1);
@@ -169,6 +182,15 @@ describe("createOutputAssetRows", () => {
     });
     const downloadUrl = new URL(result.outputs[0].url);
     expect(`${downloadUrl.origin}${downloadUrl.pathname}`).toBe(`https://media.example.test/objects/${outputId}`);
+    const downloadToken = downloadUrl.searchParams.get("token") ?? "";
+    await expect(verifyMediaToken(downloadToken, mediaEnv.tokenSecret, nowSeconds)).resolves.toMatchObject({
+      kind: "download",
+      sub: "user_1",
+      key: storageKey,
+      assetId: outputId,
+      jobId: "job_1",
+      exp: nowSeconds + mediaEnv.downloadUrlTtlSeconds,
+    });
   });
 
   it("fetches HTTP provider outputs before uploading them to the Woven media URL", async () => {
@@ -176,6 +198,7 @@ describe("createOutputAssetRows", () => {
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
     const outputId = deterministicOutputAssetId("job_1", 0);
+    const outputAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
     const existingStep = selectQuery({ data: null, error: null });
     const admin = mockAdminWith({
       selectSteps: [existingStep],
@@ -215,9 +238,11 @@ describe("createOutputAssetRows", () => {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "remote_url",
+        output_attempt_id: outputAttemptId,
       },
     }));
-    expect(JSON.stringify(admin.rpc.mock.calls[0][1])).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain(claimToken);
     expect(result.outputs[0].url).toContain(`https://media.example.test/objects/${outputId}?token=`);
     expect(result.outputs[0].url).not.toContain("provider.example");
   });
@@ -227,6 +252,7 @@ describe("createOutputAssetRows", () => {
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
     const outputId = deterministicOutputAssetId("job_1", 0);
+    const outputAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
     const existingStep = selectQuery({ data: null, error: null });
     const admin = mockAdminWith({
       selectSteps: [existingStep],
@@ -258,17 +284,20 @@ describe("createOutputAssetRows", () => {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "inline_data",
+        output_attempt_id: outputAttemptId,
         failure_reason: "media_output_upload_failed:503",
         failed_at: "2026-07-01T12:00:00.000Z",
       },
     });
-    expect(JSON.stringify(admin.rpc.mock.calls[1][1])).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain(claimToken);
   });
 
   it("marks the media asset failed and throws a safe error when upload fetch throws", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
+    const outputAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
     const existingStep = selectQuery({ data: null, error: null });
     const admin = mockAdminWith({
       selectSteps: [existingStep],
@@ -296,11 +325,13 @@ describe("createOutputAssetRows", () => {
     expect(admin.rpc).toHaveBeenNthCalledWith(2, "fail_claimed_media_output_asset", expect.objectContaining({
       p_claim_token: claimToken,
       p_metadata: expect.objectContaining({
+        output_attempt_id: outputAttemptId,
         failure_reason: "media_output_upload_failed:network",
       }),
     }));
-    expect(JSON.stringify(admin.rpc.mock.calls[1][1])).not.toContain("provider.example");
-    expect(JSON.stringify(admin.rpc.mock.calls[1][1])).not.toContain("connection reset");
+    expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain("connection reset");
+    expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain(claimToken);
   });
 
   it("rejects oversized inline outputs before preparing an asset row", async () => {
@@ -352,6 +383,11 @@ describe("createOutputAssetRows", () => {
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
     const existingId = deterministicOutputAssetId("job_1", 0);
+    const previousAttemptId = deterministicOutputAttemptId(
+      "job_1",
+      0,
+      "00000000-0000-4000-8000-000000000002",
+    );
     const existing = {
       id: existingId,
       user_id: "user_1",
@@ -360,11 +396,18 @@ describe("createOutputAssetRows", () => {
       status: "ready",
       content_type: "audio/mpeg",
       size_bytes: 4,
-      storage_key: `users/user_1/media/outputs/job_1/${existingId}.mp3`,
+      storage_key: outputAttemptStorageKey({
+        userId: "user_1",
+        jobId: "job_1",
+        outputId: existingId,
+        outputAttemptId: previousAttemptId,
+        extension: "mp3",
+      }),
       metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "inline_data",
+        output_attempt_id: previousAttemptId,
         copied_to_r2_at: "2026-07-01T11:00:00.000Z",
       },
     };
@@ -393,6 +436,13 @@ describe("createOutputAssetRows", () => {
       content_type: "audio/mpeg",
       expires_at: "2026-07-01T12:02:00.000Z",
     });
+    const downloadToken = new URL(result.outputs[0].url).searchParams.get("token") ?? "";
+    await expect(verifyMediaToken(downloadToken, mediaEnv.tokenSecret, nowSeconds)).resolves.toMatchObject({
+      kind: "download",
+      key: existing.storage_key,
+      assetId: existing.id,
+      jobId: "job_1",
+    });
   });
 
   it("resets an existing failed output row and stores only safe data URL provenance", async () => {
@@ -400,6 +450,12 @@ describe("createOutputAssetRows", () => {
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
     const existingId = deterministicOutputAssetId("job_1", 0);
+    const previousAttemptId = deterministicOutputAttemptId(
+      "job_1",
+      0,
+      "00000000-0000-4000-8000-000000000002",
+    );
+    const outputAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
     const existing = {
       id: existingId,
       user_id: "user_1",
@@ -408,11 +464,18 @@ describe("createOutputAssetRows", () => {
       status: "failed",
       content_type: "audio/mpeg",
       size_bytes: 0,
-      storage_key: `users/user_1/media/outputs/job_1/${existingId}.mp3`,
+      storage_key: outputAttemptStorageKey({
+        userId: "user_1",
+        jobId: "job_1",
+        outputId: existingId,
+        outputAttemptId: previousAttemptId,
+        extension: "mp3",
+      }),
       metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "data_url",
+        output_attempt_id: previousAttemptId,
         failure_reason: "media_output_upload_failed:network",
       },
     };
@@ -449,15 +512,18 @@ describe("createOutputAssetRows", () => {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "data_url",
+        output_attempt_id: outputAttemptId,
       },
     }));
     expect(JSON.stringify(admin.rpc.mock.calls[0][1])).not.toContain("data:audio");
     expect(result.attemptAssets).toEqual([{
       id: existingId,
+      outputAttemptId,
       metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "data_url",
+        output_attempt_id: outputAttemptId,
       },
     }]);
   });
@@ -468,6 +534,8 @@ describe("createOutputAssetRows", () => {
 
     const firstId = deterministicOutputAssetId("job_1", 0);
     const secondId = deterministicOutputAssetId("job_1", 1);
+    const firstAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
+    const secondAttemptId = deterministicOutputAttemptId("job_1", 1, claimToken);
     const admin = mockAdminWith({
       selectSteps: [
         selectQuery({ data: null, error: null }),
@@ -518,6 +586,7 @@ describe("createOutputAssetRows", () => {
       p_claim_token: claimToken,
       p_metadata: expect.objectContaining({
         output_index: 1,
+        output_attempt_id: secondAttemptId,
         failure_reason: "media_output_upload_failed:503",
       }),
     }));
@@ -526,9 +595,57 @@ describe("createOutputAssetRows", () => {
       p_claim_token: claimToken,
       p_metadata: expect.objectContaining({
         output_index: 0,
+        output_attempt_id: firstAttemptId,
         failure_reason: "media_output_materialization_failed",
       }),
     }));
+  });
+
+  it("falls back to attempt cleanup when claim-fenced failure sees a stale claim", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
+
+    const outputId = deterministicOutputAssetId("job_1", 0);
+    const outputAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
+    const existingStep = selectQuery({ data: null, error: null });
+    const admin = mockAdminWith({
+      selectSteps: [existingStep],
+      rpcSteps: [
+        rpcStep("prepare_claimed_media_output_asset"),
+        rpcStep("fail_claimed_media_output_asset", {
+          data: null,
+          error: { message: "media_job_stale_claim" },
+        }),
+        rpcStep("fail_media_output_asset_attempt"),
+      ],
+    });
+    globalThis.fetch = vi.fn(async () => new Response("nope", { status: 503 })) as unknown as typeof fetch;
+
+    await expect(createOutputAssetRows({
+      userId: "user_1",
+      jobId: "job_1",
+      claimToken,
+      outputs: [{
+        data: Uint8Array.from([1, 2, 3]),
+        contentType: "audio/mpeg",
+        type: "audio",
+      }],
+    })).rejects.toThrow("media_output_upload_failed:503");
+
+    expect(admin.rpc).toHaveBeenNthCalledWith(3, "fail_media_output_asset_attempt", {
+      p_job_id: "job_1",
+      p_asset_id: outputId,
+      p_user_id: "user_1",
+      p_output_attempt_id: outputAttemptId,
+      p_metadata: {
+        source: "provider_output",
+        output_index: 0,
+        provider_source_type: "inline_data",
+        output_attempt_id: outputAttemptId,
+        failure_reason: "media_output_upload_failed:503",
+        failed_at: "2026-07-01T12:00:00.000Z",
+      },
+    });
   });
 
   it("surfaces stale claims from claim-aware output RPCs", async () => {
@@ -557,41 +674,44 @@ describe("createOutputAssetRows", () => {
 });
 
 describe("failOutputAssetRowsForAttempt", () => {
-  it("claim-fences stale-settlement cleanup and skips reused assets", async () => {
+  it("uses attempt-scoped cleanup and skips reused assets", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
+    const outputAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
     const admin = mockAdminWith({
       rpcSteps: [
-        rpcStep("fail_claimed_media_output_asset"),
+        rpcStep("fail_media_output_asset_attempt"),
       ],
     });
 
     await expect(failOutputAssetRowsForAttempt({
       userId: "user_1",
       jobId: "job_1",
-      claimToken,
       attemptAssets: [{
         id: "asset_created_this_attempt",
+        outputAttemptId,
         metadata: {
           source: "provider_output",
           output_index: 0,
           provider_source_type: "inline_data",
+          output_attempt_id: outputAttemptId,
         },
       }],
       reason: "media_output_materialization_failed",
     })).resolves.toBeUndefined();
 
     expect(admin.rpc).toHaveBeenCalledTimes(1);
-    expect(admin.rpc).toHaveBeenCalledWith("fail_claimed_media_output_asset", {
+    expect(admin.rpc).toHaveBeenCalledWith("fail_media_output_asset_attempt", {
       p_job_id: "job_1",
-      p_claim_token: claimToken,
       p_asset_id: "asset_created_this_attempt",
       p_user_id: "user_1",
+      p_output_attempt_id: outputAttemptId,
       p_metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "inline_data",
+        output_attempt_id: outputAttemptId,
         failure_reason: "media_output_materialization_failed",
         failed_at: "2026-07-01T12:00:00.000Z",
       },
@@ -656,4 +776,20 @@ async function bytesFromBody(body: BodyInit | null | undefined): Promise<number[
   if (!body) return [];
   const arrayBuffer = await new Response(body).arrayBuffer();
   return Array.from(new Uint8Array(arrayBuffer));
+}
+
+function outputAttemptStorageKey({
+  userId,
+  jobId,
+  outputId,
+  outputAttemptId,
+  extension,
+}: {
+  userId: string;
+  jobId: string;
+  outputId: string;
+  outputAttemptId: string;
+  extension: string;
+}): string {
+  return `users/${userId}/media/outputs/${jobId}/${outputId}/attempts/${outputAttemptId}/output.${extension}`;
 }

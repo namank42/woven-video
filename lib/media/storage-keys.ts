@@ -32,17 +32,20 @@ export function mediaOutputKey({
   userId,
   jobId,
   outputId,
+  attemptId,
   contentType,
 }: {
   userId: string;
   jobId: string;
   outputId: string;
+  attemptId: string;
   contentType: string;
 }): string {
   const safeUserId = safeSegment("userId", userId);
   const safeJobId = safeSegment("jobId", jobId);
   const safeOutputId = safeSegment("outputId", outputId);
-  return `users/${safeUserId}/media/outputs/${safeJobId}/${safeOutputId}${extensionFor("", contentType)}`;
+  const safeAttemptId = safeSegment("attemptId", attemptId);
+  return `users/${safeUserId}/media/outputs/${safeJobId}/${safeOutputId}/attempts/${safeAttemptId}/output${extensionFor("", contentType)}`;
 }
 
 export function extensionFor(_filename: string, contentType: string): string {
