@@ -2,13 +2,14 @@ import { readFileSync } from "node:fs";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MediaProviderAdapter } from "@/lib/media/provider";
+import type { MediaProviderAdapter, ProviderOutput } from "@/lib/media/provider";
 import { drainOneMediaJob, materializeOutputs } from "@/lib/media/worker";
 import type { MediaModel } from "@/lib/media/types";
 
 const mocks = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
   getMediaModel: vi.fn(),
+  createOutputAssetRows: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -17,6 +18,10 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 vi.mock("@/lib/media/model-registry", () => ({
   getMediaModel: mocks.getMediaModel,
+}));
+
+vi.mock("@/lib/media/output-assets", () => ({
+  createOutputAssetRows: mocks.createOutputAssetRows,
 }));
 
 type SupabaseError = { message: string };
@@ -51,6 +56,8 @@ describe("drainOneMediaJob", () => {
   beforeEach(() => {
     mocks.createSupabaseAdminClient.mockReset();
     mocks.getMediaModel.mockReset();
+    mocks.createOutputAssetRows.mockReset();
+    mocks.createOutputAssetRows.mockImplementation(async () => [wovenOutput()]);
   });
 
   it("returns unclaimed when the claim RPC returns no jobs", async () => {
@@ -212,12 +219,11 @@ describe("drainOneMediaJob", () => {
         media_model_id: "fal:frontier-video",
         outputs: [
           {
-            id: "out_1",
+            id: "output_asset_1",
             type: "video",
             content_type: "video/mp4",
-            source_url: "https://provider.example/output.mp4",
-            user_id: "user_1",
-            job_id: "job_1",
+            url: "https://media.example.test/objects/output_asset_1?token=download-token",
+            expires_at: "2026-07-01T12:15:00.000Z",
           },
         ],
         provider_metadata: {
@@ -231,12 +237,11 @@ describe("drainOneMediaJob", () => {
         media_model_id: "fal:frontier-video",
         outputs: [
           {
-            id: "out_1",
+            id: "output_asset_1",
             type: "video",
             content_type: "video/mp4",
-            source_url: "https://provider.example/output.mp4",
-            user_id: "user_1",
-            job_id: "job_1",
+            url: "https://media.example.test/objects/output_asset_1?token=download-token",
+            expires_at: "2026-07-01T12:15:00.000Z",
           },
         ],
         provider_metadata: {
@@ -262,9 +267,20 @@ describe("drainOneMediaJob", () => {
         },
       },
     });
+    expect(mocks.createOutputAssetRows).toHaveBeenCalledWith({
+      userId: "user_1",
+      jobId: "job_1",
+      outputs: [
+        {
+          url: "https://provider.example/output.mp4",
+          contentType: "video/mp4",
+          type: "video",
+        },
+      ],
+    });
   });
 
-  it("releases the reservation instead of settling inline-only provider outputs", async () => {
+  it("settles inline provider outputs after copying them to Woven media assets", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJobs: [jobRow()] });
     const adapter = {
@@ -284,18 +300,52 @@ describe("drainOneMediaJob", () => {
     await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toEqual({
       claimed: true,
       jobId: "job_1",
-      status: "failed",
+      status: "succeeded",
     });
 
     expect(admin.tables).toEqual([]);
     expect(admin.rpc).toHaveBeenCalledTimes(2);
-    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_claimed_media_job", {
+    expect(mocks.createOutputAssetRows).toHaveBeenCalledWith({
+      userId: "user_1",
+      jobId: "job_1",
+      outputs: [
+        {
+          data: Buffer.from([1, 2, 3, 4]),
+          contentType: "audio/mpeg",
+          type: "audio",
+        },
+      ],
+    });
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "record_and_settle_claimed_media_job", {
       p_job_id: "job_1",
       p_claim_token: claimToken,
-      p_status: "failed",
-      p_error: "provider_output_not_persisted",
-      p_metadata: { reason: "provider_output_not_persisted" },
+      p_final_cost_usd_micros: 300_000,
+      p_output: {
+        media_model_id: "fal:frontier-video",
+        outputs: [wovenOutput()],
+        provider_metadata: {},
+        charged_amount_usd_micros: 300_000,
+      },
+      p_metadata: {
+        media_model_id: "fal:frontier-video",
+        outputs: [wovenOutput()],
+        provider_metadata: {},
+        charged_amount_usd_micros: 300_000,
+      },
+      p_usage_event: {
+        user_id: "user_1",
+        job_id: "job_1",
+        provider: "fal",
+        model: "fal-ai/frontier-video",
+        operation: "video_generation",
+        raw_provider_cost: 0.25,
+        charged_amount_usd_micros: 300_000,
+        markup_amount_usd_micros: 50_000,
+        metadata: {},
+      },
     });
+    expect(JSON.stringify(admin.rpc.mock.calls[1][1].p_output.outputs)).not.toContain("source");
+    expect(JSON.stringify(admin.rpc.mock.calls[1][1].p_output.outputs)).not.toContain("base64");
   });
 
   it("catches adapter errors, releases the reservation, and returns failed", async () => {
@@ -464,24 +514,26 @@ describe("drainOneMediaJob", () => {
 });
 
 describe("materializeOutputs", () => {
-  it("stores inline provider data as metadata without persisting base64 source urls", () => {
-    expect(materializeOutputs("user_1", "job_1", [
+  beforeEach(() => {
+    mocks.createOutputAssetRows.mockReset();
+  });
+
+  it("delegates provider outputs to the output asset helper", async () => {
+    mocks.createOutputAssetRows.mockResolvedValueOnce([wovenOutput()]);
+    const providerOutputs = [
       {
         data: Buffer.from([1, 2, 3, 4]),
         contentType: "audio/mpeg",
         type: "audio",
       },
-    ])).toEqual([
-      {
-        id: "out_1",
-        type: "audio",
-        content_type: "audio/mpeg",
-        source: "inline_data",
-        byte_length: 4,
-        user_id: "user_1",
-        job_id: "job_1",
-      },
-    ]);
+    ] satisfies ProviderOutput[];
+
+    await expect(materializeOutputs("user_1", "job_1", providerOutputs)).resolves.toEqual([wovenOutput()]);
+    expect(mocks.createOutputAssetRows).toHaveBeenCalledWith({
+      userId: "user_1",
+      jobId: "job_1",
+      outputs: providerOutputs,
+    });
   });
 });
 
@@ -514,6 +566,16 @@ function jobRow(overrides: Record<string, unknown> = {}) {
       parameters: { prompt: "a mountain" },
     },
     ...overrides,
+  };
+}
+
+function wovenOutput() {
+  return {
+    id: "output_asset_1",
+    type: "video",
+    content_type: "video/mp4",
+    url: "https://media.example.test/objects/output_asset_1?token=download-token",
+    expires_at: "2026-07-01T12:15:00.000Z",
   };
 }
 

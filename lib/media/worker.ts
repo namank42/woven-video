@@ -1,4 +1,5 @@
 import { getMediaModel } from "@/lib/media/model-registry";
+import { createOutputAssetRows } from "@/lib/media/output-assets";
 import type { MediaProviderAdapter, ProviderOutput } from "@/lib/media/provider";
 import { chargeMediaUsdMicros } from "@/lib/media/pricing";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -105,16 +106,11 @@ export async function drainOneMediaJob({
     return { claimed: true, jobId: job.id, status: "stale_claim" };
   }
 
-  if (hasUnpersistedInlineOutputs(result.outputs)) {
-    const status = await releaseJob(admin, job, "provider_output_not_persisted");
-    return { claimed: true, jobId: job.id, status };
-  }
-
   const charge = chargeMediaUsdMicros({ model, rawCostUsd: result.rawCostUsd });
   const providerMetadata = safeMetadata(result.metadata);
   const outputPayload = {
     media_model_id: model.id,
-    outputs: materializeOutputs(job.userId, job.id, result.outputs),
+    outputs: await materializeOutputs(job.userId, job.id, result.outputs),
     provider_metadata: providerMetadata,
     charged_amount_usd_micros: charge.chargedAmountUsdMicros,
   };
@@ -156,28 +152,7 @@ export function materializeOutputs(
   jobId: string,
   outputs: ProviderOutput[],
 ) {
-  return outputs.map((output, index) => {
-    const base = {
-      id: `out_${index + 1}`,
-      type: output.type,
-      content_type: output.contentType,
-      user_id: userId,
-      job_id: jobId,
-    };
-
-    if (output.data) {
-      return {
-        ...base,
-        source: "inline_data",
-        byte_length: output.data.byteLength,
-      };
-    }
-
-    return {
-      ...base,
-      source_url: output.url,
-    };
-  });
+  return createOutputAssetRows({ userId, jobId, outputs });
 }
 
 function normalizeClaimedJob(job: ClaimedMediaJobRow) {
@@ -275,8 +250,7 @@ async function releaseJob(
   reason:
     | "model_not_enabled"
     | "provider_failed"
-    | "provider_not_configured"
-    | "provider_output_not_persisted",
+    | "provider_not_configured",
 ) {
   if (!job.claimToken) {
     return "stale_claim";
@@ -322,14 +296,6 @@ function abortReason(signal: AbortSignal) {
 function rawProviderCostNumber(rawCostUsd: number | string) {
   const rawCost = Number(rawCostUsd);
   return Number.isFinite(rawCost) && rawCost > 0 ? rawCost : 0;
-}
-
-function hasUnpersistedInlineOutputs(outputs: ProviderOutput[]) {
-  return outputs.some((output) => output.data && !isDurableOutputUrl(output.url));
-}
-
-function isDurableOutputUrl(url: string | undefined) {
-  return typeof url === "string" && /^https?:\/\//i.test(url);
 }
 
 function safeMetadata(metadata: Record<string, unknown> | undefined) {
