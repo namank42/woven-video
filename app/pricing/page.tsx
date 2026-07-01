@@ -13,6 +13,11 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { SiteFooter } from "@/components/site-footer";
+import {
+  chatModelRates,
+  featureRates,
+  mediaModelRates,
+} from "@/lib/pricing-page-rates";
 import { ANSWER_FIRST_PRICING, DOWNLOAD_URL } from "@/lib/seo/constants";
 import { pricingFaqs } from "@/lib/seo/faqs";
 import { pricingPageGraph } from "@/lib/seo/schema";
@@ -23,95 +28,6 @@ export const metadata: Metadata = {
     "Woven is a native macOS AI video editor. Try free for 7 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Includes $5 in hosted credits. Run any model your way: bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
   alternates: { canonical: "/pricing" },
 };
-
-type ModelRate = {
-  name: string;
-  modelId: string;
-  input: string;
-  output: string;
-  cacheRead: string;
-  cacheWrite: string;
-};
-
-type FeatureRate = {
-  name: string;
-  description: string;
-  rate: string;
-  reference: string;
-};
-
-const models: ModelRate[] = [
-  {
-    name: "Claude Sonnet 4.6",
-    modelId: "anthropic/claude-sonnet-4.6",
-    input: "$3.60/M",
-    output: "$18.00/M",
-    cacheRead: "$0.36/M",
-    cacheWrite: "$4.50/M",
-  },
-  {
-    name: "Claude Opus 4.8",
-    modelId: "anthropic/claude-opus-4.8",
-    input: "$6.00/M",
-    output: "$30.00/M",
-    cacheRead: "$0.60/M",
-    cacheWrite: "$7.50/M",
-  },
-  {
-    name: "Claude Haiku 4.5",
-    modelId: "anthropic/claude-haiku-4.5",
-    input: "$1.20/M",
-    output: "$6.00/M",
-    cacheRead: "$0.12/M",
-    cacheWrite: "$1.50/M",
-  },
-  {
-    name: "GPT-5.5",
-    modelId: "openai/gpt-5.5",
-    input: "$6.00/M",
-    output: "$36.00/M",
-    cacheRead: "$0.60/M",
-    cacheWrite: "—",
-  },
-  {
-    name: "Kimi K2.6",
-    modelId: "moonshotai/kimi-k2.6",
-    input: "$1.14/M",
-    output: "$4.80/M",
-    cacheRead: "$0.19/M",
-    cacheWrite: "—",
-  },
-  {
-    name: "Grok 4.3",
-    modelId: "xai/grok-4.3",
-    input: "$1.50/M",
-    output: "$3.00/M",
-    cacheRead: "$0.24/M",
-    cacheWrite: "—",
-  },
-];
-
-const otherFeatures: FeatureRate[] = [
-  {
-    name: "Auto captions",
-    description: "Generates word-timed captions from a reel voiceover.",
-    rate: "$0.10/min",
-    reference: "$0.10 minimum",
-  },
-  {
-    name: "Web Search",
-    description: "Searches the web for current info.",
-    rate: "$0.012/call",
-    reference: "$12.00 / 1K calls",
-  },
-  {
-    name: "Web Fetch",
-    description: "Reads a webpage.",
-    rate: "$0.006/call",
-    reference: "$6.00 / 1K calls",
-  },
-];
-
 
 export default function PricingPage() {
   return (
@@ -307,69 +223,192 @@ function ModelsTable() {
           </p>
         </div>
 
-        <div className="hidden overflow-hidden rounded-2xl ring-1 ring-border md:block">
-          <table className="w-full text-sm">
-            <thead className="bg-card text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-6 py-4 font-medium">Model</th>
-                <th className="px-6 py-4 text-right font-medium">Input</th>
-                <th className="px-6 py-4 text-right font-medium">Output</th>
-                <th className="px-6 py-4 text-right font-medium">Cache read</th>
-                <th className="px-6 py-4 text-right font-medium">Cache write</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border bg-background">
-              {models.map((m) => (
-                <tr key={m.modelId}>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="font-medium text-foreground">{m.name}</span>
-                      <code className="font-mono text-xs text-muted-foreground">
-                        {m.modelId}
-                      </code>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right tabular-nums">{m.input}</td>
-                  <td className="px-6 py-4 text-right tabular-nums">{m.output}</td>
-                  <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
-                    {m.cacheRead}
-                  </td>
-                  <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
-                    {m.cacheWrite}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RateGroupHeader
+          title="Chat models"
+          description="Token pricing for hosted text models."
+        />
+        <ChatModelsTable />
 
-        <div className="flex flex-col gap-3 md:hidden">
-          {models.map((m) => (
-            <div
-              key={m.modelId}
-              className="flex flex-col gap-3 rounded-2xl bg-card p-5 ring-1 ring-border"
-            >
-              <div className="flex flex-col gap-0.5">
-                <span className="font-medium">{m.name}</span>
-                <code className="font-mono text-xs text-muted-foreground">
-                  {m.modelId}
-                </code>
-              </div>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <dt className="text-muted-foreground">Input</dt>
-                <dd className="text-right tabular-nums">{m.input}</dd>
-                <dt className="text-muted-foreground">Output</dt>
-                <dd className="text-right tabular-nums">{m.output}</dd>
-                <dt className="text-muted-foreground">Cache read</dt>
-                <dd className="text-right tabular-nums">{m.cacheRead}</dd>
-                <dt className="text-muted-foreground">Cache write</dt>
-                <dd className="text-right tabular-nums">{m.cacheWrite}</dd>
-              </dl>
-            </div>
-          ))}
+        <div className="mt-10">
+          <RateGroupHeader
+            title="Media models"
+            description="Image, video, and music generation pricing for Woven-hosted credits."
+          />
         </div>
+        <MediaModelsTable />
       </div>
     </section>
+  );
+}
+
+function RateGroupHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1 pb-4">
+      <h3 className="text-base font-semibold tracking-tight">{title}</h3>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}
+
+function ChatModelsTable() {
+  return (
+    <>
+      <div className="hidden overflow-hidden rounded-2xl ring-1 ring-border md:block">
+        <table className="w-full text-sm">
+          <thead className="bg-card text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <tr>
+              <th className="px-6 py-4 font-medium">Model</th>
+              <th className="px-6 py-4 text-right font-medium">Input</th>
+              <th className="px-6 py-4 text-right font-medium">Output</th>
+              <th className="px-6 py-4 text-right font-medium">Cache read</th>
+              <th className="px-6 py-4 text-right font-medium">Cache write</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border bg-background">
+            {chatModelRates.map((model) => (
+              <tr key={model.modelId}>
+                <td className="px-6 py-4">
+                  <div className="flex flex-col">
+                    <span className="font-medium text-foreground">
+                      {model.name}
+                    </span>
+                    <code className="font-mono text-xs text-muted-foreground">
+                      {model.modelId}
+                    </code>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-right tabular-nums">
+                  {model.input}
+                </td>
+                <td className="px-6 py-4 text-right tabular-nums">
+                  {model.output}
+                </td>
+                <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
+                  {model.cacheRead}
+                </td>
+                <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
+                  {model.cacheWrite}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col gap-3 md:hidden">
+        {chatModelRates.map((model) => (
+          <div
+            key={model.modelId}
+            className="flex flex-col gap-3 rounded-2xl bg-card p-5 ring-1 ring-border"
+          >
+            <div className="flex flex-col gap-0.5">
+              <span className="font-medium">{model.name}</span>
+              <code className="font-mono text-xs text-muted-foreground">
+                {model.modelId}
+              </code>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Input</dt>
+              <dd className="text-right tabular-nums">{model.input}</dd>
+              <dt className="text-muted-foreground">Output</dt>
+              <dd className="text-right tabular-nums">{model.output}</dd>
+              <dt className="text-muted-foreground">Cache read</dt>
+              <dd className="text-right tabular-nums">{model.cacheRead}</dd>
+              <dt className="text-muted-foreground">Cache write</dt>
+              <dd className="text-right tabular-nums">{model.cacheWrite}</dd>
+            </dl>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function MediaModelsTable() {
+  return (
+    <>
+      <div className="hidden overflow-hidden rounded-2xl ring-1 ring-border md:block">
+        <table className="w-full text-sm">
+          <thead className="bg-card text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <tr>
+              <th className="w-[28%] px-6 py-4 font-medium">Model</th>
+              <th className="w-[18%] px-6 py-4 font-medium">Capability</th>
+              <th className="w-[28%] px-6 py-4 text-right font-medium">Rate</th>
+              <th className="w-[26%] px-6 py-4 text-right font-medium">Notes</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border bg-background">
+            {mediaModelRates.map((model) => (
+              <tr key={model.name}>
+                <td className="px-6 py-4 align-top">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="font-medium text-foreground">
+                      {model.name}
+                    </span>
+                    <div className="flex flex-col gap-1">
+                      {model.modelIds.map((modelId) => (
+                        <code
+                          key={modelId}
+                          className="break-all font-mono text-xs leading-relaxed text-muted-foreground"
+                        >
+                          {modelId}
+                        </code>
+                      ))}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 align-top text-muted-foreground">
+                  {model.capability}
+                </td>
+                <td className="px-6 py-4 text-right align-top tabular-nums">
+                  {model.rate}
+                </td>
+                <td className="px-6 py-4 text-right align-top text-muted-foreground">
+                  {model.notes}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex flex-col gap-3 md:hidden">
+        {mediaModelRates.map((model) => (
+          <div
+            key={model.name}
+            className="flex flex-col gap-3 rounded-2xl bg-card p-5 ring-1 ring-border"
+          >
+            <div className="flex flex-col gap-1.5">
+              <span className="font-medium">{model.name}</span>
+              <div className="flex flex-col gap-1">
+                {model.modelIds.map((modelId) => (
+                  <code
+                    key={modelId}
+                    className="break-all font-mono text-xs leading-relaxed text-muted-foreground"
+                  >
+                    {modelId}
+                  </code>
+                ))}
+              </div>
+            </div>
+            <dl className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-x-4 gap-y-2 text-sm">
+              <dt className="text-muted-foreground">Capability</dt>
+              <dd className="text-right">{model.capability}</dd>
+              <dt className="text-muted-foreground">Rate</dt>
+              <dd className="text-right tabular-nums">{model.rate}</dd>
+              <dt className="text-muted-foreground">Notes</dt>
+              <dd className="text-right text-muted-foreground">{model.notes}</dd>
+            </dl>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -397,7 +436,7 @@ function ToolsTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-background">
-              {otherFeatures.map((feature) => (
+              {featureRates.map((feature) => (
                 <tr key={feature.name}>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
@@ -422,7 +461,7 @@ function ToolsTable() {
         </div>
 
         <div className="flex flex-col gap-3 md:hidden">
-          {otherFeatures.map((feature) => (
+          {featureRates.map((feature) => (
             <div
               key={feature.name}
               className="flex flex-col gap-3 rounded-2xl bg-card p-5 ring-1 ring-border"
