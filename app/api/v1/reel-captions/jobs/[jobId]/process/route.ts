@@ -95,15 +95,6 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const claim = await claimQueuedJob(admin, job.id);
-  if (!claim) {
-    return apiError(
-      "Caption job is already running.",
-      409,
-      "caption_job_running",
-    );
-  }
-
   const asset = await loadInputAsset(admin, mediaAssetId, job.user_id);
   if (!isAssetReadyForCaptioning(asset)) {
     return apiError(
@@ -113,18 +104,21 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const rule = await getReelCaptionPricing();
-  if (!rule) {
-    await releaseReservation(admin, job.id, "Auto captions pricing rule is not enabled.");
-    await markInputAssetDeleted(admin, asset.id, job.id, "caption_generation_not_enabled");
+  const claim = await claimQueuedJob(admin, job.id);
+  if (!claim) {
     return apiError(
-      "Auto captions pricing rule is not enabled.",
-      503,
-      "caption_generation_not_enabled",
+      "Caption job is already running.",
+      409,
+      "caption_job_running",
     );
   }
 
   try {
+    const rule = await getReelCaptionPricing();
+    if (!rule) {
+      throw new Error("caption_generation_not_enabled");
+    }
+
     const signedAudioUrl = await signedMediaDownloadUrl({
       asset,
       jobId: job.id,

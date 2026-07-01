@@ -162,6 +162,7 @@ describe("reel captions routes", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { code: "caption_upload_not_ready" },
     });
+    expect(admin.claimUpdate).not.toHaveBeenCalled();
     expect(admin.rpc).not.toHaveBeenCalled();
   });
 
@@ -417,6 +418,66 @@ describe("reel captions routes", () => {
       expect.any(Error),
     );
   });
+
+  it("logs pricing lookup errors after claim and returns a safe public caption failure", async () => {
+    const transcribeWithElevenLabs = vi.fn();
+    const getReelCaptionPricing = vi.fn(async () => {
+      throw new Error("database failure with private details");
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/wav",
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
+      },
+    });
+
+    mockCaptionRouteDependencies({
+      admin,
+      getReelCaptionPricing,
+      transcribeWithElevenLabs,
+    });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "caption_generation_failed",
+        message: "Caption generation failed. Try again later.",
+      },
+    });
+    expect(admin.claimUpdate).toHaveBeenCalledTimes(1);
+    expect(transcribeWithElevenLabs).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
+      p_job_id: JOB_ID,
+      p_status: "failed",
+      p_error: "caption_generation_failed",
+      p_metadata: { reason: "caption_generation_failed" },
+    });
+    expect(admin.deletedAssetUpdate).toMatchObject({
+      status: "deleted",
+      metadata: expect.objectContaining({
+        deletion_reason: "caption_job_failed",
+        caption_job_id: JOB_ID,
+      }),
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "Caption generation failed",
+      expect.objectContaining({ jobId: JOB_ID }),
+      expect.any(Error),
+    );
+  });
 });
 
 function mockCaptionRouteDependencies({
@@ -424,11 +485,13 @@ function mockCaptionRouteDependencies({
   createInputAssetUpload = vi.fn(),
   signMediaToken = vi.fn(async () => "download-token"),
   transcribeWithElevenLabs = vi.fn(),
+  getReelCaptionPricing = vi.fn(async () => pricingRule),
 }: {
   admin: unknown;
   createInputAssetUpload?: ReturnType<typeof vi.fn>;
   signMediaToken?: ReturnType<typeof vi.fn>;
   transcribeWithElevenLabs?: ReturnType<typeof vi.fn>;
+  getReelCaptionPricing?: ReturnType<typeof vi.fn>;
 }) {
   vi.doMock("@/lib/api/auth", () => ({
     requireApiAuth: vi.fn(async () => ({
@@ -460,7 +523,7 @@ function mockCaptionRouteDependencies({
   }));
   vi.doMock("@/lib/reel-captions/pricing", async (importOriginal) => ({
     ...(await importOriginal<typeof import("@/lib/reel-captions/pricing")>()),
-    getReelCaptionPricing: vi.fn(async () => pricingRule),
+    getReelCaptionPricing,
   }));
   vi.doMock("@/lib/supabase/admin", () => ({
     createSupabaseAdminClient: vi.fn(() => admin),
@@ -536,6 +599,7 @@ function mockProcessAdmin({
   const usageInsert = vi.fn(async () => ({ data: null, error: null }));
   const admin = {
     deletedAssetUpdate: null as unknown,
+    claimUpdate: vi.fn(),
     usageInsert,
     from: vi.fn((table: string) => {
       if (table === "generation_jobs") {
@@ -547,7 +611,8 @@ function mockProcessAdmin({
             };
             return chain;
           }),
-          update: vi.fn(() => {
+          update: vi.fn((values: unknown) => {
+            admin.claimUpdate(values);
             const chain = {
               eq: vi.fn(() => chain),
               in: vi.fn(async () => ({ data: claimResult, error: null })),
