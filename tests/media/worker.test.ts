@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MediaProviderAdapter } from "@/lib/media/provider";
@@ -408,6 +410,24 @@ describe("drainOneMediaJob", () => {
 
     expect(admin.tables).toEqual([]);
     expect(admin.rpc).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("claim-aware media finalization migration", () => {
+  it("compares every inserted usage event field on idempotent retry", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260701122000_claim_aware_media_job_finalization.sql",
+      "utf8",
+    );
+
+    expect(sql).toContain("v_input_units bigint;");
+    expect(sql).toContain("v_existing_usage.user_id is distinct from v_job.user_id");
+    expect(sql).toContain("v_existing_usage.input_units is distinct from v_input_units");
+    expect(sql).toContain("v_existing_usage.output_units is distinct from v_output_units");
+    expect(sql).toContain("v_existing_usage.reasoning_units is distinct from v_reasoning_units");
+    expect(sql).toContain("v_existing_usage.cached_units is distinct from v_cached_units");
+    expect(sql).toContain("v_existing_usage.metadata is distinct from v_usage_metadata");
+    expect(sql).toContain("v_existing_usage.gateway_generation_id is not null");
   });
 });
 

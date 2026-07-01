@@ -60,6 +60,10 @@ declare
   v_raw_provider_cost numeric(18, 9);
   v_charged_amount_usd_micros bigint;
   v_markup_amount_usd_micros bigint;
+  v_input_units bigint;
+  v_output_units bigint;
+  v_reasoning_units bigint;
+  v_cached_units bigint;
   v_usage_metadata jsonb;
   v_existing_usage public.usage_events%rowtype;
   v_existing_usage_count integer;
@@ -98,6 +102,10 @@ begin
     nullif(p_usage_event->>'markup_amount_usd_micros', '')::bigint,
     0
   );
+  v_input_units := coalesce(nullif(p_usage_event->>'input_units', '')::bigint, 0);
+  v_output_units := coalesce(nullif(p_usage_event->>'output_units', '')::bigint, 0);
+  v_reasoning_units := coalesce(nullif(p_usage_event->>'reasoning_units', '')::bigint, 0);
+  v_cached_units := coalesce(nullif(p_usage_event->>'cached_units', '')::bigint, 0);
   v_usage_metadata := coalesce(p_usage_event->'metadata', '{}'::jsonb);
 
   if v_charged_amount_usd_micros <> p_final_cost_usd_micros then
@@ -105,7 +113,8 @@ begin
   end if;
 
   -- Idempotent worker retry: a prior attempt may have inserted usage and
-  -- failed before the caller observed settlement. Reuse only an exact match.
+  -- failed before the caller observed settlement. Reuse only an exact match
+  -- for every field this function writes; reject pre-existing extra gateway IDs.
   select count(*)
   into v_existing_usage_count
   from (
@@ -126,12 +135,19 @@ begin
     where job_id = p_job_id
     for update;
 
-    if v_existing_usage.provider is distinct from v_provider
+    if v_existing_usage.user_id is distinct from v_job.user_id
+      or v_existing_usage.provider is distinct from v_provider
       or v_existing_usage.model is distinct from v_model
       or v_existing_usage.operation is distinct from v_operation
+      or v_existing_usage.input_units is distinct from v_input_units
+      or v_existing_usage.output_units is distinct from v_output_units
+      or v_existing_usage.reasoning_units is distinct from v_reasoning_units
+      or v_existing_usage.cached_units is distinct from v_cached_units
       or v_existing_usage.raw_provider_cost is distinct from v_raw_provider_cost
       or v_existing_usage.charged_amount_usd_micros is distinct from v_charged_amount_usd_micros
-      or v_existing_usage.markup_amount_usd_micros is distinct from v_markup_amount_usd_micros then
+      or v_existing_usage.markup_amount_usd_micros is distinct from v_markup_amount_usd_micros
+      or v_existing_usage.metadata is distinct from v_usage_metadata
+      or v_existing_usage.gateway_generation_id is not null then
       raise exception 'usage_event_mismatch';
     end if;
   else
@@ -156,10 +172,10 @@ begin
       v_provider,
       v_model,
       v_operation,
-      coalesce(nullif(p_usage_event->>'input_units', '')::bigint, 0),
-      coalesce(nullif(p_usage_event->>'output_units', '')::bigint, 0),
-      coalesce(nullif(p_usage_event->>'reasoning_units', '')::bigint, 0),
-      coalesce(nullif(p_usage_event->>'cached_units', '')::bigint, 0),
+      v_input_units,
+      v_output_units,
+      v_reasoning_units,
+      v_cached_units,
       v_raw_provider_cost,
       v_charged_amount_usd_micros,
       v_markup_amount_usd_micros,
