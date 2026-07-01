@@ -95,8 +95,8 @@ const otherFeatures: FeatureRate[] = [
   {
     name: "Auto captions",
     description: "Generates word-timed captions from a reel voiceover.",
-    rate: "$0.01/min",
-    reference: "$0.01 minimum",
+    rate: "$0.10/min",
+    reference: "$0.10 minimum",
   },
   {
     name: "Web Search",

@@ -106,15 +106,15 @@ The desktop sidecar remains responsible for writing this as `captions.json` in t
 
 Public price:
 
-- `$0.01` per audio minute.
-- `$0.01` minimum per generation.
+- `$0.10` per audio minute.
+- `$0.10` minimum per generation.
 - Bill by voiceover duration, rounded up to the nearest billable second.
 - Failed or cancelled jobs are not charged.
 
 Recommended final charge formula:
 
 ```text
-max(10_000, ceil(duration_seconds * 10_000 / 60))
+max(100_000, ceil(duration_seconds * 100_000 / 60))
 ```
 
 Values are in `usd_micros`, where `$0.01 = 10_000`.
@@ -123,7 +123,7 @@ The pricing page should list this under a media feature section:
 
 | Feature | Price | Notes |
 | --- | ---: | --- |
-| Auto captions | `$0.01/min` | `$0.01 minimum`, billed by voiceover duration |
+| Auto captions | `$0.10/min` | `$0.10 minimum`, billed by voiceover duration |
 
 ## Billing
 
@@ -243,8 +243,8 @@ Do not mark captions stale for:
 
 ## Validation Checklist
 
-- A 30-second reel charges `$0.01`.
-- A 90-second reel charges `$0.015`.
+- A 30-second reel charges `$0.10`.
+- A 90-second reel charges `$0.15`.
 - Failed jobs release reserved balance.
 - Existing captions remain intact if regeneration fails.
 - Returned captions match the local Remotion caption token shape.

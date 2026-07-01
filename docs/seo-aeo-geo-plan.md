@@ -174,7 +174,7 @@ Only build `/ai-voiceover` if Woven **actually generates voice from script** in 
 | What exists today | Evidence |
 |-------------------|----------|
 | Marketing claims voice generation | Homepage: "generates the footage and voice" |
-| Auto captions from voiceover | ElevenLabs Scribe STT, `$0.01/min` on pricing |
+| Auto captions from voiceover | ElevenLabs Scribe STT, `$0.10/min` on pricing |
 | Standalone TTS / voiceover generator | **Unconfirmed in desktop app** |
 
 **Decision rule:**
@@ -483,7 +483,7 @@ Current: 7 FAQs on homepage. Target: 15+ across homepage and pricing.
 1. H1: "AI Voiceover for Short-Form Video — Woven"
 2. Answer-first: how Woven generates voice as part of reel assembly
 3. Workflow: script → voice → edit → export
-4. Mention auto captions from voiceover ($0.01/min) as related feature
+4. Mention auto captions from voiceover ($0.10/min) as related feature
 5. Mac-native, short-form focus (Reels, TikTok, Shorts)
 6. FAQ + schema
 7. **Not** a fake standalone Murf/ElevenLabs clone page — honest feature positioning
