@@ -22,8 +22,10 @@ export function mediaInputKey({
   filename: string;
   contentType: string;
 }): string {
+  const safeUserId = safeSegment("userId", userId);
+  const safeAssetId = safeSegment("assetId", assetId);
   const extension = extensionFor(filename, contentType);
-  return `users/${userId}/media/tmp/${assetId}/input${extension}`;
+  return `users/${safeUserId}/media/tmp/${safeAssetId}/input${extension}`;
 }
 
 export function mediaOutputKey({
@@ -37,15 +39,22 @@ export function mediaOutputKey({
   outputId: string;
   contentType: string;
 }): string {
-  return `users/${userId}/media/outputs/${jobId}/${outputId}${extensionFor("", contentType)}`;
+  const safeUserId = safeSegment("userId", userId);
+  const safeJobId = safeSegment("jobId", jobId);
+  const safeOutputId = safeSegment("outputId", outputId);
+  return `users/${safeUserId}/media/outputs/${safeJobId}/${safeOutputId}${extensionFor("", contentType)}`;
 }
 
-export function extensionFor(filename: string, contentType: string): string {
+export function extensionFor(_filename: string, contentType: string): string {
   const safeExtension = SAFE_EXTENSIONS[contentType];
   if (safeExtension) return safeExtension;
 
-  const lower = filename.toLowerCase();
-  const match = lower.match(/\.[a-z0-9]{1,8}$/);
-  if (match) return match[0];
   return ".bin";
+}
+
+function safeSegment(name: string, value: string): string {
+  if (!value || value.includes("/")) {
+    throw new Error(`${name} must be a safe path segment.`);
+  }
+  return value;
 }
