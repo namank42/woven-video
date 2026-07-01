@@ -21,7 +21,18 @@ const PROVIDER_WAIT_PROGRESS = {
   message: "Waiting on provider",
 };
 
-const SECRET_METADATA_KEY = /(?:api[_-]?key|authorization|bearer|password|secret|token)/i;
+const SAFE_PROVIDER_METADATA_KEYS = new Set([
+  "byte_length",
+  "duration_seconds",
+  "endpoint",
+  "fal_request_id",
+  "fal_status",
+  "output_format",
+  "provider_request_id",
+  "request_id",
+  "status",
+]);
+const SECRET_METADATA_VALUE = /(?:authorization:\s*bearer|bearer\s+[a-z0-9._~+/=-]+|api[_-]?key|secret|token\s*[:=])/i;
 
 export async function drainOneMediaJob({
   adapters,
@@ -65,6 +76,10 @@ export async function drainOneMediaJob({
     providerJobId: job.providerJobId,
     signal,
   });
+
+  if (signal?.aborted) {
+    throw abortReason(signal);
+  }
 
   if (result.status === "provider_failed") {
     const status = await releaseJob(admin, job, "provider_failed");
@@ -177,6 +192,10 @@ async function runProviderAdapter({
   providerJobId: string | null;
   signal?: AbortSignal;
 }) {
+  if (signal?.aborted) {
+    throw abortReason(signal);
+  }
+
   try {
     return await adapter.run({
       model,
@@ -185,7 +204,15 @@ async function runProviderAdapter({
       providerJobId,
       signal,
     });
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) {
+      throw abortReason(signal);
+    }
+
+    if (isAbortError(error)) {
+      throw error;
+    }
+
     return { status: "provider_failed" as const };
   }
 }
@@ -205,23 +232,22 @@ async function updateWaitingProviderJob({
     return false;
   }
 
-  let updateQuery = admin
-    .from("generation_jobs")
-    .update({
-      status: "waiting_provider",
-      provider_job_id: providerJobId,
-      progress: PROVIDER_WAIT_PROGRESS,
-    })
-    .eq("id", jobId);
+  const { error } = await admin.rpc("mark_media_job_waiting_provider", {
+    p_job_id: jobId,
+    p_claim_token: claimToken,
+    p_provider_job_id: providerJobId,
+    p_progress: PROVIDER_WAIT_PROGRESS,
+  });
 
-  updateQuery = updateQuery.eq("claim_token", claimToken);
-
-  const { data, error } = await updateQuery.select("id");
   if (error) {
+    if (isStaleClaimError(error)) {
+      return false;
+    }
+
     throw new Error(error.message);
   }
 
-  return updatedRowCount(data) > 0;
+  return true;
 }
 
 async function releaseJob(
@@ -252,16 +278,18 @@ async function releaseJob(
   return "failed";
 }
 
-function updatedRowCount(data: unknown) {
-  if (Array.isArray(data)) {
-    return data.length;
-  }
-
-  return data ? 1 : 0;
-}
-
 function isStaleClaimError(error: { message?: string }) {
   return error.message === "media_job_stale_claim";
+}
+
+function isAbortError(error: unknown) {
+  return isRecord(error) && error.name === "AbortError";
+}
+
+function abortReason(signal: AbortSignal) {
+  return signal.reason instanceof Error
+    ? signal.reason
+    : new DOMException("Aborted", "AbortError");
 }
 
 function rawProviderCostNumber(rawCostUsd: number | string) {
@@ -270,54 +298,21 @@ function rawProviderCostNumber(rawCostUsd: number | string) {
 }
 
 function safeMetadata(metadata: Record<string, unknown> | undefined) {
-  return sanitizeRecord(metadata ?? {}, new WeakSet(), 0);
-}
-
-function sanitizeRecord(
-  value: Record<string, unknown>,
-  seen: WeakSet<object>,
-  depth: number,
-): Record<string, unknown> {
-  if (seen.has(value)) {
-    return {};
-  }
-
-  seen.add(value);
-
   return Object.fromEntries(
-    Object.entries(value)
-      .filter(([key]) => !SECRET_METADATA_KEY.test(key))
-      .map(([key, item]) => [key, sanitizeMetadataValue(item, seen, depth + 1)])
-      .filter(([, item]) => item !== undefined),
+    Object.entries(metadata ?? {})
+      .filter(([key]) => SAFE_PROVIDER_METADATA_KEYS.has(key))
+      .map(([key, value]) => [key, safeMetadataPrimitive(value)])
+      .filter((entry): entry is [string, string | number | boolean | null] => entry[1] !== undefined),
   );
 }
 
-function sanitizeMetadataValue(
-  value: unknown,
-  seen: WeakSet<object>,
-  depth: number,
-): unknown {
-  if (depth > 5) {
-    return "[truncated]";
-  }
-
-  if (
-    value === null ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
+function safeMetadataPrimitive(value: unknown) {
+  if (value === null || typeof value === "number" || typeof value === "boolean") {
     return value;
   }
 
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => sanitizeMetadataValue(item, seen, depth + 1))
-      .filter((item) => item !== undefined);
-  }
-
-  if (isRecord(value)) {
-    return sanitizeRecord(value, seen, depth);
+  if (typeof value === "string") {
+    return SECRET_METADATA_VALUE.test(value) ? undefined : value;
   }
 
   return undefined;

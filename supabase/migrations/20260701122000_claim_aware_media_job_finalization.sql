@@ -61,6 +61,8 @@ declare
   v_charged_amount_usd_micros bigint;
   v_markup_amount_usd_micros bigint;
   v_usage_metadata jsonb;
+  v_existing_usage public.usage_events%rowtype;
+  v_existing_usage_count integer;
 begin
   if p_claim_token is null then
     raise exception 'media_job_missing_claim_token';
@@ -102,11 +104,37 @@ begin
     raise exception 'usage_event_charge_mismatch';
   end if;
 
-  if not exists (
-    select 1
+  -- Idempotent worker retry: a prior attempt may have inserted usage and
+  -- failed before the caller observed settlement. Reuse only an exact match.
+  select count(*)
+  into v_existing_usage_count
+  from (
+    select id
     from public.usage_events
     where job_id = p_job_id
-  ) then
+    for update
+  ) locked_usage;
+
+  if v_existing_usage_count > 1 then
+    raise exception 'usage_event_mismatch';
+  end if;
+
+  if v_existing_usage_count = 1 then
+    select *
+    into v_existing_usage
+    from public.usage_events
+    where job_id = p_job_id
+    for update;
+
+    if v_existing_usage.provider is distinct from v_provider
+      or v_existing_usage.model is distinct from v_model
+      or v_existing_usage.operation is distinct from v_operation
+      or v_existing_usage.raw_provider_cost is distinct from v_raw_provider_cost
+      or v_existing_usage.charged_amount_usd_micros is distinct from v_charged_amount_usd_micros
+      or v_existing_usage.markup_amount_usd_micros is distinct from v_markup_amount_usd_micros then
+      raise exception 'usage_event_mismatch';
+    end if;
+  else
     insert into public.usage_events (
       user_id,
       job_id,
@@ -145,6 +173,48 @@ begin
     p_output,
     p_metadata
   );
+end;
+$$;
+
+create or replace function public.mark_media_job_waiting_provider(
+  p_job_id uuid,
+  p_claim_token uuid,
+  p_provider_job_id text,
+  p_progress jsonb default '{"stage":"provider_wait","percent":null,"message":"Waiting on provider"}'::jsonb
+)
+returns public.generation_jobs
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_job public.generation_jobs%rowtype;
+begin
+  if p_claim_token is null then
+    raise exception 'media_job_missing_claim_token';
+  end if;
+
+  select *
+  into v_job
+  from public.generation_jobs
+  where id = p_job_id
+    and type = 'media_job'
+    and claim_token = p_claim_token
+    and (claim_expires_at is null or claim_expires_at >= now())
+  for update;
+
+  if v_job.id is null then
+    raise exception 'media_job_stale_claim';
+  end if;
+
+  update public.generation_jobs
+  set status = 'waiting_provider',
+      provider_job_id = p_provider_job_id,
+      progress = coalesce(p_progress, '{}'::jsonb)
+  where id = p_job_id
+  returning * into v_job;
+
+  return v_job;
 end;
 $$;
 
@@ -197,6 +267,11 @@ grant execute on function public.settle_claimed_media_job(uuid, uuid, bigint, js
 revoke all on function public.record_and_settle_claimed_media_job(uuid, uuid, bigint, jsonb, jsonb, jsonb)
   from public, anon, authenticated;
 grant execute on function public.record_and_settle_claimed_media_job(uuid, uuid, bigint, jsonb, jsonb, jsonb)
+  to service_role;
+
+revoke all on function public.mark_media_job_waiting_provider(uuid, uuid, text, jsonb)
+  from public, anon, authenticated;
+grant execute on function public.mark_media_job_waiting_provider(uuid, uuid, text, jsonb)
   to service_role;
 
 revoke all on function public.release_claimed_media_job(uuid, uuid, text, text, jsonb)
