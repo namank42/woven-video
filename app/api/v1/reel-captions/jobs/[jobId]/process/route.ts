@@ -70,7 +70,11 @@ export async function POST(request: Request, context: RouteContext) {
     typeof input.media_asset_id === "string" ? input.media_asset_id : "";
   const durationSeconds = Number(input.duration_seconds);
 
-  if (!mediaAssetId || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+  if (
+    !isUuid(mediaAssetId) ||
+    !Number.isFinite(durationSeconds) ||
+    durationSeconds <= 0
+  ) {
     await releaseReservation(admin, job.id, "Caption job is missing upload metadata.");
     return apiError(
       "Caption job is missing upload metadata.",
@@ -221,6 +225,10 @@ async function loadJob(
   }
 
   return data as CaptionJob | null;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
 async function loadInputAsset(

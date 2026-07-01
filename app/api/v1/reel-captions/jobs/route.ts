@@ -59,8 +59,11 @@ export async function POST(request: Request) {
     typeof filename === "string" && filename.trim()
       ? filename.trim().slice(0, 120)
       : "voiceover.wav";
-  const uploadSizeBytes = Number(sizeBytes ?? 1);
-  if (!Number.isInteger(uploadSizeBytes) || uploadSizeBytes <= 0) {
+  if (
+    typeof sizeBytes !== "number" ||
+    !Number.isInteger(sizeBytes) ||
+    sizeBytes <= 0
+  ) {
     return apiError(
       "sizeBytes must be a positive integer.",
       400,
@@ -137,7 +140,7 @@ export async function POST(request: Request) {
       userId: authResult.auth.user.id,
       filename: originalFilename,
       contentType: uploadContentType,
-      sizeBytes: uploadSizeBytes,
+      sizeBytes,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to create upload URL.";

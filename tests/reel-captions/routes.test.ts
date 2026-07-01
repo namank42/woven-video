@@ -13,6 +13,8 @@ const pricingRule = {
   metadata: {},
 };
 
+const ASSET_ID = "11111111-1111-4111-8111-111111111111";
+
 describe("reel captions routes", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -50,10 +52,31 @@ describe("reel captions routes", () => {
     expect(admin.from).not.toHaveBeenCalled();
   });
 
+  it("rejects missing caption upload sizes before creating a job or asset", async () => {
+    const createInputAssetUpload = vi.fn();
+    const admin = mockCreateJobAdmin();
+
+    mockCaptionRouteDependencies({ admin, createInputAssetUpload });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/reel-captions/jobs", {
+      durationSeconds: 12,
+      filename: "voice.wav",
+      contentType: "audio/wav",
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "invalid_media_input" },
+    });
+    expect(createInputAssetUpload).not.toHaveBeenCalled();
+    expect(admin.from).not.toHaveBeenCalled();
+  });
+
   it("creates caption jobs with Woven media upload URLs", async () => {
     const createInputAssetUpload = vi.fn(async () => ({
-      asset: { id: "asset_1" },
-      uploadUrl: "https://media.example.test/uploads/asset_1?token=upload-token",
+      asset: { id: ASSET_ID },
+      uploadUrl: `https://media.example.test/uploads/${ASSET_ID}?token=upload-token`,
       expiresAt: "2026-07-01T12:15:00.000Z",
     }));
     const admin = mockCreateJobAdmin();
@@ -74,9 +97,9 @@ describe("reel captions routes", () => {
       id: "job_1",
       status: "queued",
       upload: {
-        assetId: "asset_1",
+        assetId: ASSET_ID,
         method: "PUT",
-        url: "https://media.example.test/uploads/asset_1?token=upload-token",
+        url: `https://media.example.test/uploads/${ASSET_ID}?token=upload-token`,
         expiresAt: "2026-07-01T12:15:00.000Z",
         contentType: "audio/mp4",
       },
@@ -105,7 +128,7 @@ describe("reel captions routes", () => {
         duration_seconds: 90,
         filename: "voice.m4a",
         content_type: "audio/mp4",
-        media_asset_id: "asset_1",
+        media_asset_id: ASSET_ID,
       },
     });
     expect(admin.storage.from).not.toHaveBeenCalled();
@@ -114,12 +137,12 @@ describe("reel captions routes", () => {
   it("returns upload-not-ready when the caption media asset is not uploaded", async () => {
     const admin = mockProcessAdmin({
       asset: {
-        id: "asset_1",
+        id: ASSET_ID,
         user_id: "user_1",
         kind: "input",
         status: "pending",
         content_type: "audio/wav",
-        storage_key: "users/user_1/media/tmp/asset_1/input.wav",
+        storage_key: `users/user_1/media/tmp/${ASSET_ID}/input.wav`,
       },
     });
 
@@ -138,6 +161,35 @@ describe("reel captions routes", () => {
       error: { code: "caption_upload_not_ready" },
     });
     expect(admin.rpc).not.toHaveBeenCalled();
+  });
+
+  it("releases the reservation and skips media asset lookup for malformed caption media asset ids", async () => {
+    const admin = mockProcessAdmin({
+      asset: null,
+      mediaAssetId: "not-a-uuid",
+    });
+
+    mockCaptionRouteDependencies({ admin });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request("https://example.test/api/v1/reel-captions/jobs/job_1/process", {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: "job_1" }) },
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_job_invalid" },
+    });
+    expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
+      p_job_id: "job_1",
+      p_status: "failed",
+      p_error: "Caption job is missing upload metadata.",
+      p_metadata: { reason: "Caption job is missing upload metadata." },
+    });
+    expect(admin.from).not.toHaveBeenCalledWith("media_assets");
   });
 
   it("transcribes caption jobs through a signed Woven media URL and deletes the input asset", async () => {
@@ -160,12 +212,12 @@ describe("reel captions routes", () => {
     const signMediaToken = vi.fn(async () => "download.token");
     const admin = mockProcessAdmin({
       asset: {
-        id: "asset_1",
+        id: ASSET_ID,
         user_id: "user_1",
         kind: "input",
         status: "uploaded",
         content_type: "audio/wav",
-        storage_key: "users/user_1/media/tmp/asset_1/input.wav",
+        storage_key: `users/user_1/media/tmp/${ASSET_ID}/input.wav`,
       },
     });
 
@@ -189,13 +241,13 @@ describe("reel captions routes", () => {
     expect(signMediaToken).toHaveBeenCalledWith({
       kind: "download",
       sub: "user_1",
-      key: "users/user_1/media/tmp/asset_1/input.wav",
-      assetId: "asset_1",
+      key: `users/user_1/media/tmp/${ASSET_ID}/input.wav`,
+      assetId: ASSET_ID,
       jobId: "job_1",
       exp: 1_782_907_800,
     }, "test-token-secret");
     expect(transcribeWithElevenLabs).toHaveBeenCalledWith({
-      cloudStorageUrl: "https://media.example.test/objects/asset_1?token=download.token",
+      cloudStorageUrl: `https://media.example.test/objects/${ASSET_ID}?token=download.token`,
       signal: expect.any(AbortSignal),
     });
     expect(admin.deletedAssetUpdate).toMatchObject({
@@ -297,7 +349,13 @@ function mockCreateJobAdmin() {
   return admin;
 }
 
-function mockProcessAdmin({ asset }: { asset: Record<string, unknown> | null }) {
+function mockProcessAdmin({
+  asset,
+  mediaAssetId = ASSET_ID,
+}: {
+  asset: Record<string, unknown> | null;
+  mediaAssetId?: unknown;
+}) {
   const generationJob = {
     id: "job_1",
     user_id: "user_1",
@@ -308,7 +366,7 @@ function mockProcessAdmin({ asset }: { asset: Record<string, unknown> | null }) 
       duration_seconds: 12,
       filename: "voice.wav",
       content_type: "audio/wav",
-      media_asset_id: "asset_1",
+      media_asset_id: mediaAssetId,
     },
     output: null,
     reserved_amount_usd_micros: 100_000,
