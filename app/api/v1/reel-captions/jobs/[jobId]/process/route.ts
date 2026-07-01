@@ -44,6 +44,10 @@ export async function POST(request: Request, context: RouteContext) {
   if (!authResult.ok) return authResult.response;
 
   const { jobId } = await context.params;
+  if (!isUuid(jobId)) {
+    return apiError("Invalid media input.", 400, "invalid_media_input");
+  }
+
   const admin = createSupabaseAdminClient();
   const job = await loadJob(admin, jobId, authResult.auth.user.id);
 
@@ -57,7 +61,15 @@ export async function POST(request: Request, context: RouteContext) {
     });
   }
 
-  if (job.status === "failed" || job.status === "cancelled") {
+  if (job.status === "running") {
+    return apiError(
+      "Caption job is already running.",
+      409,
+      "caption_job_running",
+    );
+  }
+
+  if (job.status !== "queued") {
     return apiError(
       "Caption job is no longer processable.",
       409,
@@ -83,6 +95,15 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
+  const claim = await claimQueuedJob(admin, job.id);
+  if (!claim) {
+    return apiError(
+      "Caption job is already running.",
+      409,
+      "caption_job_running",
+    );
+  }
+
   const asset = await loadInputAsset(admin, mediaAssetId, job.user_id);
   if (!isAssetReadyForCaptioning(asset)) {
     return apiError(
@@ -91,15 +112,6 @@ export async function POST(request: Request, context: RouteContext) {
       "caption_upload_not_ready",
     );
   }
-
-  await admin
-    .from("generation_jobs")
-    .update({
-      status: "running",
-      started_at: new Date().toISOString(),
-    })
-    .eq("id", job.id)
-    .in("status", ["queued", "running"]);
 
   const rule = await getReelCaptionPricing();
   if (!rule) {
@@ -199,10 +211,14 @@ export async function POST(request: Request, context: RouteContext) {
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await releaseReservation(admin, job.id, message);
+    console.error("Caption generation failed", { jobId: job.id }, err);
+    await releaseReservation(admin, job.id, "caption_generation_failed");
     await markInputAssetDeleted(admin, asset.id, job.id, "caption_job_failed");
-    return apiError(message, 502, "caption_generation_failed");
+    return apiError(
+      "Caption generation failed. Try again later.",
+      502,
+      "caption_generation_failed",
+    );
   }
 }
 
@@ -229,6 +245,28 @@ async function loadJob(
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function claimQueuedJob(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  jobId: string,
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from("generation_jobs")
+    .update({
+      status: "running",
+      started_at: new Date().toISOString(),
+    })
+    .eq("id", jobId)
+    .eq("status", "queued")
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return Boolean(data?.id);
 }
 
 async function loadInputAsset(

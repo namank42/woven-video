@@ -14,6 +14,8 @@ const pricingRule = {
 };
 
 const ASSET_ID = "11111111-1111-4111-8111-111111111111";
+const JOB_ID = "22222222-2222-4222-8222-222222222222";
+const USER_ID = "33333333-3333-4333-8333-333333333333";
 
 describe("reel captions routes", () => {
   afterEach(() => {
@@ -94,7 +96,7 @@ describe("reel captions routes", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     await expect(response.json()).resolves.toMatchObject({
-      id: "job_1",
+      id: JOB_ID,
       status: "queued",
       upload: {
         assetId: ASSET_ID,
@@ -111,7 +113,7 @@ describe("reel captions routes", () => {
     });
 
     expect(createInputAssetUpload).toHaveBeenCalledWith({
-      userId: "user_1",
+      userId: USER_ID,
       filename: "voice.m4a",
       contentType: "audio/mp4",
       sizeBytes: 123_456,
@@ -138,11 +140,11 @@ describe("reel captions routes", () => {
     const admin = mockProcessAdmin({
       asset: {
         id: ASSET_ID,
-        user_id: "user_1",
+        user_id: USER_ID,
         kind: "input",
         status: "pending",
         content_type: "audio/wav",
-        storage_key: `users/user_1/media/tmp/${ASSET_ID}/input.wav`,
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
       },
     });
 
@@ -150,10 +152,10 @@ describe("reel captions routes", () => {
 
     const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
     const response = await POST(
-      new Request("https://example.test/api/v1/reel-captions/jobs/job_1/process", {
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
         method: "POST",
       }),
-      { params: Promise.resolve({ jobId: "job_1" }) },
+      { params: Promise.resolve({ jobId: JOB_ID }) },
     );
 
     expect(response.status).toBe(409);
@@ -173,10 +175,10 @@ describe("reel captions routes", () => {
 
     const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
     const response = await POST(
-      new Request("https://example.test/api/v1/reel-captions/jobs/job_1/process", {
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
         method: "POST",
       }),
-      { params: Promise.resolve({ jobId: "job_1" }) },
+      { params: Promise.resolve({ jobId: JOB_ID }) },
     );
 
     expect(response.status).toBe(500);
@@ -184,12 +186,121 @@ describe("reel captions routes", () => {
       error: { code: "caption_job_invalid" },
     });
     expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
-      p_job_id: "job_1",
+      p_job_id: JOB_ID,
       p_status: "failed",
       p_error: "Caption job is missing upload metadata.",
       p_metadata: { reason: "Caption job is missing upload metadata." },
     });
     expect(admin.from).not.toHaveBeenCalledWith("media_assets");
+  });
+
+  it("rejects malformed caption job route ids before querying the database", async () => {
+    const admin = mockProcessAdmin({ asset: null });
+
+    mockCaptionRouteDependencies({ admin });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request("https://example.test/api/v1/reel-captions/jobs/not-a-uuid/process", {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: "not-a-uuid" }) },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "invalid_media_input" },
+    });
+    expect(admin.from).not.toHaveBeenCalled();
+    expect(admin.rpc).not.toHaveBeenCalled();
+  });
+
+  it("returns a running conflict without transcription or usage insertion for already-running caption jobs", async () => {
+    const transcribeWithElevenLabs = vi.fn(async () => ({
+      text: "Hello",
+      languageCode: "en",
+      languageProbability: 0.98,
+      captions: [{
+        text: "Hello",
+        startMs: 0,
+        endMs: 400,
+        timestampMs: 0,
+        confidence: 0.99,
+      }],
+      raw: {},
+    }));
+    const admin = mockProcessAdmin({
+      jobStatus: "running",
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/wav",
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_job_running" },
+    });
+    expect(transcribeWithElevenLabs).not.toHaveBeenCalled();
+    expect(admin.usageInsert).not.toHaveBeenCalled();
+  });
+
+  it("does not continue processing when the queued-to-running claim updates no rows", async () => {
+    const transcribeWithElevenLabs = vi.fn(async () => ({
+      text: "Hello",
+      languageCode: "en",
+      languageProbability: 0.98,
+      captions: [{
+        text: "Hello",
+        startMs: 0,
+        endMs: 400,
+        timestampMs: 0,
+        confidence: 0.99,
+      }],
+      raw: {},
+    }));
+    const admin = mockProcessAdmin({
+      claimResult: null,
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/wav",
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_job_running" },
+    });
+    expect(transcribeWithElevenLabs).not.toHaveBeenCalled();
+    expect(admin.usageInsert).not.toHaveBeenCalled();
   });
 
   it("transcribes caption jobs through a signed Woven media URL and deletes the input asset", async () => {
@@ -213,11 +324,11 @@ describe("reel captions routes", () => {
     const admin = mockProcessAdmin({
       asset: {
         id: ASSET_ID,
-        user_id: "user_1",
+        user_id: USER_ID,
         kind: "input",
         status: "uploaded",
         content_type: "audio/wav",
-        storage_key: `users/user_1/media/tmp/${ASSET_ID}/input.wav`,
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
       },
     });
 
@@ -225,25 +336,25 @@ describe("reel captions routes", () => {
 
     const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
     const response = await POST(
-      new Request("https://example.test/api/v1/reel-captions/jobs/job_1/process", {
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
         method: "POST",
       }),
-      { params: Promise.resolve({ jobId: "job_1" }) },
+      { params: Promise.resolve({ jobId: JOB_ID }) },
     );
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
-      id: "job_1",
+      id: JOB_ID,
       status: "succeeded",
       text: "Hello",
       chargedAmountUsdMicros: 100_000,
     });
     expect(signMediaToken).toHaveBeenCalledWith({
       kind: "download",
-      sub: "user_1",
-      key: `users/user_1/media/tmp/${ASSET_ID}/input.wav`,
+      sub: USER_ID,
+      key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
       assetId: ASSET_ID,
-      jobId: "job_1",
+      jobId: JOB_ID,
       exp: 1_782_907_800,
     }, "test-token-secret");
     expect(transcribeWithElevenLabs).toHaveBeenCalledWith({
@@ -256,9 +367,55 @@ describe("reel captions routes", () => {
       metadata: {
         deleted_at: "2026-07-01T12:00:00.000Z",
         deletion_reason: "caption_job_succeeded",
-        caption_job_id: "job_1",
+        caption_job_id: JOB_ID,
       },
     });
+  });
+
+  it("logs internal transcription errors and returns a safe public caption failure", async () => {
+    const transcribeWithElevenLabs = vi.fn(async () => {
+      throw new Error("provider failed for https://media.example.test/objects/token-secret");
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/wav",
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "caption_generation_failed",
+        message: "Caption generation failed. Try again later.",
+      },
+    });
+    expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
+      p_job_id: JOB_ID,
+      p_status: "failed",
+      p_error: "caption_generation_failed",
+      p_metadata: { reason: "caption_generation_failed" },
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "Caption generation failed",
+      expect.objectContaining({ jobId: JOB_ID }),
+      expect.any(Error),
+    );
   });
 });
 
@@ -276,7 +433,7 @@ function mockCaptionRouteDependencies({
   vi.doMock("@/lib/api/auth", () => ({
     requireApiAuth: vi.fn(async () => ({
       ok: true,
-      auth: { user: { id: "user_1" } },
+      auth: { user: { id: USER_ID } },
     })),
   }));
   vi.doMock("@/lib/api/license", () => ({
@@ -325,7 +482,7 @@ function mockCreateJobAdmin() {
           admin.insertedJob = values;
           return {
             select: vi.fn(() => ({
-              single: vi.fn(async () => ({ data: { id: "job_1" }, error: null })),
+              single: vi.fn(async () => ({ data: { id: JOB_ID }, error: null })),
             })),
           };
         }),
@@ -351,17 +508,21 @@ function mockCreateJobAdmin() {
 
 function mockProcessAdmin({
   asset,
+  jobStatus = "queued",
   mediaAssetId = ASSET_ID,
+  claimResult = { id: JOB_ID },
 }: {
   asset: Record<string, unknown> | null;
+  jobStatus?: string;
   mediaAssetId?: unknown;
+  claimResult?: { id: string } | null;
 }) {
   const generationJob = {
-    id: "job_1",
-    user_id: "user_1",
+    id: JOB_ID,
+    user_id: USER_ID,
     provider: "elevenlabs",
     model: "scribe_v2",
-    status: "queued",
+    status: jobStatus,
     input: {
       duration_seconds: 12,
       filename: "voice.wav",
@@ -372,8 +533,10 @@ function mockProcessAdmin({
     reserved_amount_usd_micros: 100_000,
   };
 
+  const usageInsert = vi.fn(async () => ({ data: null, error: null }));
   const admin = {
     deletedAssetUpdate: null as unknown,
+    usageInsert,
     from: vi.fn((table: string) => {
       if (table === "generation_jobs") {
         return {
@@ -384,11 +547,16 @@ function mockProcessAdmin({
             };
             return chain;
           }),
-          update: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              in: vi.fn(async () => ({ data: null, error: null })),
-            })),
-          })),
+          update: vi.fn(() => {
+            const chain = {
+              eq: vi.fn(() => chain),
+              in: vi.fn(async () => ({ data: claimResult, error: null })),
+              select: vi.fn(() => ({
+                maybeSingle: vi.fn(async () => ({ data: claimResult, error: null })),
+              })),
+            };
+            return chain;
+          }),
         };
       }
 
@@ -412,7 +580,7 @@ function mockProcessAdmin({
 
       if (table === "usage_events") {
         return {
-          insert: vi.fn(async () => ({ data: null, error: null })),
+          insert: usageInsert,
         };
       }
 
