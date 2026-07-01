@@ -38,10 +38,12 @@ const OUTPUT_ASSET_SELECT =
 export async function createOutputAssetRows({
   userId,
   jobId,
+  claimToken,
   outputs,
 }: {
   userId: string;
   jobId: string;
+  claimToken: string;
   outputs: ProviderOutput[];
 }) {
   const admin = createSupabaseAdminClient();
@@ -56,6 +58,7 @@ export async function createOutputAssetRows({
         env,
         userId,
         jobId,
+        claimToken,
         output,
         outputIndex: index,
       });
@@ -68,11 +71,14 @@ export async function createOutputAssetRows({
       }
     }
   } catch (error) {
-    await markAttemptOutputsFailed(admin, completedThisAttempt);
+    await markAttemptOutputsFailed(admin, userId, jobId, claimToken, completedThisAttempt);
     throw error;
   }
 
-  return materializedOutputs;
+  return {
+    outputs: materializedOutputs,
+    attemptAssets: completedThisAttempt,
+  };
 }
 
 export function deterministicOutputAssetId(jobId: string, outputIndex: number): string {
@@ -92,6 +98,7 @@ async function materializeOutputAsset({
   env,
   userId,
   jobId,
+  claimToken,
   output,
   outputIndex,
 }: {
@@ -99,6 +106,7 @@ async function materializeOutputAsset({
   env: MediaEnv;
   userId: string;
   jobId: string;
+  claimToken: string;
   output: ProviderOutput;
   outputIndex: number;
 }) {
@@ -128,34 +136,40 @@ async function materializeOutputAsset({
 
   const bytes = await readProviderOutput(output, env.maxUploadBytes);
 
-  if (existing) {
-    await resetOutputAsset({
-      admin,
-      outputId,
-      output,
-      storageKey,
-      sizeBytes: bytes.byteLength,
-      metadata,
-    });
-  } else {
-    await insertOutputAsset({
-      admin,
-      outputId,
-      userId,
-      jobId,
-      output,
-      storageKey,
-      sizeBytes: bytes.byteLength,
-      metadata,
-    });
-  }
+  await prepareOutputAsset({
+    admin,
+    outputId,
+    userId,
+    jobId,
+    claimToken,
+    output,
+    storageKey,
+    sizeBytes: bytes.byteLength,
+    metadata,
+  });
 
   try {
     await uploadOutputBytes({ env, userId, jobId, outputId, output, storageKey, bytes });
-    await markOutputAssetReady({ admin, env, outputId, metadata });
+    await markOutputAssetReady({
+      admin,
+      env,
+      userId,
+      jobId,
+      claimToken,
+      outputId,
+      metadata,
+    });
   } catch (error) {
     const failureReason = safeFailureReason(error);
-    await markOutputAssetFailed(admin, outputId, metadata, failureReason);
+    await markOutputAssetFailed({
+      admin,
+      userId,
+      jobId,
+      claimToken,
+      outputId,
+      metadata,
+      failureReason,
+    });
     throw safeError(error, failureReason);
   }
 
@@ -221,11 +235,12 @@ function canReuseReadyAsset({
   return true;
 }
 
-async function insertOutputAsset({
+async function prepareOutputAsset({
   admin,
   outputId,
   userId,
   jobId,
+  claimToken,
   output,
   storageKey,
   sizeBytes,
@@ -235,64 +250,26 @@ async function insertOutputAsset({
   outputId: string;
   userId: string;
   jobId: string;
+  claimToken: string;
   output: ProviderOutput;
   storageKey: string;
   sizeBytes: number;
   metadata: OutputMetadata;
 }): Promise<void> {
   const { data, error } = await admin
-    .from("media_assets")
-    .insert({
-      id: outputId,
-      user_id: userId,
-      job_id: jobId,
-      kind: "output",
-      status: "pending",
-      content_type: output.contentType,
-      size_bytes: sizeBytes,
-      storage_key: storageKey,
-      download_expires_at: null,
-      metadata,
-    })
-    .select("id")
-    .single();
+    .rpc("prepare_claimed_media_output_asset", {
+      p_job_id: jobId,
+      p_claim_token: claimToken,
+      p_asset_id: outputId,
+      p_user_id: userId,
+      p_content_type: output.contentType,
+      p_size_bytes: sizeBytes,
+      p_storage_key: storageKey,
+      p_metadata: metadata,
+    });
 
   if (error || !data) {
     throw new Error(error?.message ?? "media_output_create_failed");
-  }
-}
-
-async function resetOutputAsset({
-  admin,
-  outputId,
-  output,
-  storageKey,
-  sizeBytes,
-  metadata,
-}: {
-  admin: SupabaseAdminClient;
-  outputId: string;
-  output: ProviderOutput;
-  storageKey: string;
-  sizeBytes: number;
-  metadata: OutputMetadata;
-}): Promise<void> {
-  const { data, error } = await admin
-    .from("media_assets")
-    .update({
-      status: "pending",
-      content_type: output.contentType,
-      size_bytes: sizeBytes,
-      storage_key: storageKey,
-      download_expires_at: null,
-      metadata,
-    })
-    .eq("id", outputId)
-    .select("id")
-    .single();
-
-  if (error || !data) {
-    throw new Error(error?.message ?? "media_output_update_failed");
   }
 }
 
@@ -349,28 +326,33 @@ async function uploadOutputBytes({
 async function markOutputAssetReady({
   admin,
   env,
+  userId,
+  jobId,
+  claimToken,
   outputId,
   metadata,
 }: {
   admin: SupabaseAdminClient;
   env: MediaEnv;
+  userId: string;
+  jobId: string;
+  claimToken: string;
   outputId: string;
   metadata: OutputMetadata;
 }): Promise<void> {
   const downloadExp = Math.floor(Date.now() / 1000) + env.downloadUrlTtlSeconds;
   const { error: readyError } = await admin
-    .from("media_assets")
-    .update({
-      status: "ready",
-      download_expires_at: new Date(downloadExp * 1000).toISOString(),
-      metadata: {
+    .rpc("mark_claimed_media_output_asset_ready", {
+      p_job_id: jobId,
+      p_claim_token: claimToken,
+      p_asset_id: outputId,
+      p_user_id: userId,
+      p_download_expires_at: new Date(downloadExp * 1000).toISOString(),
+      p_metadata: {
         ...metadata,
         copied_to_r2_at: new Date().toISOString(),
       },
-    })
-    .eq("id", outputId)
-    .select("id")
-    .single();
+    });
 
   if (readyError) {
     throw new Error(readyError.message);
@@ -513,35 +495,83 @@ function arrayBufferBody(bytes: Uint8Array): ArrayBuffer {
 
 async function markAttemptOutputsFailed(
   admin: SupabaseAdminClient,
+  userId: string,
+  jobId: string,
+  claimToken: string,
   completedThisAttempt: CompletedAttemptAsset[],
 ): Promise<void> {
   await Promise.all(completedThisAttempt.map((asset) => (
-    markOutputAssetFailed(admin, asset.id, asset.metadata, "media_output_materialization_failed")
+    markOutputAssetFailed({
+      admin,
+      userId,
+      jobId,
+      claimToken,
+      outputId: asset.id,
+      metadata: asset.metadata,
+      failureReason: "media_output_materialization_failed",
+    })
   )));
 }
 
-async function markOutputAssetFailed(
-  admin: SupabaseAdminClient,
-  outputId: string,
-  metadata: OutputMetadata,
-  failureReason: string,
-): Promise<void> {
+export async function failOutputAssetRowsForAttempt({
+  userId,
+  jobId,
+  claimToken,
+  attemptAssets,
+  reason,
+}: {
+  userId: string;
+  jobId: string;
+  claimToken: string;
+  attemptAssets: CompletedAttemptAsset[];
+  reason: string;
+}): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  await Promise.all(attemptAssets.map((asset) => (
+    markOutputAssetFailed({
+      admin,
+      userId,
+      jobId,
+      claimToken,
+      outputId: asset.id,
+      metadata: asset.metadata,
+      failureReason: reason,
+    })
+  )));
+}
+
+async function markOutputAssetFailed({
+  admin,
+  userId,
+  jobId,
+  claimToken,
+  outputId,
+  metadata,
+  failureReason,
+}: {
+  admin: SupabaseAdminClient;
+  userId: string;
+  jobId: string;
+  claimToken: string;
+  outputId: string;
+  metadata: OutputMetadata;
+  failureReason: string;
+}): Promise<void> {
   const { error } = await admin
-    .from("media_assets")
-    .update({
-      status: "failed",
-      metadata: {
+    .rpc("fail_claimed_media_output_asset", {
+      p_job_id: jobId,
+      p_claim_token: claimToken,
+      p_asset_id: outputId,
+      p_user_id: userId,
+      p_metadata: {
         ...metadata,
         failure_reason: failureReason,
         failed_at: new Date().toISOString(),
       },
-    })
-    .eq("id", outputId)
-    .select("id")
-    .single();
+    });
 
   if (error) {
-    console.error("Failed to mark media output asset failed", error);
+    throw new Error(error.message);
   }
 }
 

@@ -1,5 +1,8 @@
 import { getMediaModel } from "@/lib/media/model-registry";
-import { createOutputAssetRows } from "@/lib/media/output-assets";
+import {
+  createOutputAssetRows,
+  failOutputAssetRowsForAttempt,
+} from "@/lib/media/output-assets";
 import type { MediaProviderAdapter, ProviderOutput } from "@/lib/media/provider";
 import { chargeMediaUsdMicros } from "@/lib/media/pricing";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -108,17 +111,21 @@ export async function drainOneMediaJob({
 
   const charge = chargeMediaUsdMicros({ model, rawCostUsd: result.rawCostUsd });
   const providerMetadata = safeMetadata(result.metadata);
-  let outputs;
+  let materializedOutputs;
   try {
-    outputs = await materializeOutputs(job.userId, job.id, result.outputs);
-  } catch {
+    materializedOutputs = await materializeOutputs(job.userId, job.id, job.claimToken, result.outputs);
+  } catch (error) {
+    if (isStaleClaimError(error)) {
+      return { claimed: true, jobId: job.id, status: "stale_claim" };
+    }
+
     const status = await releaseJob(admin, job, "media_output_materialization_failed");
     return { claimed: true, jobId: job.id, status };
   }
 
   const outputPayload = {
     media_model_id: model.id,
-    outputs,
+    outputs: materializedOutputs.outputs,
     provider_metadata: providerMetadata,
     charged_amount_usd_micros: charge.chargedAmountUsdMicros,
   };
@@ -146,6 +153,19 @@ export async function drainOneMediaJob({
 
   if (settleError) {
     if (isStaleClaimError(settleError)) {
+      try {
+        await failOutputAssetRowsForAttempt({
+          userId: job.userId,
+          jobId: job.id,
+          claimToken: job.claimToken,
+          attemptAssets: materializedOutputs.attemptAssets,
+          reason: "media_output_materialization_failed",
+        });
+      } catch (error) {
+        if (!isStaleClaimError(error)) {
+          throw error;
+        }
+      }
       return { claimed: true, jobId: job.id, status: "stale_claim" };
     }
 
@@ -158,9 +178,10 @@ export async function drainOneMediaJob({
 export function materializeOutputs(
   userId: string,
   jobId: string,
+  claimToken: string,
   outputs: ProviderOutput[],
 ) {
-  return createOutputAssetRows({ userId, jobId, outputs });
+  return createOutputAssetRows({ userId, jobId, claimToken, outputs });
 }
 
 function normalizeClaimedJob(job: ClaimedMediaJobRow) {
@@ -284,8 +305,8 @@ async function releaseJob(
   return "failed";
 }
 
-function isStaleClaimError(error: { message?: string }) {
-  return error.message === "media_job_stale_claim";
+function isStaleClaimError(error: unknown) {
+  return isRecord(error) && error.message === "media_job_stale_claim";
 }
 
 function isAbortError(error: unknown) {

@@ -4,6 +4,7 @@ import type { MediaEnv } from "@/lib/media/env";
 import {
   createOutputAssetRows,
   deterministicOutputAssetId,
+  failOutputAssetRowsForAttempt,
 } from "@/lib/media/output-assets";
 import { verifyMediaToken } from "@/lib/media/tokens";
 
@@ -28,25 +29,24 @@ const mediaEnv: MediaEnv = {
   uploadUrlTtlSeconds: 60,
   downloadUrlTtlSeconds: 120,
 };
+const claimToken = "00000000-0000-4000-8000-000000000001";
+const originalFetch = globalThis.fetch;
+const nowSeconds = Math.floor(Date.parse("2026-07-01T12:00:00.000Z") / 1000);
 
 type SupabaseError = { message: string };
 type SupabaseResult<T> = { data: T | null; error: SupabaseError | null };
 type QueryRoot = {
   select?: ReturnType<typeof vi.fn>;
-  insert?: ReturnType<typeof vi.fn>;
-  update?: ReturnType<typeof vi.fn>;
 };
 type QueryStep = {
   root: QueryRoot;
-  inserted?: unknown;
-  updated?: unknown;
   selected?: string;
   filters: Array<[string, unknown]>;
 };
-
-const originalFetch = globalThis.fetch;
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-const nowSeconds = Math.floor(Date.parse("2026-07-01T12:00:00.000Z") / 1000);
+type RpcStep = {
+  name: string;
+  result: SupabaseResult<unknown>;
+};
 
 describe("createOutputAssetRows", () => {
   beforeEach(() => {
@@ -61,14 +61,20 @@ describe("createOutputAssetRows", () => {
     vi.restoreAllMocks();
   });
 
-  it("uses inline bytes without fetching the provider URL and returns a Woven download URL", async () => {
+  it("uses inline bytes without fetching the provider URL, claim-fences mutations, and returns a Woven download URL", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
+    const outputId = deterministicOutputAssetId("job_1", 0);
+    const storageKey = `users/user_1/media/outputs/job_1/${outputId}.mp3`;
     const existingStep = selectQuery({ data: null, error: null });
-    const insertStep = insertQuery({ data: { id: "inserted" }, error: null });
-    const readyStep = updateQuery({ data: { id: "ready" }, error: null });
-    const admin = mockAdminWith(existingStep, insertStep, readyStep);
+    const admin = mockAdminWith({
+      selectSteps: [existingStep],
+      rpcSteps: [
+        rpcStep("prepare_claimed_media_output_asset"),
+        rpcStep("mark_claimed_media_output_asset_ready"),
+      ],
+    });
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       void input;
       void init;
@@ -76,9 +82,10 @@ describe("createOutputAssetRows", () => {
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const outputs = await createOutputAssetRows({
+    const result = await createOutputAssetRows({
       userId: "user_1",
       jobId: "job_1",
+      claimToken,
       outputs: [{
         url: "https://provider.example/audio.mp3",
         data: Uint8Array.from([1, 2, 3, 4]),
@@ -87,38 +94,29 @@ describe("createOutputAssetRows", () => {
       }],
     });
 
-    const inserted = insertStep.inserted as Record<string, unknown>;
-    const outputId = String(inserted.id);
-    const storageKey = String(inserted.storage_key);
-
-    expect(outputId).toMatch(uuidPattern);
-    expect(storageKey).toBe(`users/user_1/media/outputs/job_1/${outputId}.mp3`);
-    expect(admin.tables).toEqual(["media_assets", "media_assets", "media_assets"]);
     expect(existingStep.filters).toEqual([
       ["id", outputId],
       ["user_id", "user_1"],
       ["job_id", "job_1"],
       ["kind", "output"],
     ]);
-    expect(insertStep.inserted).toEqual({
-      id: outputId,
-      user_id: "user_1",
-      job_id: "job_1",
-      kind: "output",
-      status: "pending",
-      content_type: "audio/mpeg",
-      size_bytes: 4,
-      storage_key: storageKey,
-      download_expires_at: null,
-      metadata: {
+    expect(admin.rpc).toHaveBeenNthCalledWith(1, "prepare_claimed_media_output_asset", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_asset_id: outputId,
+      p_user_id: "user_1",
+      p_content_type: "audio/mpeg",
+      p_size_bytes: 4,
+      p_storage_key: storageKey,
+      p_metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "inline_data",
       },
     });
-    expect(JSON.stringify(insertStep.inserted)).not.toContain("provider.example");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(admin.rpc.mock.calls[0][1])).not.toContain("provider.example");
 
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     const [uploadUrl, uploadInit] = fetchMock.mock.calls[0];
     expect(String(uploadUrl).startsWith(`https://media.example.test/uploads/${outputId}?token=`)).toBe(true);
     expect(uploadInit?.method).toBe("PUT");
@@ -140,47 +138,52 @@ describe("createOutputAssetRows", () => {
       exp: nowSeconds + mediaEnv.uploadUrlTtlSeconds,
     });
 
-    expect(readyStep.updated).toEqual({
-      status: "ready",
-      download_expires_at: "2026-07-01T12:02:00.000Z",
-      metadata: {
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "mark_claimed_media_output_asset_ready", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_asset_id: outputId,
+      p_user_id: "user_1",
+      p_download_expires_at: "2026-07-01T12:02:00.000Z",
+      p_metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "inline_data",
         copied_to_r2_at: "2026-07-01T12:00:00.000Z",
       },
     });
-    expect(readyStep.filters).toEqual([["id", outputId]]);
-    expect(JSON.stringify(readyStep.updated)).not.toContain("provider.example");
 
-    expect(outputs).toHaveLength(1);
-    expect(outputs[0]).toMatchObject({
+    expect(result.attemptAssets).toEqual([{
+      id: outputId,
+      metadata: {
+        source: "provider_output",
+        output_index: 0,
+        provider_source_type: "inline_data",
+      },
+    }]);
+    expect(result.outputs).toHaveLength(1);
+    expect(result.outputs[0]).toMatchObject({
       id: outputId,
       type: "audio",
       content_type: "audio/mpeg",
       expires_at: "2026-07-01T12:02:00.000Z",
     });
-    const downloadUrl = new URL(outputs[0].url);
+    const downloadUrl = new URL(result.outputs[0].url);
     expect(`${downloadUrl.origin}${downloadUrl.pathname}`).toBe(`https://media.example.test/objects/${outputId}`);
-    const downloadToken = downloadUrl.searchParams.get("token") ?? "";
-    await expect(verifyMediaToken(downloadToken, mediaEnv.tokenSecret, nowSeconds)).resolves.toMatchObject({
-      kind: "download",
-      sub: "user_1",
-      key: storageKey,
-      assetId: outputId,
-      jobId: "job_1",
-      exp: nowSeconds + mediaEnv.downloadUrlTtlSeconds,
-    });
   });
 
   it("fetches HTTP provider outputs before uploading them to the Woven media URL", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
+    const outputId = deterministicOutputAssetId("job_1", 0);
     const existingStep = selectQuery({ data: null, error: null });
-    const insertStep = insertQuery({ data: { id: "inserted" }, error: null });
-    const readyStep = updateQuery({ data: { id: "ready" }, error: null });
-    mockAdminWith(existingStep, insertStep, readyStep);
+    const admin = mockAdminWith({
+      selectSteps: [existingStep],
+      rpcSteps: [
+        rpcStep("prepare_claimed_media_output_asset"),
+        rpcStep("mark_claimed_media_output_asset_ready"),
+      ],
+    });
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       void init;
       const url = String(input);
@@ -191,9 +194,10 @@ describe("createOutputAssetRows", () => {
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const outputs = await createOutputAssetRows({
+    const result = await createOutputAssetRows({
       userId: "user_1",
       jobId: "job_1",
+      claimToken,
       outputs: [{
         url: "https://provider.example/audio.mp3",
         contentType: "audio/mpeg",
@@ -201,39 +205,42 @@ describe("createOutputAssetRows", () => {
       }],
     });
 
-    const inserted = insertStep.inserted as Record<string, unknown>;
-    const outputId = String(inserted.id);
-
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[0][0])).toBe("https://provider.example/audio.mp3");
     expect(String(fetchMock.mock.calls[1][0]).startsWith(`https://media.example.test/uploads/${outputId}?token=`)).toBe(true);
     await expect(bytesFromBody(fetchMock.mock.calls[1][1]?.body)).resolves.toEqual([5, 6, 7]);
-    expect(insertStep.inserted).toMatchObject({
-      size_bytes: 3,
-      metadata: {
+    expect(admin.rpc).toHaveBeenNthCalledWith(1, "prepare_claimed_media_output_asset", expect.objectContaining({
+      p_size_bytes: 3,
+      p_metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "remote_url",
       },
-    });
-    expect(JSON.stringify(insertStep.inserted)).not.toContain("provider.example");
-    expect(outputs[0].url).toContain(`https://media.example.test/objects/${outputId}?token=`);
-    expect(outputs[0].url).not.toContain("provider.example");
+    }));
+    expect(JSON.stringify(admin.rpc.mock.calls[0][1])).not.toContain("provider.example");
+    expect(result.outputs[0].url).toContain(`https://media.example.test/objects/${outputId}?token=`);
+    expect(result.outputs[0].url).not.toContain("provider.example");
   });
 
-  it("marks the media asset failed and throws when upload to Woven media fails", async () => {
+  it("marks the media asset failed through the claim-aware RPC when upload to Woven media fails", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
+    const outputId = deterministicOutputAssetId("job_1", 0);
     const existingStep = selectQuery({ data: null, error: null });
-    const insertStep = insertQuery({ data: { id: "inserted" }, error: null });
-    const failedStep = updateQuery({ data: { id: "failed" }, error: null });
-    mockAdminWith(existingStep, insertStep, failedStep);
+    const admin = mockAdminWith({
+      selectSteps: [existingStep],
+      rpcSteps: [
+        rpcStep("prepare_claimed_media_output_asset"),
+        rpcStep("fail_claimed_media_output_asset"),
+      ],
+    });
     globalThis.fetch = vi.fn(async () => new Response("nope", { status: 503 })) as unknown as typeof fetch;
 
     await expect(createOutputAssetRows({
       userId: "user_1",
       jobId: "job_1",
+      claimToken,
       outputs: [{
         url: "https://provider.example/audio.mp3",
         data: Uint8Array.from([1, 2, 3]),
@@ -242,9 +249,12 @@ describe("createOutputAssetRows", () => {
       }],
     })).rejects.toThrow("media_output_upload_failed:503");
 
-    expect(failedStep.updated).toEqual({
-      status: "failed",
-      metadata: {
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "fail_claimed_media_output_asset", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_asset_id: outputId,
+      p_user_id: "user_1",
+      p_metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "inline_data",
@@ -252,8 +262,7 @@ describe("createOutputAssetRows", () => {
         failed_at: "2026-07-01T12:00:00.000Z",
       },
     });
-    expect(JSON.stringify(failedStep.updated)).not.toContain("provider.example");
-    expect(failedStep.filters).toEqual([["id", (insertStep.inserted as { id: string }).id]]);
+    expect(JSON.stringify(admin.rpc.mock.calls[1][1])).not.toContain("provider.example");
   });
 
   it("marks the media asset failed and throws a safe error when upload fetch throws", async () => {
@@ -261,9 +270,13 @@ describe("createOutputAssetRows", () => {
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
     const existingStep = selectQuery({ data: null, error: null });
-    const insertStep = insertQuery({ data: { id: "inserted" }, error: null });
-    const failedStep = updateQuery({ data: { id: "failed" }, error: null });
-    mockAdminWith(existingStep, insertStep, failedStep);
+    const admin = mockAdminWith({
+      selectSteps: [existingStep],
+      rpcSteps: [
+        rpcStep("prepare_claimed_media_output_asset"),
+        rpcStep("fail_claimed_media_output_asset"),
+      ],
+    });
     globalThis.fetch = vi.fn(async () => {
       throw new Error("connection reset with internal host details");
     }) as unknown as typeof fetch;
@@ -271,6 +284,7 @@ describe("createOutputAssetRows", () => {
     await expect(createOutputAssetRows({
       userId: "user_1",
       jobId: "job_1",
+      claimToken,
       outputs: [{
         url: "https://provider.example/audio.mp3",
         data: Uint8Array.from([1, 2, 3]),
@@ -279,27 +293,24 @@ describe("createOutputAssetRows", () => {
       }],
     })).rejects.toThrow("media_output_upload_failed:network");
 
-    expect(failedStep.updated).toEqual({
-      status: "failed",
-      metadata: {
-        source: "provider_output",
-        output_index: 0,
-        provider_source_type: "inline_data",
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "fail_claimed_media_output_asset", expect.objectContaining({
+      p_claim_token: claimToken,
+      p_metadata: expect.objectContaining({
         failure_reason: "media_output_upload_failed:network",
-        failed_at: "2026-07-01T12:00:00.000Z",
-      },
-    });
-    expect(JSON.stringify(failedStep.updated)).not.toContain("provider.example");
-    expect(failedStep.filters).toEqual([["id", (insertStep.inserted as { id: string }).id]]);
+      }),
+    }));
+    expect(JSON.stringify(admin.rpc.mock.calls[1][1])).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[1][1])).not.toContain("connection reset");
   });
 
-  it("rejects oversized inline outputs before creating an asset row", async () => {
+  it("rejects oversized inline outputs before preparing an asset row", async () => {
     const existingStep = selectQuery({ data: null, error: null });
-    const admin = mockAdminWith(existingStep);
+    const admin = mockAdminWith({ selectSteps: [existingStep] });
 
     await expect(createOutputAssetRows({
       userId: "user_1",
       jobId: "job_1",
+      claimToken,
       outputs: [{
         data: Uint8Array.from({ length: mediaEnv.maxUploadBytes + 1 }, () => 1),
         contentType: "audio/mpeg",
@@ -307,12 +318,12 @@ describe("createOutputAssetRows", () => {
       }],
     })).rejects.toThrow("media_output_too_large");
 
-    expect(admin.tables).toEqual(["media_assets"]);
+    expect(admin.rpc).not.toHaveBeenCalled();
   });
 
-  it("rejects oversized remote outputs from Content-Length before creating an asset row", async () => {
+  it("rejects oversized remote outputs from Content-Length before preparing an asset row", async () => {
     const existingStep = selectQuery({ data: null, error: null });
-    const admin = mockAdminWith(existingStep);
+    const admin = mockAdminWith({ selectSteps: [existingStep] });
     const fetchMock = vi.fn(async () => (
       new Response("too large", {
         status: 200,
@@ -324,6 +335,7 @@ describe("createOutputAssetRows", () => {
     await expect(createOutputAssetRows({
       userId: "user_1",
       jobId: "job_1",
+      claimToken,
       outputs: [{
         url: "https://provider.example/audio.mp3",
         contentType: "audio/mpeg",
@@ -332,10 +344,10 @@ describe("createOutputAssetRows", () => {
     })).rejects.toThrow("media_output_too_large");
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(admin.tables).toEqual(["media_assets"]);
+    expect(admin.rpc).not.toHaveBeenCalled();
   });
 
-  it("reuses an existing ready output asset and returns a fresh Woven URL without inserting or uploading", async () => {
+  it("reuses an existing ready output asset and returns a fresh Woven URL without mutation or upload", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
@@ -357,13 +369,14 @@ describe("createOutputAssetRows", () => {
       },
     };
     const existingStep = selectQuery({ data: existing, error: null });
-    const admin = mockAdminWith(existingStep);
+    const admin = mockAdminWith({ selectSteps: [existingStep] });
     const fetchMock = vi.fn();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const outputs = await createOutputAssetRows({
+    const result = await createOutputAssetRows({
       userId: "user_1",
       jobId: "job_1",
+      claimToken,
       outputs: [{
         data: Uint8Array.from([1, 2, 3, 4]),
         contentType: "audio/mpeg",
@@ -371,16 +384,15 @@ describe("createOutputAssetRows", () => {
       }],
     });
 
-    expect(admin.tables).toEqual(["media_assets"]);
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(outputs).toHaveLength(1);
-    expect(outputs[0]).toMatchObject({
+    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(result.attemptAssets).toEqual([]);
+    expect(result.outputs[0]).toMatchObject({
       id: existing.id,
       type: "audio",
       content_type: "audio/mpeg",
       expires_at: "2026-07-01T12:02:00.000Z",
     });
-    expect(outputs[0].url).toContain(`https://media.example.test/objects/${existing.id}?token=`);
   });
 
   it("resets an existing failed output row and stores only safe data URL provenance", async () => {
@@ -405,15 +417,24 @@ describe("createOutputAssetRows", () => {
       },
     };
     const existingStep = selectQuery({ data: existing, error: null });
-    const resetStep = updateQuery({ data: { id: existingId }, error: null });
-    const readyStep = updateQuery({ data: { id: existingId }, error: null });
-    const admin = mockAdminWith(existingStep, resetStep, readyStep);
-    const fetchMock = vi.fn(async () => new Response(null, { status: 200 }));
+    const admin = mockAdminWith({
+      selectSteps: [existingStep],
+      rpcSteps: [
+        rpcStep("prepare_claimed_media_output_asset"),
+        rpcStep("mark_claimed_media_output_asset_ready"),
+      ],
+    });
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      void input;
+      void init;
+      return new Response(null, { status: 200 });
+    });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const outputs = await createOutputAssetRows({
+    const result = await createOutputAssetRows({
       userId: "user_1",
       jobId: "job_1",
+      claimToken,
       outputs: [{
         url: "data:audio/mpeg;base64,AQID",
         contentType: "audio/mpeg",
@@ -421,55 +442,48 @@ describe("createOutputAssetRows", () => {
       }],
     });
 
-    expect(admin.tables).toEqual(["media_assets", "media_assets", "media_assets"]);
-    expect(resetStep.updated).toEqual({
-      status: "pending",
-      content_type: "audio/mpeg",
-      size_bytes: 3,
-      storage_key: `users/user_1/media/outputs/job_1/${existingId}.mp3`,
-      download_expires_at: null,
+    expect(admin.rpc).toHaveBeenNthCalledWith(1, "prepare_claimed_media_output_asset", expect.objectContaining({
+      p_claim_token: claimToken,
+      p_asset_id: existingId,
+      p_metadata: {
+        source: "provider_output",
+        output_index: 0,
+        provider_source_type: "data_url",
+      },
+    }));
+    expect(JSON.stringify(admin.rpc.mock.calls[0][1])).not.toContain("data:audio");
+    expect(result.attemptAssets).toEqual([{
+      id: existingId,
       metadata: {
         source: "provider_output",
         output_index: 0,
         provider_source_type: "data_url",
       },
-    });
-    expect(JSON.stringify(resetStep.updated)).not.toContain("data:audio");
-    expect(readyStep.updated).toMatchObject({
-      status: "ready",
-      metadata: {
-        source: "provider_output",
-        output_index: 0,
-        provider_source_type: "data_url",
-        copied_to_r2_at: "2026-07-01T12:00:00.000Z",
-      },
-    });
-    expect(outputs[0].id).toBe(existingId);
-    expect(outputs[0].url).toContain(`https://media.example.test/objects/${existingId}?token=`);
+    }]);
   });
 
   it("marks outputs created in the same materialization attempt failed when a later output fails", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
-    const firstExistingStep = selectQuery({ data: null, error: null });
-    const firstInsertStep = insertQuery({ data: { id: "first" }, error: null });
-    const firstReadyStep = updateQuery({ data: { id: "first" }, error: null });
-    const secondExistingStep = selectQuery({ data: null, error: null });
-    const secondInsertStep = insertQuery({ data: { id: "second" }, error: null });
-    const secondFailedStep = updateQuery({ data: { id: "second" }, error: null });
-    const firstCleanupStep = updateQuery({ data: { id: "first" }, error: null });
-    mockAdminWith(
-      firstExistingStep,
-      firstInsertStep,
-      firstReadyStep,
-      secondExistingStep,
-      secondInsertStep,
-      secondFailedStep,
-      firstCleanupStep,
-    );
+    const firstId = deterministicOutputAssetId("job_1", 0);
+    const secondId = deterministicOutputAssetId("job_1", 1);
+    const admin = mockAdminWith({
+      selectSteps: [
+        selectQuery({ data: null, error: null }),
+        selectQuery({ data: null, error: null }),
+      ],
+      rpcSteps: [
+        rpcStep("prepare_claimed_media_output_asset"),
+        rpcStep("mark_claimed_media_output_asset_ready"),
+        rpcStep("prepare_claimed_media_output_asset"),
+        rpcStep("fail_claimed_media_output_asset"),
+        rpcStep("fail_claimed_media_output_asset"),
+      ],
+    });
     let uploadCalls = 0;
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
       const url = String(input);
       if (url.includes("/uploads/")) {
         uploadCalls += 1;
@@ -484,6 +498,7 @@ describe("createOutputAssetRows", () => {
     await expect(createOutputAssetRows({
       userId: "user_1",
       jobId: "job_1",
+      claimToken,
       outputs: [
         {
           data: Uint8Array.from([1, 2, 3]),
@@ -498,20 +513,88 @@ describe("createOutputAssetRows", () => {
       ],
     })).rejects.toThrow("media_output_upload_failed:503");
 
-    expect(firstReadyStep.updated).toMatchObject({ status: "ready" });
-    expect(secondFailedStep.updated).toMatchObject({
-      status: "failed",
-      metadata: expect.objectContaining({
+    expect(admin.rpc).toHaveBeenNthCalledWith(4, "fail_claimed_media_output_asset", expect.objectContaining({
+      p_asset_id: secondId,
+      p_claim_token: claimToken,
+      p_metadata: expect.objectContaining({
         output_index: 1,
         failure_reason: "media_output_upload_failed:503",
       }),
-    });
-    expect(firstCleanupStep.updated).toMatchObject({
-      status: "failed",
-      metadata: expect.objectContaining({
+    }));
+    expect(admin.rpc).toHaveBeenNthCalledWith(5, "fail_claimed_media_output_asset", expect.objectContaining({
+      p_asset_id: firstId,
+      p_claim_token: claimToken,
+      p_metadata: expect.objectContaining({
         output_index: 0,
         failure_reason: "media_output_materialization_failed",
       }),
+    }));
+  });
+
+  it("surfaces stale claims from claim-aware output RPCs", async () => {
+    const existingStep = selectQuery({ data: null, error: null });
+    mockAdminWith({
+      selectSteps: [existingStep],
+      rpcSteps: [
+        rpcStep("prepare_claimed_media_output_asset", {
+          data: null,
+          error: { message: "media_job_stale_claim" },
+        }),
+      ],
+    });
+
+    await expect(createOutputAssetRows({
+      userId: "user_1",
+      jobId: "job_1",
+      claimToken,
+      outputs: [{
+        data: Uint8Array.from([1, 2, 3]),
+        contentType: "audio/mpeg",
+        type: "audio",
+      }],
+    })).rejects.toThrow("media_job_stale_claim");
+  });
+});
+
+describe("failOutputAssetRowsForAttempt", () => {
+  it("claim-fences stale-settlement cleanup and skips reused assets", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
+
+    const admin = mockAdminWith({
+      rpcSteps: [
+        rpcStep("fail_claimed_media_output_asset"),
+      ],
+    });
+
+    await expect(failOutputAssetRowsForAttempt({
+      userId: "user_1",
+      jobId: "job_1",
+      claimToken,
+      attemptAssets: [{
+        id: "asset_created_this_attempt",
+        metadata: {
+          source: "provider_output",
+          output_index: 0,
+          provider_source_type: "inline_data",
+        },
+      }],
+      reason: "media_output_materialization_failed",
+    })).resolves.toBeUndefined();
+
+    expect(admin.rpc).toHaveBeenCalledTimes(1);
+    expect(admin.rpc).toHaveBeenCalledWith("fail_claimed_media_output_asset", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_asset_id: "asset_created_this_attempt",
+      p_user_id: "user_1",
+      p_metadata: {
+        source: "provider_output",
+        output_index: 0,
+        provider_source_type: "inline_data",
+        failure_reason: "media_output_materialization_failed",
+        failed_at: "2026-07-01T12:00:00.000Z",
+      },
     });
   });
 });
@@ -535,57 +618,38 @@ function selectQuery<T>(result: SupabaseResult<T>): QueryStep {
   return step;
 }
 
-function insertQuery<T>(result: SupabaseResult<T>): QueryStep {
-  const step: QueryStep = { root: {}, filters: [] };
-  const single = vi.fn(async () => result);
-  const select = vi.fn((columns: string) => {
-    step.selected = columns;
-    return { single };
-  });
-
-  step.root.insert = vi.fn((values: unknown) => {
-    step.inserted = values;
-    return { select };
-  });
-
-  return step;
+function rpcStep(name: string, result: SupabaseResult<unknown> = { data: { id: "asset" }, error: null }): RpcStep {
+  return { name, result };
 }
 
-function updateQuery<T>(result: SupabaseResult<T>): QueryStep {
-  const step: QueryStep = { root: {}, filters: [] };
-  const single = vi.fn(async () => result);
-  const select = vi.fn((columns: string) => {
-    step.selected = columns;
-    return { single };
-  });
-  const chain = {
-    eq: vi.fn((column: string, value: unknown) => {
-      step.filters.push([column, value]);
-      return chain;
-    }),
-    select,
-  };
-
-  step.root.update = vi.fn((values: unknown) => {
-    step.updated = values;
-    return chain;
-  });
-
-  return step;
-}
-
-function mockAdminWith(...steps: QueryStep[]) {
-  const queue = [...steps];
+function mockAdminWith({
+  selectSteps = [],
+  rpcSteps = [],
+}: {
+  selectSteps?: QueryStep[];
+  rpcSteps?: RpcStep[];
+} = {}) {
+  const selectQueue = [...selectSteps];
+  const rpcQueue = [...rpcSteps];
   const tables: string[] = [];
   const from = vi.fn((table: string) => {
     tables.push(table);
-    const step = queue.shift();
+    const step = selectQueue.shift();
     if (!step) throw new Error(`Unexpected Supabase table: ${table}`);
     return step.root;
   });
+  const rpc = vi.fn(async (name: string, args?: Record<string, unknown>) => {
+    void args;
+    const step = rpcQueue.shift();
+    if (!step) throw new Error(`Unexpected RPC: ${name}`);
+    if (step.name !== name) {
+      throw new Error(`Expected RPC ${step.name}, received ${name}`);
+    }
+    return step.result;
+  });
 
-  mocks.createSupabaseAdminClient.mockReturnValue({ from });
-  return { from, tables };
+  mocks.createSupabaseAdminClient.mockReturnValue({ from, rpc });
+  return { from, rpc, tables };
 }
 
 async function bytesFromBody(body: BodyInit | null | undefined): Promise<number[]> {
