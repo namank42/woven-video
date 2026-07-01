@@ -10,10 +10,14 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 type SupabaseError = { message: string };
 type SupabaseResult<T> = { data: T | null; error: SupabaseError | null };
+type QueryFilter = {
+  method: "eq" | "lt" | "neq" | "or";
+  column?: string;
+  value: unknown;
+};
 type UpdateStep = {
   updated?: unknown;
-  orFilter?: string;
-  neqFilters: Array<[string, unknown]>;
+  filters: QueryFilter[];
   selected?: string;
 };
 
@@ -26,37 +30,91 @@ describe("media cleanup", () => {
     vi.restoreAllMocks();
   });
 
-  it("marks expired upload or download assets as deleted", async () => {
+  it("marks stale pending uploads and expired ready downloads as deleted", async () => {
     const nowIso = "2026-07-01T12:00:00.000Z";
-    const step = updateQuery({
-      data: [{ id: "asset_1", storage_key: "users/user_1/media/asset_1/output.mp4" }],
+    const pendingUploadStep = updateQuery({
+      data: [{ id: "asset_1", storage_key: "users/user_1/media/tmp/asset_1/input.mp4" }],
       error: null,
     });
-    mockAdminWith(step);
+    const readyDownloadStep = updateQuery({
+      data: [{ id: "asset_2", storage_key: "users/user_1/media/asset_2/output.mp4" }],
+      error: null,
+    });
+    mockAdminWith(pendingUploadStep, readyDownloadStep);
     const { markExpiredMediaForDeletion } = await import("@/lib/media/cleanup");
 
     const deleted = await markExpiredMediaForDeletion(nowIso);
 
     expect(deleted).toEqual([
-      { id: "asset_1", storage_key: "users/user_1/media/asset_1/output.mp4" },
+      { id: "asset_1", storage_key: "users/user_1/media/tmp/asset_1/input.mp4" },
+      { id: "asset_2", storage_key: "users/user_1/media/asset_2/output.mp4" },
     ]);
-    expect(step.updated).toEqual({
+    expect(pendingUploadStep.updated).toEqual({
       status: "deleted",
       deleted_at: nowIso,
     });
-    expect(step.orFilter).toBe(
-      `upload_expires_at.lt.${nowIso},download_expires_at.lt.${nowIso}`,
+    expect(pendingUploadStep.filters).toEqual([
+      { method: "eq", column: "status", value: "pending" },
+      { method: "lt", column: "upload_expires_at", value: nowIso },
+    ]);
+    expect(pendingUploadStep.selected).toBe("id, storage_key");
+
+    expect(readyDownloadStep.updated).toEqual({
+      status: "deleted",
+      deleted_at: nowIso,
+    });
+    expect(readyDownloadStep.filters).toEqual([
+      { method: "eq", column: "status", value: "ready" },
+      { method: "lt", column: "download_expires_at", value: nowIso },
+    ]);
+    expect(readyDownloadStep.selected).toBe("id, storage_key");
+  });
+
+  it("does not use upload expiry to match uploaded or attached inputs", async () => {
+    const nowIso = "2026-07-01T12:00:00.000Z";
+    const pendingUploadStep = updateQuery({ data: [], error: null });
+    const readyDownloadStep = updateQuery({ data: [], error: null });
+    mockAdminWith(pendingUploadStep, readyDownloadStep);
+    const { markExpiredMediaForDeletion } = await import("@/lib/media/cleanup");
+
+    await markExpiredMediaForDeletion(nowIso);
+
+    const uploadExpirySteps = [pendingUploadStep, readyDownloadStep].filter((step) =>
+      step.filters.some((filter) =>
+        filter.method === "lt" && filter.column === "upload_expires_at"
+      )
     );
-    expect(step.neqFilters).toEqual([["status", "deleted"]]);
-    expect(step.selected).toBe("id, storage_key");
+
+    expect(uploadExpirySteps).toHaveLength(1);
+    expect(uploadExpirySteps[0].filters).toContainEqual({
+      method: "eq",
+      column: "status",
+      value: "pending",
+    });
+    expect(uploadExpirySteps[0].filters).not.toContainEqual({
+      method: "eq",
+      column: "status",
+      value: "uploaded",
+    });
+    expect(uploadExpirySteps[0].filters).not.toContainEqual({
+      method: "eq",
+      column: "status",
+      value: "attached",
+    });
+    expect([pendingUploadStep, readyDownloadStep].flatMap((step) => step.filters))
+      .not.toContainEqual(expect.objectContaining({ method: "or" }));
   });
 
   it("throws Supabase update errors", async () => {
-    const step = updateQuery({
+    const pendingUploadStep = updateQuery({
+      data: [],
+      error: null,
+    });
+    const readyDownloadStep = updateQuery({
       data: null,
       error: { message: "database unavailable" },
     });
-    mockAdminWith(step);
+    mockAdminWith(pendingUploadStep, readyDownloadStep);
     const { markExpiredMediaForDeletion } = await import("@/lib/media/cleanup");
 
     await expect(markExpiredMediaForDeletion("2026-07-01T12:00:00.000Z"))
@@ -134,14 +192,22 @@ describe("internal media cleanup route", () => {
 });
 
 function updateQuery<T>(result: SupabaseResult<T>): UpdateStep {
-  const step: UpdateStep = { neqFilters: [] };
+  const step: UpdateStep = { filters: [] };
   const chain = {
+    eq: vi.fn((column: string, value: unknown) => {
+      step.filters.push({ method: "eq", column, value });
+      return chain;
+    }),
+    lt: vi.fn((column: string, value: unknown) => {
+      step.filters.push({ method: "lt", column, value });
+      return chain;
+    }),
     or: vi.fn((filter: string) => {
-      step.orFilter = filter;
+      step.filters.push({ method: "or", value: filter });
       return chain;
     }),
     neq: vi.fn((column: string, value: unknown) => {
-      step.neqFilters.push([column, value]);
+      step.filters.push({ method: "neq", column, value });
       return chain;
     }),
     select: vi.fn(async (columns: string) => {
@@ -160,9 +226,12 @@ function updateQuery<T>(result: SupabaseResult<T>): UpdateStep {
   });
 }
 
-function mockAdminWith(step: UpdateStep & { root?: { update: ReturnType<typeof vi.fn> } }) {
+function mockAdminWith(...steps: Array<UpdateStep & { root?: { update: ReturnType<typeof vi.fn> } }>) {
+  const queue = [...steps];
   const from = vi.fn((table: string) => {
     if (table !== "media_assets") throw new Error(`Unexpected Supabase table: ${table}`);
+    const step = queue.shift();
+    if (!step) throw new Error(`Unexpected Supabase table: ${table}`);
     return step.root;
   });
   const admin = { from };
