@@ -11,6 +11,8 @@ import {
 
 const SELECT_COLUMNS =
   "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, metadata";
+const PARAMETER_TYPES = ["string", "number", "boolean", "object", "array"] as const;
+type ParameterType = (typeof PARAMETER_TYPES)[number];
 
 export async function listMediaModels(): Promise<MediaModel[]> {
   const admin = createSupabaseAdminClient();
@@ -51,7 +53,7 @@ export function parseMediaModel(rule: ModelPricingRule): MediaModel | null {
     operation,
     kind,
     displayName: rule.display_name,
-    supportsUploadedInputs: Boolean(metadata.supports_uploaded_inputs),
+    supportsUploadedInputs: metadata.supports_uploaded_inputs === true,
     supportedInputTypes: stringArray(metadata.supported_input_types),
     outputTypes: stringArray(metadata.output_types),
     defaultParameters: objectValue(metadata.default_parameters),
@@ -86,8 +88,31 @@ function objectValue(value: unknown): Record<string, unknown> {
 }
 
 function schemaValue(value: unknown): MediaParameterSchema | null {
-  const object = objectValue(value);
-  return object.type === "object" ? object as MediaParameterSchema : { type: "object", properties: {} };
+  if (value === undefined) {
+    return { type: "object", properties: {} };
+  }
+
+  if (!isRecord(value) || value.type !== "object") {
+    return null;
+  }
+
+  if (value.required !== undefined && !isStringArray(value.required)) {
+    return null;
+  }
+
+  if (value.properties !== undefined) {
+    if (!isRecord(value.properties)) {
+      return null;
+    }
+
+    for (const rule of Object.values(value.properties)) {
+      if (!isRecord(rule) || !isParameterType(rule.type)) {
+        return null;
+      }
+    }
+  }
+
+  return value as MediaParameterSchema;
 }
 
 function mediaProvider(value: string): MediaProvider | null {
@@ -104,4 +129,16 @@ function mediaKind(value: unknown): MediaKind | null {
 
 function pricingUnit(value: unknown): "job" | "second" | "minute" {
   return value === "second" || value === "minute" ? value : "job";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isParameterType(value: unknown): value is ParameterType {
+  return typeof value === "string" && (PARAMETER_TYPES as readonly string[]).includes(value);
 }
