@@ -13,6 +13,7 @@ type OutputMetadata = {
   output_index: number;
   provider_source_type: ProviderSourceType;
   output_attempt_id: string;
+  reused_from_output_attempt_id?: string;
   copied_to_r2_at?: string;
   failure_reason?: string;
   failed_at?: string;
@@ -31,6 +32,7 @@ type OutputAssetRow = {
 type CompletedAttemptAsset = {
   id: string;
   outputAttemptId: string;
+  storageKey: string;
   metadata: OutputMetadata;
 };
 
@@ -69,6 +71,7 @@ export async function createOutputAssetRows({
         completedThisAttempt.push({
           id: materialized.id,
           outputAttemptId: materialized.outputAttemptId,
+          storageKey: materialized.storageKey,
           metadata: materialized.metadata,
         });
       }
@@ -134,21 +137,35 @@ async function materializeOutputAsset({
     attemptId: outputAttemptId,
     contentType: output.contentType,
   });
-  const metadata = outputMetadata(output, outputIndex, outputAttemptId);
   const existing = await findExistingOutputAsset({ admin, outputId, userId, jobId });
-
-  if (existing && canReuseReadyAsset({
+  const reusableSizeBytes = existing ? reusableReadyAssetSize({
     existing,
     output,
     userId,
     jobId,
     outputId,
     maxBytes: env.maxUploadBytes,
-  })) {
+  }) : null;
+
+  if (existing && reusableSizeBytes !== null) {
+    const reuseMetadata = outputMetadataForReuse(output, outputIndex, outputAttemptId, existing.metadata);
+    await reuseOutputAsset({
+      admin,
+      userId,
+      jobId,
+      claimToken,
+      outputId,
+      output,
+      storageKey: existing.storage_key,
+      sizeBytes: reusableSizeBytes,
+      metadata: reuseMetadata,
+    });
+
     return {
       id: outputId,
       outputAttemptId,
-      metadata,
+      storageKey: existing.storage_key,
+      metadata: reuseMetadata,
       createdOrRetried: false,
       output: await publicOutputObject({
         env,
@@ -161,6 +178,7 @@ async function materializeOutputAsset({
     };
   }
 
+  const metadata = outputMetadata(output, outputIndex, outputAttemptId);
   const bytes = await readProviderOutput(output, env.maxUploadBytes);
 
   await prepareOutputAsset({
@@ -197,6 +215,7 @@ async function materializeOutputAsset({
       jobId,
       claimToken,
       outputId,
+      storageKey,
       metadata,
       failureReason,
     });
@@ -209,6 +228,7 @@ async function materializeOutputAsset({
   return {
     id: outputId,
     outputAttemptId,
+    storageKey,
     metadata,
     createdOrRetried: true,
     output: await publicOutputObject({ env, userId, jobId, outputId, storageKey, output }),
@@ -242,7 +262,7 @@ async function findExistingOutputAsset({
   return data as OutputAssetRow | null;
 }
 
-function canReuseReadyAsset({
+function reusableReadyAssetSize({
   existing,
   output,
   userId,
@@ -256,26 +276,64 @@ function canReuseReadyAsset({
   jobId: string;
   outputId: string;
   maxBytes: number;
-}): boolean {
-  if (!existing || existing.status !== "ready") return false;
-  if (existing.content_type !== output.contentType) return false;
+}): number | null {
+  if (!existing || existing.status !== "ready") return null;
+  if (existing.content_type !== output.contentType) return null;
   if (!isOutputAttemptStorageKey({
     storageKey: existing.storage_key,
     userId,
     jobId,
     outputId,
-  })) return false;
+  })) return null;
 
   const existingSize = numberValue(existing.size_bytes);
   if (existingSize === null || existingSize <= 0 || existingSize > maxBytes) {
-    return false;
+    return null;
   }
 
   if (output.data && existingSize !== output.data.byteLength) {
-    return false;
+    return null;
   }
 
-  return true;
+  return existingSize;
+}
+
+async function reuseOutputAsset({
+  admin,
+  outputId,
+  userId,
+  jobId,
+  claimToken,
+  output,
+  storageKey,
+  sizeBytes,
+  metadata,
+}: {
+  admin: SupabaseAdminClient;
+  outputId: string;
+  userId: string;
+  jobId: string;
+  claimToken: string;
+  output: ProviderOutput;
+  storageKey: string;
+  sizeBytes: number;
+  metadata: OutputMetadata;
+}): Promise<void> {
+  const { data, error } = await admin
+    .rpc("reuse_claimed_media_output_asset", {
+      p_job_id: jobId,
+      p_claim_token: claimToken,
+      p_asset_id: outputId,
+      p_user_id: userId,
+      p_content_type: output.contentType,
+      p_size_bytes: sizeBytes,
+      p_storage_key: storageKey,
+      p_metadata: metadata,
+    });
+
+  if (error || !data) {
+    throw new Error(error?.message ?? "media_output_reuse_failed");
+  }
 }
 
 async function prepareOutputAsset({
@@ -523,6 +581,34 @@ function outputMetadata(
   };
 }
 
+function outputMetadataForReuse(
+  output: ProviderOutput,
+  outputIndex: number,
+  outputAttemptId: string,
+  existingMetadata: Record<string, unknown> | null | undefined,
+): OutputMetadata {
+  const metadata: OutputMetadata = outputMetadata(output, outputIndex, outputAttemptId);
+  const reusedFromOutputAttemptId = stringMetadataValue(existingMetadata, "output_attempt_id");
+  const copiedToR2At = stringMetadataValue(existingMetadata, "copied_to_r2_at");
+
+  if (reusedFromOutputAttemptId) {
+    metadata.reused_from_output_attempt_id = reusedFromOutputAttemptId;
+  }
+  if (copiedToR2At) {
+    metadata.copied_to_r2_at = copiedToR2At;
+  }
+
+  return metadata;
+}
+
+function stringMetadataValue(
+  metadata: Record<string, unknown> | null | undefined,
+  key: string,
+): string | null {
+  const value = metadata?.[key];
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
 function providerSourceType(output: ProviderOutput): ProviderSourceType {
   if (output.data) return "inline_data";
   if (output.url?.startsWith("data:")) return "data_url";
@@ -577,6 +663,7 @@ async function markAttemptOutputsFailed(
       jobId,
       claimToken,
       outputId: asset.id,
+      storageKey: asset.storageKey,
       metadata: asset.metadata,
       failureReason: "media_output_materialization_failed",
     })
@@ -602,6 +689,7 @@ export async function failOutputAssetRowsForAttempt({
       jobId,
       outputId: asset.id,
       outputAttemptId: asset.outputAttemptId,
+      storageKey: asset.storageKey,
       metadata: asset.metadata,
       failureReason: reason,
     })
@@ -614,6 +702,7 @@ async function markOutputAssetFailed({
   jobId,
   claimToken,
   outputId,
+  storageKey,
   metadata,
   failureReason,
 }: {
@@ -622,6 +711,7 @@ async function markOutputAssetFailed({
   jobId: string;
   claimToken: string;
   outputId: string;
+  storageKey: string;
   metadata: OutputMetadata;
   failureReason: string;
 }): Promise<void> {
@@ -646,6 +736,7 @@ async function markOutputAssetFailed({
         jobId,
         outputId,
         outputAttemptId: metadata.output_attempt_id,
+        storageKey,
         metadata,
         failureReason,
       });
@@ -662,6 +753,7 @@ async function markOutputAssetAttemptFailed({
   jobId,
   outputId,
   outputAttemptId,
+  storageKey,
   metadata,
   failureReason,
 }: {
@@ -670,6 +762,7 @@ async function markOutputAssetAttemptFailed({
   jobId: string;
   outputId: string;
   outputAttemptId: string;
+  storageKey: string;
   metadata: OutputMetadata;
   failureReason: string;
 }): Promise<void> {
@@ -679,6 +772,7 @@ async function markOutputAssetAttemptFailed({
       p_asset_id: outputId,
       p_user_id: userId,
       p_output_attempt_id: outputAttemptId,
+      p_storage_key: storageKey,
       p_metadata: {
         ...metadata,
         failure_reason: failureReason,

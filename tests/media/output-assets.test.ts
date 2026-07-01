@@ -166,6 +166,7 @@ describe("createOutputAssetRows", () => {
     expect(result.attemptAssets).toEqual([{
       id: outputId,
       outputAttemptId,
+      storageKey,
       metadata: {
         source: "provider_output",
         output_index: 0,
@@ -378,11 +379,12 @@ describe("createOutputAssetRows", () => {
     expect(admin.rpc).not.toHaveBeenCalled();
   });
 
-  it("reuses an existing ready output asset and returns a fresh Woven URL without mutation or upload", async () => {
+  it("reuses an existing ready output asset by claiming it for the current attempt without upload", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
     const existingId = deterministicOutputAssetId("job_1", 0);
+    const outputAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
     const previousAttemptId = deterministicOutputAttemptId(
       "job_1",
       0,
@@ -412,7 +414,12 @@ describe("createOutputAssetRows", () => {
       },
     };
     const existingStep = selectQuery({ data: existing, error: null });
-    const admin = mockAdminWith({ selectSteps: [existingStep] });
+    const admin = mockAdminWith({
+      selectSteps: [existingStep],
+      rpcSteps: [
+        rpcStep("reuse_claimed_media_output_asset"),
+      ],
+    });
     const fetchMock = vi.fn();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
@@ -428,7 +435,25 @@ describe("createOutputAssetRows", () => {
     });
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(admin.rpc).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenCalledTimes(1);
+    expect(admin.rpc).toHaveBeenCalledWith("reuse_claimed_media_output_asset", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_asset_id: existingId,
+      p_user_id: "user_1",
+      p_content_type: "audio/mpeg",
+      p_size_bytes: 4,
+      p_storage_key: existing.storage_key,
+      p_metadata: {
+        source: "provider_output",
+        output_index: 0,
+        provider_source_type: "inline_data",
+        output_attempt_id: outputAttemptId,
+        reused_from_output_attempt_id: previousAttemptId,
+        copied_to_r2_at: "2026-07-01T11:00:00.000Z",
+      },
+    });
+    expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain(claimToken);
     expect(result.attemptAssets).toEqual([]);
     expect(result.outputs[0]).toMatchObject({
       id: existing.id,
@@ -519,6 +544,13 @@ describe("createOutputAssetRows", () => {
     expect(result.attemptAssets).toEqual([{
       id: existingId,
       outputAttemptId,
+      storageKey: outputAttemptStorageKey({
+        userId: "user_1",
+        jobId: "job_1",
+        outputId: existingId,
+        outputAttemptId,
+        extension: "mp3",
+      }),
       metadata: {
         source: "provider_output",
         output_index: 0,
@@ -607,6 +639,13 @@ describe("createOutputAssetRows", () => {
 
     const outputId = deterministicOutputAssetId("job_1", 0);
     const outputAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
+    const storageKey = outputAttemptStorageKey({
+      userId: "user_1",
+      jobId: "job_1",
+      outputId,
+      outputAttemptId,
+      extension: "mp3",
+    });
     const existingStep = selectQuery({ data: null, error: null });
     const admin = mockAdminWith({
       selectSteps: [existingStep],
@@ -637,6 +676,7 @@ describe("createOutputAssetRows", () => {
       p_asset_id: outputId,
       p_user_id: "user_1",
       p_output_attempt_id: outputAttemptId,
+      p_storage_key: storageKey,
       p_metadata: {
         source: "provider_output",
         output_index: 0,
@@ -679,6 +719,13 @@ describe("failOutputAssetRowsForAttempt", () => {
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
     const outputAttemptId = deterministicOutputAttemptId("job_1", 0, claimToken);
+    const storageKey = outputAttemptStorageKey({
+      userId: "user_1",
+      jobId: "job_1",
+      outputId: "asset_created_this_attempt",
+      outputAttemptId,
+      extension: "mp3",
+    });
     const admin = mockAdminWith({
       rpcSteps: [
         rpcStep("fail_media_output_asset_attempt"),
@@ -691,6 +738,7 @@ describe("failOutputAssetRowsForAttempt", () => {
       attemptAssets: [{
         id: "asset_created_this_attempt",
         outputAttemptId,
+        storageKey,
         metadata: {
           source: "provider_output",
           output_index: 0,
@@ -707,6 +755,7 @@ describe("failOutputAssetRowsForAttempt", () => {
       p_asset_id: "asset_created_this_attempt",
       p_user_id: "user_1",
       p_output_attempt_id: outputAttemptId,
+      p_storage_key: storageKey,
       p_metadata: {
         source: "provider_output",
         output_index: 0,

@@ -488,6 +488,7 @@ describe("drainOneMediaJob", () => {
     const attemptAssets = [{
       id: "attempt_output_1",
       outputAttemptId: "attempt_id_1",
+      storageKey: "users/user_1/media/outputs/job_1/attempt_output_1/attempts/attempt_id_1/output.mp4",
       metadata: {
         source: "provider_output",
         output_index: 0,
@@ -645,6 +646,23 @@ describe("claim-aware media output asset migration", () => {
     expect(sql).toContain("to service_role");
     expect(sql).not.toContain("claim_token =");
   });
+
+  it("adds claim-aware reuse and storage-key-fenced stale cleanup", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260701125000_reuse_claimed_media_output_asset.sql",
+      "utf8",
+    );
+
+    expect(sql).toContain("create or replace function public.reuse_claimed_media_output_asset");
+    expect(sql).toContain("claim_token = p_claim_token");
+    expect(sql).toContain("and status = 'ready'");
+    expect(sql).toContain("and content_type = p_content_type");
+    expect(sql).toContain("and size_bytes = p_size_bytes");
+    expect(sql).toContain("and storage_key = p_storage_key");
+    expect(sql).toContain("create or replace function public.fail_media_output_asset_attempt");
+    expect(sql).toContain("and metadata->>'output_attempt_id' = p_output_attempt_id");
+    expect(sql).toContain("revoke all on function public.fail_media_output_asset_attempt(uuid, uuid, uuid, text, text, jsonb)");
+  });
 });
 
 function jobRow(overrides: Record<string, unknown> = {}) {
@@ -677,6 +695,7 @@ function materializedOutputs() {
     attemptAssets: [{
       id: "output_asset_1",
       outputAttemptId: "attempt_id_1",
+      storageKey: "users/user_1/media/outputs/job_1/output_asset_1/attempts/attempt_id_1/output.mp4",
       metadata: {
         source: "provider_output",
         output_index: 0,
