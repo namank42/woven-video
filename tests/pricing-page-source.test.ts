@@ -4,11 +4,20 @@ import { describe, expect, it } from "vitest";
 
 describe("pricing page source", () => {
   it("uses static pricing data instead of runtime model fetches", async () => {
-    const source = await readFile("app/pricing/page.tsx", "utf8");
+    const pageSource = await readFile("app/pricing/page.tsx", "utf8");
+    const pricingDataSource = await readFile(
+      "lib/pricing-page-rates.ts",
+      "utf8",
+    );
 
-    expect(source).toContain("@/lib/pricing-page-rates");
-    expect(source).toContain("mediaModelRates");
-    expect(source).not.toMatch(
+    expect(pageSource).toMatch(
+      /import\s*{[^}]*chatModelRates[^}]*featureRates[^}]*mediaModelRates[^}]*}\s*from\s*"@\/lib\/pricing-page-rates"/s,
+    );
+    expect(pageSource).not.toMatch(/\bconst\s+(models|otherFeatures)\b/);
+    expect(pageSource).not.toMatch(/["']use client["']/);
+
+    const combinedStaticSources = `${pageSource}\n${pricingDataSource}`;
+    expect(combinedStaticSources).not.toMatch(
       /createSupabase|api\/v1\/media\/models|fetch\(|listMediaModels/,
     );
   });
