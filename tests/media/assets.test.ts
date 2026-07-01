@@ -186,6 +186,86 @@ describe("media assets", () => {
   });
 });
 
+describe("media upload routes", () => {
+  afterEach(() => {
+    vi.doUnmock("@/lib/api/auth");
+    vi.doUnmock("@/lib/api/license");
+    vi.doUnmock("@/lib/media/assets");
+    vi.resetModules();
+  });
+
+  it("rejects non-number size_bytes values in public upload requests", async () => {
+    const createInputAssetUpload = vi.fn(async () => ({
+      asset: { id: "asset_1" },
+      uploadUrl: "https://media.example.test/uploads/asset_1?token=token",
+      expiresAt: "2026-07-01T12:01:00.000Z",
+    }));
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: {
+          user: { id: "user_1" },
+        },
+      })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({
+      licenseGateResponse: vi.fn(async () => null),
+    }));
+    vi.doMock("@/lib/media/assets", () => ({
+      createInputAssetUpload,
+    }));
+
+    const { POST } = await import("@/app/api/v1/media/uploads/route");
+
+    for (const sizeBytes of ["12", true, null]) {
+      const response = await POST(jsonRequest("/api/v1/media/uploads", {
+        purpose: "media_input",
+        filename: "input.png",
+        content_type: "image/png",
+        size_bytes: sizeBytes,
+      }));
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toMatchObject({
+        error: { code: "invalid_media_input" },
+      });
+    }
+
+    expect(createInputAssetUpload).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-number size_bytes values in internal completion requests", async () => {
+    const markInputAssetUploaded = vi.fn(async () => undefined);
+    mocks.getMediaEnv.mockReturnValue(mediaEnv);
+
+    vi.doMock("@/lib/media/assets", () => ({
+      markInputAssetUploaded,
+    }));
+
+    const { POST } = await import("@/app/api/internal/media/uploads/complete/route");
+
+    for (const sizeBytes of ["0", true, null]) {
+      const response = await POST(jsonRequest(
+        "/api/internal/media/uploads/complete",
+        {
+          asset_id: "asset_1",
+          storage_key: "users/user_1/media/tmp/asset_1/input.png",
+          size_bytes: sizeBytes,
+        },
+        { "x-woven-media-worker-secret": mediaEnv.workerSharedSecret },
+      ));
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toMatchObject({
+        error: { code: "invalid_media_input" },
+      });
+    }
+
+    expect(markInputAssetUploaded).not.toHaveBeenCalled();
+  });
+});
+
 function insertQuery<T>(result: SupabaseResult<T>): QueryStep {
   const step: QueryStep = { root: {}, filters: [] };
   const single = vi.fn(async () => result);
@@ -237,4 +317,19 @@ function mockAdminWith(...steps: QueryStep[]) {
 
   mocks.createSupabaseAdminClient.mockReturnValue({ from });
   return { from, tables };
+}
+
+function jsonRequest(
+  pathname: string,
+  body: unknown,
+  headers: Record<string, string> = {},
+): Request {
+  return new Request(`https://example.test${pathname}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify(body),
+  });
 }

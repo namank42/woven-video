@@ -22,12 +22,17 @@ export async function POST(request: Request) {
 
   const assetId = typeof payload.asset_id === "string" ? payload.asset_id : "";
   const storageKey = typeof payload.storage_key === "string" ? payload.storage_key : "";
-  const sizeBytes = Number(payload.size_bytes);
-  if (!assetId || !storageKey || !Number.isInteger(sizeBytes) || sizeBytes < 0) {
+  if (
+    !assetId ||
+    !storageKey ||
+    typeof payload.size_bytes !== "number" ||
+    !Number.isInteger(payload.size_bytes) ||
+    payload.size_bytes < 0
+  ) {
     return apiError("Invalid upload completion payload.", 400, "invalid_media_input");
   }
 
-  await markInputAssetUploaded({ assetId, storageKey, sizeBytes });
+  await markInputAssetUploaded({ assetId, storageKey, sizeBytes: payload.size_bytes });
 
   return Response.json(
     { ok: true },

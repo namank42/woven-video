@@ -40,8 +40,11 @@ export async function POST(request: Request) {
     return apiError("content_type is required.", 400, "invalid_media_input");
   }
 
-  const sizeBytes = Number(body.size_bytes);
-  if (!Number.isInteger(sizeBytes) || sizeBytes <= 0) {
+  if (
+    typeof body.size_bytes !== "number" ||
+    !Number.isInteger(body.size_bytes) ||
+    body.size_bytes <= 0
+  ) {
     return apiError("size_bytes must be a positive integer.", 400, "invalid_media_input");
   }
 
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
       userId: authResult.auth.user.id,
       filename: body.filename,
       contentType: body.content_type,
-      sizeBytes,
+      sizeBytes: body.size_bytes,
     });
 
     return Response.json(
