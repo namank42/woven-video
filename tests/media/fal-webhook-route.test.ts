@@ -29,6 +29,7 @@ describe("Fal media webhook route", () => {
     expect(eq).toHaveBeenNthCalledWith(1, "provider_job_id", "fal_req_123");
     expect(eq).toHaveBeenNthCalledWith(2, "provider", "fal");
     expect(eq).toHaveBeenNthCalledWith(3, "type", "media_job");
+    expect(eq).toHaveBeenNthCalledWith(4, "status", "waiting_provider");
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
     await expect(response.json()).resolves.toEqual({ ok: true });
@@ -42,6 +43,15 @@ describe("Fal media webhook route", () => {
 
     expect(eq).toHaveBeenNthCalledWith(1, "provider_job_id", "fal_req_camel");
     expect(response.status).toBe(200);
+  });
+
+  it("fences updates to jobs still waiting on the provider", async () => {
+    const { eq } = mockSupabaseUpdate({ error: null });
+
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
+    await POST(jsonRequest({ request_id: "fal_req_replay" }));
+
+    expect(eq).toHaveBeenCalledWith("status", "waiting_provider");
   });
 
   it("rejects invalid JSON object bodies and missing request ids", async () => {
@@ -72,14 +82,20 @@ describe("Fal media webhook route", () => {
   });
 
   it("returns provider_failed when Supabase cannot update the job", async () => {
-    mockSupabaseUpdate({ error: { message: "database unavailable" } });
+    const error = { message: "database unavailable" };
+    mockSupabaseUpdate({ error });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
     const response = await POST(jsonRequest({ request_id: "fal_req_123" }));
 
     expect(response.status).toBe(500);
+    expect(consoleError).toHaveBeenCalledWith("Failed to update Fal media webhook state", error);
     await expect(response.json()).resolves.toMatchObject({
-      error: { message: "database unavailable", code: "provider_failed" },
+      error: {
+        message: "Unable to update media job webhook state.",
+        code: "provider_failed",
+      },
     });
   });
 });

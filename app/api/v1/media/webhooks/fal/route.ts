@@ -36,10 +36,16 @@ export async function POST(request: Request) {
     })
     .eq("provider_job_id", requestId)
     .eq("provider", "fal")
-    .eq("type", "media_job");
+    .eq("type", "media_job")
+    .eq("status", "waiting_provider");
 
   if (error) {
-    return apiError(error.message, 500, "provider_failed");
+    console.error("Failed to update Fal media webhook state", error);
+    return apiError(
+      "Unable to update media job webhook state.",
+      500,
+      "provider_failed",
+    );
   }
 
   return Response.json(
