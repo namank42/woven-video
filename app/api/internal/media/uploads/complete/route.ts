@@ -32,7 +32,16 @@ export async function POST(request: Request) {
     return apiError("Invalid upload completion payload.", 400, "invalid_media_input");
   }
 
-  await markInputAssetUploaded({ assetId, storageKey, sizeBytes: payload.size_bytes });
+  try {
+    await markInputAssetUploaded({ assetId, storageKey, sizeBytes: payload.size_bytes });
+  } catch (error) {
+    console.error("Failed to mark media upload complete", error);
+    return apiError(
+      "Unable to mark media upload complete.",
+      500,
+      "media_upload_complete_failed",
+    );
+  }
 
   return Response.json(
     { ok: true },

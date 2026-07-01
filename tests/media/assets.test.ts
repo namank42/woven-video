@@ -146,6 +146,36 @@ describe("media assets", () => {
     });
   });
 
+  it("marks the inserted asset failed when final key setup fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-01T12:03:00.000Z"));
+
+    const insertStep = insertQuery({ data: { id: "asset_1" }, error: null });
+    const finalKeyStep = updateQuery({
+      data: null,
+      error: { message: "storage key conflict" },
+    });
+    const cleanupStep = updateQuery({ data: null, error: null });
+    const admin = mockAdminWith(insertStep, finalKeyStep, cleanupStep);
+
+    await expect(createInputAssetUpload({
+      userId: "user_1",
+      filename: "input.png",
+      contentType: "image/png",
+      sizeBytes: 123,
+    })).rejects.toThrow("storage key conflict");
+
+    expect(admin.tables).toEqual(["media_assets", "media_assets", "media_assets"]);
+    expect(cleanupStep.updated).toEqual({
+      status: "failed",
+      metadata: {
+        setup_error: "storage key conflict",
+        failed_at: "2026-07-01T12:03:00.000Z",
+      },
+    });
+    expect(cleanupStep.filters).toEqual([["id", "asset_1"]]);
+  });
+
   it("marks only matching pending input assets as uploaded", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:02:00.000Z"));
@@ -263,6 +293,42 @@ describe("media upload routes", () => {
     }
 
     expect(markInputAssetUploaded).not.toHaveBeenCalled();
+  });
+
+  it("returns a safe JSON error when internal completion update fails", async () => {
+    const markInputAssetUploaded = vi.fn(async () => {
+      throw new Error("database details");
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.getMediaEnv.mockReturnValue(mediaEnv);
+
+    vi.doMock("@/lib/media/assets", () => ({
+      markInputAssetUploaded,
+    }));
+
+    const { POST } = await import("@/app/api/internal/media/uploads/complete/route");
+
+    const response = await POST(jsonRequest(
+      "/api/internal/media/uploads/complete",
+      {
+        asset_id: "asset_1",
+        storage_key: "users/user_1/media/tmp/asset_1/input.png",
+        size_bytes: 123,
+      },
+      { "x-woven-media-worker-secret": mediaEnv.workerSharedSecret },
+    ));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "media_upload_complete_failed",
+        message: "Unable to mark media upload complete.",
+      },
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to mark media upload complete",
+      expect.any(Error),
+    );
   });
 });
 

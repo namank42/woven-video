@@ -82,7 +82,9 @@ export async function createInputAssetUpload({
     .single();
 
   if (updateError || !data) {
-    throw new Error(updateError?.message ?? "media_asset_update_failed");
+    const message = updateError?.message ?? "media_asset_update_failed";
+    await markAssetSetupFailed(admin, assetId, message);
+    throw new Error(message);
   }
 
   const exp = Math.floor(new Date(expiresAt).getTime() / 1000);
@@ -131,5 +133,26 @@ export async function markInputAssetUploaded({
 
   if (error || !data) {
     throw new Error(error?.message ?? "media_asset_upload_complete_failed");
+  }
+}
+
+async function markAssetSetupFailed(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  assetId: string,
+  setupError: string,
+): Promise<void> {
+  const { error } = await admin
+    .from("media_assets")
+    .update({
+      status: "failed",
+      metadata: {
+        setup_error: setupError,
+        failed_at: new Date().toISOString(),
+      },
+    })
+    .eq("id", assetId);
+
+  if (error) {
+    console.error("Failed to mark media asset setup failed", error);
   }
 }
