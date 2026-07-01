@@ -218,6 +218,39 @@ describe("createOutputAssetRows", () => {
     });
     expect(failedStep.filters).toEqual([["id", outputId]]);
   });
+
+  it("marks the media asset failed and throws a safe error when upload fetch throws", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
+
+    const insertStep = insertQuery({ data: { id: outputId, storage_key: storageKey }, error: null });
+    const failedStep = updateQuery({ data: { id: outputId }, error: null });
+    mockAdminWith(insertStep, failedStep);
+    globalThis.fetch = vi.fn(async () => {
+      throw new Error("connection reset with internal host details");
+    }) as unknown as typeof fetch;
+
+    await expect(createOutputAssetRows({
+      userId: "user_1",
+      jobId: "job_1",
+      outputs: [{
+        url: "https://provider.example/audio.mp3",
+        data: Uint8Array.from([1, 2, 3]),
+        contentType: "audio/mpeg",
+        type: "audio",
+      }],
+    })).rejects.toThrow("media_output_upload_failed:network");
+
+    expect(failedStep.updated).toEqual({
+      status: "failed",
+      metadata: {
+        provider_source_url: "https://provider.example/audio.mp3",
+        upload_error: "media_output_upload_failed:network",
+        failed_at: "2026-07-01T12:00:00.000Z",
+      },
+    });
+    expect(failedStep.filters).toEqual([["id", outputId]]);
+  });
 });
 
 function insertQuery<T>(result: SupabaseResult<T>): QueryStep {

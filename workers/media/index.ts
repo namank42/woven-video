@@ -11,6 +11,7 @@ type UploadTokenPayload = {
   sub: string;
   key: string;
   assetId: string;
+  jobId?: string;
   contentType: string;
   sizeBytes: number;
   exp: number;
@@ -274,10 +275,32 @@ function isValidUploadPayload(
   if (!Number.isInteger(payload.sizeBytes) || payload.sizeBytes <= 0) {
     return false;
   }
+  if (!isSafeKeySegment(payload.sub) || !isSafeKeySegment(payload.assetId)) {
+    return false;
+  }
 
+  return isValidInputUploadKey(payload) || isValidOutputUploadKey(payload);
+}
+
+function isValidInputUploadKey(payload: UploadTokenPayload): boolean {
+  if (payload.jobId !== undefined) return false;
   return payload.key.startsWith(
     `users/${payload.sub}/media/tmp/${payload.assetId}/`,
   );
+}
+
+function isValidOutputUploadKey(payload: UploadTokenPayload): boolean {
+  if (!isNonEmptyString(payload.jobId) || !isSafeKeySegment(payload.jobId)) {
+    return false;
+  }
+
+  const outputPrefix = `users/${payload.sub}/media/outputs/${payload.jobId}/${payload.assetId}`;
+  if (!payload.key.startsWith(outputPrefix)) {
+    return false;
+  }
+
+  const extension = payload.key.slice(outputPrefix.length);
+  return /^\.[A-Za-z0-9]+$/.test(extension);
 }
 
 function parsePositiveInteger(value: string | null): number | null {
@@ -312,6 +335,10 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isOptionalString(value: unknown): value is string | undefined {
   return value === undefined || typeof value === "string";
+}
+
+function isSafeKeySegment(value: string): boolean {
+  return value.length > 0 && !value.includes("/");
 }
 
 function jsonResponse(body: unknown): Response {

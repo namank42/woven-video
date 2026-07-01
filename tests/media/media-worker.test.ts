@@ -127,6 +127,82 @@ describe("media Worker", () => {
     );
   });
 
+  it("writes valid output uploads to R2 when the token key matches the job output asset", async () => {
+    const env = testEnv();
+    const outputKey = "users/user_1/media/outputs/job_1/output_1.mp4";
+    const token = await uploadToken({
+      assetId: "output_1",
+      contentType: "video/mp4",
+      key: outputKey,
+      jobId: "job_1",
+      sizeBytes: 12,
+    });
+    const completionFetch = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", completionFetch);
+
+    const response = await mediaWorker.fetch(new Request(
+      `https://media.example.test/uploads/output_1?token=${token}`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "video/mp4",
+          "content-length": "12",
+        },
+        body: "video bytes!",
+      },
+    ), env);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(env.MEDIA_BUCKET.puts).toEqual([{
+      key: outputKey,
+      text: "video bytes!",
+      options: {
+        httpMetadata: { contentType: "video/mp4" },
+        customMetadata: { user_id: "user_1", asset_id: "output_1" },
+      },
+    }]);
+    expect(completionFetch).toHaveBeenCalledWith(
+      "https://app.example.test/api/internal/media/uploads/complete",
+      expect.objectContaining({
+        body: JSON.stringify({
+          asset_id: "output_1",
+          storage_key: outputKey,
+          size_bytes: 12,
+        }),
+      }),
+    );
+  });
+
+  it("rejects output uploads when the key does not match the token job output path", async () => {
+    const env = testEnv();
+    const token = await uploadToken({
+      assetId: "output_1",
+      contentType: "video/mp4",
+      key: "users/user_1/media/outputs/job_2/output_1.mp4",
+      jobId: "job_1",
+      sizeBytes: 5,
+    });
+    const completionFetch = vi.fn();
+    vi.stubGlobal("fetch", completionFetch);
+
+    const response = await mediaWorker.fetch(new Request(
+      `https://media.example.test/uploads/output_1?token=${token}`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "video/mp4",
+          "content-length": "5",
+        },
+        body: "video",
+      },
+    ), env);
+
+    expect(response.status).toBe(401);
+    expect(env.MEDIA_BUCKET.puts).toEqual([]);
+    expect(completionFetch).not.toHaveBeenCalled();
+  });
+
   it("rejects uploads when content type does not match the token", async () => {
     const env = testEnv();
     const token = await uploadToken({
@@ -350,14 +426,21 @@ function testEnv(options: { maxUploadBytes?: string } = {}): WorkerEnv {
   };
 }
 
-function uploadToken(options: { key: string; sizeBytes: number }): Promise<string> {
+function uploadToken(options: {
+  key: string;
+  sizeBytes: number;
+  assetId?: string;
+  contentType?: string;
+  jobId?: string;
+}): Promise<string> {
   return signMediaToken({
     kind: "upload",
     sub: "user_1",
     key: options.key,
-    assetId: "asset_1",
-    contentType: "image/png",
+    assetId: options.assetId ?? "asset_1",
+    contentType: options.contentType ?? "image/png",
     sizeBytes: options.sizeBytes,
+    jobId: options.jobId,
     exp: futureExp(),
   }, "token-secret");
 }

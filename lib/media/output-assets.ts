@@ -66,17 +66,24 @@ export async function createOutputAssetRows({
       exp: Math.floor(Date.now() / 1000) + env.uploadUrlTtlSeconds,
     }, env.tokenSecret);
 
-    const uploadResponse = await fetch(
-      `${env.baseUrl}/uploads/${outputId}?token=${encodeURIComponent(uploadToken)}`,
-      {
-        method: "PUT",
-        headers: {
-          "content-type": output.contentType,
-          "content-length": String(bytes.byteLength),
+    let uploadResponse: Response;
+    try {
+      uploadResponse = await fetch(
+        `${env.baseUrl}/uploads/${outputId}?token=${encodeURIComponent(uploadToken)}`,
+        {
+          method: "PUT",
+          headers: {
+            "content-type": output.contentType,
+            "content-length": String(bytes.byteLength),
+          },
+          body: arrayBufferBody(bytes),
         },
-        body: arrayBufferBody(bytes),
-      },
-    );
+      );
+    } catch {
+      const message = "media_output_upload_failed:network";
+      await markOutputAssetFailed(admin, outputId, metadata, message);
+      throw new Error(message);
+    }
 
     if (!uploadResponse.ok) {
       const message = `media_output_upload_failed:${uploadResponse.status}`;
