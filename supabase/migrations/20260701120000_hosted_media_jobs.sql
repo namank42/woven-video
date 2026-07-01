@@ -23,6 +23,8 @@ create index media_assets_job_idx
   on public.media_assets(job_id);
 create index media_assets_status_expires_idx
   on public.media_assets(status, upload_expires_at);
+create index media_assets_download_expires_idx
+  on public.media_assets(status, download_expires_at);
 
 create trigger set_media_assets_updated_at
 before update on public.media_assets
@@ -46,11 +48,16 @@ alter table public.generation_jobs
 alter table public.generation_jobs
   add column if not exists progress jsonb not null default '{}'::jsonb,
   add column if not exists claim_expires_at timestamptz,
+  add column if not exists claim_token uuid,
   add column if not exists last_provider_poll_at timestamptz;
 
 create index if not exists generation_jobs_media_claim_idx
   on public.generation_jobs(status, claim_expires_at, created_at)
   where type = 'media_job';
+
+create index if not exists generation_jobs_media_provider_job_idx
+  on public.generation_jobs(provider, provider_job_id)
+  where type = 'media_job' and provider_job_id is not null;
 
 create or replace function public.claim_media_jobs(
   p_limit integer default 1,
@@ -62,10 +69,10 @@ security definer
 set search_path = public, extensions
 as $$
 begin
-  if p_limit < 1 or p_limit > 25 then
+  if p_limit is null or p_limit < 1 or p_limit > 25 then
     raise exception 'claim_media_jobs_limit_out_of_range';
   end if;
-  if p_lease_seconds < 30 or p_lease_seconds > 3600 then
+  if p_lease_seconds is null or p_lease_seconds < 30 or p_lease_seconds > 3600 then
     raise exception 'claim_media_jobs_lease_seconds_out_of_range';
   end if;
 
@@ -91,6 +98,7 @@ begin
       end,
       started_at = coalesce(jobs.started_at, now()),
       claim_expires_at = now() + make_interval(secs => p_lease_seconds),
+      claim_token = gen_random_uuid(),
       progress = coalesce(jobs.progress, '{}'::jsonb) || jsonb_build_object(
         'stage', case
           when jobs.status = 'queued' then 'claimed'
