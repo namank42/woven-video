@@ -7,7 +7,9 @@ describe("media job routes", () => {
     vi.doUnmock("@/lib/media/jobs");
     vi.doUnmock("@/lib/media/model-registry");
     vi.doUnmock("@/lib/media/schema");
+    vi.doUnmock("@/lib/supabase/admin");
     vi.resetModules();
+    vi.restoreAllMocks();
   });
 
   it("rejects malformed input_asset_ids without creating a job", async () => {
@@ -126,6 +128,148 @@ describe("media job routes", () => {
       },
       parameters: { prompt: "a mountain" },
       inputAssetIds: ["asset_1"],
+    });
+  });
+
+  it("maps known media job creation failures to stable public errors", async () => {
+    const createReservedMediaJob = vi.fn()
+      .mockRejectedValueOnce(new Error("insufficient_balance"))
+      .mockRejectedValueOnce(new Error("upload_not_complete"));
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({
+      licenseGateResponse: vi.fn(async () => null),
+    }));
+    vi.doMock("@/lib/media/model-registry", () => ({
+      getMediaModel: vi.fn(async () => ({
+        id: "fal:frontier-video",
+        parameterSchema: { type: "object" },
+      })),
+    }));
+    vi.doMock("@/lib/media/schema", () => ({
+      validateMediaParameters: vi.fn(() => ({
+        ok: true,
+        value: { prompt: "a mountain" },
+      })),
+    }));
+    vi.doMock("@/lib/media/jobs", () => ({
+      createReservedMediaJob,
+    }));
+
+    const { POST } = await import("@/app/api/v1/media/jobs/route");
+    const insufficient = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "fal:frontier-video",
+      parameters: { prompt: "a mountain" },
+      input_asset_ids: [],
+    }));
+    const uploadIncomplete = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "fal:frontier-video",
+      parameters: { prompt: "a mountain" },
+      input_asset_ids: ["asset_1"],
+    }));
+
+    expect(insufficient.status).toBe(402);
+    await expect(insufficient.json()).resolves.toMatchObject({
+      error: { code: "insufficient_balance" },
+    });
+    expect(uploadIncomplete.status).toBe(409);
+    await expect(uploadIncomplete.json()).resolves.toMatchObject({
+      error: { code: "upload_not_complete" },
+    });
+  });
+
+  it("returns status outputs and a generic public provider error message", async () => {
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+
+    const maybeSingle = vi.fn(async () => ({
+      data: {
+        id: "job_1",
+        status: "failed",
+        estimated_cost_usd_micros: 500_000,
+        reserved_amount_usd_micros: 500_000,
+        final_cost_usd_micros: 0,
+        progress: { stage: "failed", percent: null },
+        input: { media_model_id: "fal:input-model" },
+        output: {
+          media_model_id: "fal:output-model",
+          outputs: [{ id: "out_1", type: "video" }],
+        },
+        error: "provider stack trace with private details",
+        created_at: "2026-07-01T12:00:00.000Z",
+        started_at: "2026-07-01T12:01:00.000Z",
+        completed_at: "2026-07-01T12:02:00.000Z",
+      },
+      error: null,
+    }));
+    const chain = {
+      eq: vi.fn(() => chain),
+      maybeSingle,
+    };
+    const select = vi.fn(() => chain);
+    const from = vi.fn(() => ({ select }));
+
+    vi.doMock("@/lib/supabase/admin", () => ({
+      createSupabaseAdminClient: vi.fn(() => ({ from })),
+    }));
+
+    const { GET } = await import("@/app/api/v1/media/jobs/[jobId]/route");
+    const response = await GET(
+      new Request("https://example.test/api/v1/media/jobs/job_1"),
+      { params: Promise.resolve({ jobId: "job_1" }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    await expect(response.json()).resolves.toMatchObject({
+      id: "job_1",
+      status: "failed",
+      model: "fal:output-model",
+      outputs: [{ id: "out_1", type: "video" }],
+      error: { code: "provider_failed", message: "Generation failed." },
+    });
+  });
+
+  it("cancels queued media jobs through the atomic RPC and maps not-ready jobs to 409", async () => {
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+
+    const rpc = vi.fn(async () => ({
+      data: null,
+      error: { message: "media_job_not_ready" },
+    }));
+    vi.doMock("@/lib/supabase/admin", () => ({
+      createSupabaseAdminClient: vi.fn(() => ({ rpc })),
+    }));
+
+    const { POST } = await import("@/app/api/v1/media/jobs/[jobId]/cancel/route");
+    const response = await POST(
+      new Request("https://example.test/api/v1/media/jobs/job_1/cancel", {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: "job_1" }) },
+    );
+
+    expect(rpc).toHaveBeenCalledWith("cancel_queued_media_job", {
+      p_user_id: "user_1",
+      p_job_id: "job_1",
+    });
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "job_not_ready" },
     });
   });
 });

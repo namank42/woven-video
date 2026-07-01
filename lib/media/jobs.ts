@@ -93,7 +93,33 @@ export async function createReservedMediaJob({
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "media_asset_attach_failed";
-    await releaseReservation(admin, createdJob.id, message, "media_asset_attach_failed");
+    let detachError: Error | null = null;
+    let releaseError: Error | null = null;
+
+    try {
+      await detachInputAssets({
+        admin,
+        userId,
+        jobId: createdJob.id,
+        inputAssetIds,
+      });
+    } catch (cleanupError) {
+      detachError = toError(cleanupError, "media_asset_detach_failed");
+    }
+
+    try {
+      await releaseReservation(admin, createdJob.id, message, "media_asset_attach_failed");
+    } catch (cleanupError) {
+      releaseError = toError(cleanupError, "media_reservation_release_failed");
+    }
+
+    if (releaseError) {
+      throw releaseError;
+    }
+    if (detachError) {
+      throw detachError;
+    }
+
     throw new Error(message);
   }
 
@@ -189,6 +215,34 @@ async function attachInputAssets({
   }
 }
 
+async function detachInputAssets({
+  admin,
+  userId,
+  jobId,
+  inputAssetIds,
+}: {
+  admin: SupabaseAdminClient;
+  userId: string;
+  jobId: string;
+  inputAssetIds: string[];
+}) {
+  if (inputAssetIds.length === 0) {
+    return;
+  }
+
+  const { error } = await admin
+    .from("media_assets")
+    .update({ job_id: null, status: "uploaded" })
+    .eq("job_id", jobId)
+    .eq("user_id", userId)
+    .in("id", inputAssetIds)
+    .select("id");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 async function markJobFailed(
   admin: SupabaseAdminClient,
   jobId: string,
@@ -222,6 +276,10 @@ async function releaseReservation(
   });
 
   if (releaseError) {
-    console.error("Failed to release media job reservation", releaseError);
+    throw new Error(releaseError.message);
   }
+}
+
+function toError(error: unknown, fallback: string): Error {
+  return error instanceof Error ? error : new Error(fallback);
 }

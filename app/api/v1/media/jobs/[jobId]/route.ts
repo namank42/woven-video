@@ -41,7 +41,8 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (error) {
-    return apiError(error.message, 500, "media_job_lookup_failed");
+    console.error("Failed to look up media job", error);
+    return apiError("Unable to look up media job.", 500, "media_job_lookup_failed");
   }
 
   if (!data) {
@@ -65,7 +66,7 @@ export async function GET(request: Request, context: RouteContext) {
       reserved_credits_usd_micros: job.reserved_amount_usd_micros,
       final_cost_usd_micros: job.final_cost_usd_micros,
       outputs,
-      error: job.error ? { code: "provider_failed", message: job.error } : null,
+      error: job.error ? { code: "provider_failed", message: "Generation failed." } : null,
       created_at: job.created_at,
       started_at: job.started_at,
       completed_at: job.completed_at,

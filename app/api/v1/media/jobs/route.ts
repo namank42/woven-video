@@ -105,6 +105,7 @@ export async function POST(request: Request) {
     if (message === "invalid_media_input") {
       return apiError("Invalid media input.", 400, "invalid_media_input");
     }
-    return apiError(message, 500, "media_job_create_failed");
+    console.error("Failed to create media job", error);
+    return apiError("Unable to create media job.", 500, "media_job_create_failed");
   }
 }

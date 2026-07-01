@@ -142,7 +142,11 @@ describe("createReservedMediaJob", () => {
       data: null,
       error: { message: "asset attach failed" },
     });
-    const admin = mockAdminWith(assetsStep, insertStep, attachStep);
+    const detachStep = attachAssetsQuery({
+      data: [{ id: "asset_1" }],
+      error: null,
+    });
+    const admin = mockAdminWith(assetsStep, insertStep, attachStep, detachStep);
 
     await expect(createReservedMediaJob({
       userId: "user_1",
@@ -156,6 +160,107 @@ describe("createReservedMediaJob", () => {
       p_job_id: "job_1",
       p_status: "failed",
       p_error: "asset attach failed",
+      p_metadata: { reason: "media_asset_attach_failed" },
+    });
+    expect(detachStep.updated).toEqual({ job_id: null, status: "uploaded" });
+    expect(detachStep.filters).toEqual([
+      ["job_id", "job_1"],
+      ["user_id", "user_1"],
+      ["id", ["asset_1"]],
+    ]);
+  });
+
+  it("does not swallow reservation release failures after asset attachment fails", async () => {
+    const assetsStep = selectAssetsQuery({
+      data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],
+      error: null,
+    });
+    const insertStep = insertJobQuery({
+      data: {
+        id: "job_1",
+        status: "queued",
+        estimated_cost_usd_micros: 500_000,
+        reserved_amount_usd_micros: 0,
+        created_at: "2026-07-01T12:00:00.000Z",
+      },
+      error: null,
+    });
+    const attachStep = attachAssetsQuery({
+      data: null,
+      error: { message: "asset attach failed" },
+    });
+    const detachStep = attachAssetsQuery({
+      data: [{ id: "asset_1" }],
+      error: null,
+    });
+    const admin = mockAdminWith(assetsStep, insertStep, attachStep, detachStep);
+    admin.rpc.mockImplementation(async (name: string) => {
+      if (name === "reserve_balance") return { data: { id: "tx_1" }, error: null };
+      if (name === "release_balance_reservation") {
+        return { data: null, error: { message: "reservation release failed" } };
+      }
+      throw new Error(`Unexpected RPC: ${name}`);
+    });
+
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model,
+      parameters: { prompt: "a mountain" },
+      inputAssetIds: ["asset_1"],
+    })).rejects.toThrow("reservation release failed");
+  });
+
+  it("restores partial asset attachments when the attach result count is short", async () => {
+    const assetsStep = selectAssetsQuery({
+      data: [
+        { id: "asset_1", status: "uploaded", content_type: "image/png" },
+        { id: "asset_2", status: "uploaded", content_type: "image/png" },
+      ],
+      error: null,
+    });
+    const insertStep = insertJobQuery({
+      data: {
+        id: "job_1",
+        status: "queued",
+        estimated_cost_usd_micros: 500_000,
+        reserved_amount_usd_micros: 0,
+        created_at: "2026-07-01T12:00:00.000Z",
+      },
+      error: null,
+    });
+    const attachStep = attachAssetsQuery({
+      data: [{ id: "asset_1" }],
+      error: null,
+    });
+    const detachStep = attachAssetsQuery({
+      data: [{ id: "asset_1" }],
+      error: null,
+    });
+    const admin = mockAdminWith(assetsStep, insertStep, attachStep, detachStep);
+
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model,
+      parameters: { prompt: "a mountain" },
+      inputAssetIds: ["asset_1", "asset_2"],
+    })).rejects.toThrow("media_asset_attach_failed");
+
+    expect(admin.tables).toEqual([
+      "media_assets",
+      "generation_jobs",
+      "media_assets",
+      "media_assets",
+    ]);
+    expect(detachStep.updated).toEqual({ job_id: null, status: "uploaded" });
+    expect(detachStep.filters).toEqual([
+      ["job_id", "job_1"],
+      ["user_id", "user_1"],
+      ["id", ["asset_1", "asset_2"]],
+    ]);
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_balance_reservation", {
+      p_job_id: "job_1",
+      p_status: "failed",
+      p_error: "media_asset_attach_failed",
       p_metadata: { reason: "media_asset_attach_failed" },
     });
   });
@@ -233,7 +338,7 @@ function mockAdminWith(...steps: QueryStep[]) {
     if (!step) throw new Error(`Unexpected Supabase table: ${table}`);
     return step.root;
   });
-  const rpc = vi.fn(async (name: string) => {
+  const rpc: ReturnType<typeof vi.fn> = vi.fn(async (name: string): Promise<SupabaseResult<{ id: string }>> => {
     if (name === "reserve_balance") return { data: { id: "tx_1" }, error: null };
     if (name === "release_balance_reservation") return { data: { id: "job_1" }, error: null };
     throw new Error(`Unexpected RPC: ${name}`);

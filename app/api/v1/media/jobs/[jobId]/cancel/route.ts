@@ -24,35 +24,21 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { jobId } = await context.params;
   const admin = createSupabaseAdminClient();
-  const { data: job, error: lookupError } = await admin
-    .from("generation_jobs")
-    .select("id, status")
-    .eq("id", jobId)
-    .eq("user_id", authResult.auth.user.id)
-    .eq("type", "media_job")
-    .maybeSingle();
-
-  if (lookupError) {
-    return apiError(lookupError.message, 500, "media_job_lookup_failed");
-  }
-
-  if (!job) {
-    return apiError("Media job not found.", 404, "job_not_found");
-  }
-
-  if (job.status !== "queued") {
-    return apiError("Only queued jobs can be cancelled.", 409, "job_not_ready");
-  }
-
-  const { data, error } = await admin.rpc("release_balance_reservation", {
+  const { data, error } = await admin.rpc("cancel_queued_media_job", {
+    p_user_id: authResult.auth.user.id,
     p_job_id: jobId,
-    p_status: "cancelled",
-    p_error: "Cancelled by user.",
-    p_metadata: { reason: "user_cancelled" },
   });
 
   if (error) {
-    return apiError(error.message, 500, "media_job_cancel_failed");
+    if (error.message === "media_job_not_found") {
+      return apiError("Media job not found.", 404, "job_not_found");
+    }
+    if (error.message === "media_job_not_ready") {
+      return apiError("Only queued jobs can be cancelled.", 409, "job_not_ready");
+    }
+
+    console.error("Failed to cancel media job", error);
+    return apiError("Unable to cancel media job.", 500, "media_job_cancel_failed");
   }
 
   const cancelledJob = data as CancelledMediaJobRow | null;
