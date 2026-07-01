@@ -20,16 +20,16 @@ vi.mock("@/lib/media/model-registry", () => ({
 type SupabaseError = { message: string };
 type SupabaseResult<T> = { data: T | null; error: SupabaseError | null };
 type QueryRoot = {
-  insert?: ReturnType<typeof vi.fn>;
   update?: ReturnType<typeof vi.fn>;
 };
 type QueryStep = {
   root: QueryRoot;
-  inserted?: unknown;
   updated?: unknown;
   selected?: string;
   filters: Array<[string, unknown]>;
 };
+
+const claimToken = "00000000-0000-4000-8000-000000000001";
 
 const model = {
   id: "fal:frontier-video",
@@ -74,8 +74,7 @@ describe("drainOneMediaJob", () => {
 
   it("releases the reservation when the media model is missing", async () => {
     mocks.getMediaModel.mockResolvedValue(null);
-    const touchStep = updateRowsQuery({ data: [{ id: "job_1" }], error: null });
-    const admin = mockAdminWith({ claimedJobs: [jobRow()], fromSteps: [touchStep] });
+    const admin = mockAdminWith({ claimedJobs: [jobRow()] });
 
     await expect(drainOneMediaJob({ adapters: {} })).resolves.toEqual({
       claimed: true,
@@ -84,9 +83,10 @@ describe("drainOneMediaJob", () => {
     });
 
     expect(mocks.getMediaModel).toHaveBeenCalledWith("fal:frontier-video");
-    expectClaimTouch(touchStep);
-    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_balance_reservation", {
+    expect(admin.tables).toEqual([]);
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_claimed_media_job", {
       p_job_id: "job_1",
+      p_claim_token: claimToken,
       p_status: "failed",
       p_error: "model_not_enabled",
       p_metadata: { reason: "model_not_enabled" },
@@ -95,8 +95,7 @@ describe("drainOneMediaJob", () => {
 
   it("releases the reservation when the provider adapter is not configured", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
-    const touchStep = updateRowsQuery({ data: [{ id: "job_1" }], error: null });
-    const admin = mockAdminWith({ claimedJobs: [jobRow()], fromSteps: [touchStep] });
+    const admin = mockAdminWith({ claimedJobs: [jobRow()] });
 
     await expect(drainOneMediaJob({ adapters: {} })).resolves.toEqual({
       claimed: true,
@@ -104,9 +103,10 @@ describe("drainOneMediaJob", () => {
       status: "failed",
     });
 
-    expectClaimTouch(touchStep);
-    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_balance_reservation", {
+    expect(admin.tables).toEqual([]);
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_claimed_media_job", {
       p_job_id: "job_1",
+      p_claim_token: claimToken,
       p_status: "failed",
       p_error: "provider_not_configured",
       p_metadata: { reason: "provider_not_configured" },
@@ -150,15 +150,13 @@ describe("drainOneMediaJob", () => {
     });
     expect(updateStep.filters).toEqual([
       ["id", "job_1"],
-      ["claim_token", "claim_1"],
+      ["claim_token", claimToken],
     ]);
   });
 
   it("inserts a usage event and settles the reservation when the provider succeeds", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
-    const touchStep = updateRowsQuery({ data: [{ id: "job_1" }], error: null });
-    const usageStep = insertRowsQuery({ data: [{ id: "usage_1" }], error: null });
-    const admin = mockAdminWith({ claimedJobs: [jobRow()], fromSteps: [touchStep, usageStep] });
+    const admin = mockAdminWith({ claimedJobs: [jobRow()] });
     const adapter = {
       run: vi.fn(async () => ({
         status: "succeeded" as const,
@@ -183,22 +181,10 @@ describe("drainOneMediaJob", () => {
       status: "succeeded",
     });
 
-    expect(admin.tables).toEqual(["generation_jobs", "usage_events"]);
-    expectClaimTouch(touchStep);
-    expect(usageStep.inserted).toMatchObject({
-      user_id: "user_1",
-      job_id: "job_1",
-      provider: "fal",
-      model: "fal-ai/frontier-video",
-      operation: "video_generation",
-      raw_provider_cost: 0.25,
-      charged_amount_usd_micros: 300_000,
-      markup_amount_usd_micros: 50_000,
-      metadata: { request_id: "provider_1" },
-    });
-    expect(usageStep.inserted).not.toHaveProperty("metadata.api_key");
-    expect(admin.rpc).toHaveBeenNthCalledWith(2, "settle_balance_reservation", {
+    expect(admin.tables).toEqual([]);
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "record_and_settle_claimed_media_job", {
       p_job_id: "job_1",
+      p_claim_token: claimToken,
       p_final_cost_usd_micros: 300_000,
       p_output: {
         media_model_id: "fal:frontier-video",
@@ -230,13 +216,23 @@ describe("drainOneMediaJob", () => {
         provider_metadata: { request_id: "provider_1" },
         charged_amount_usd_micros: 300_000,
       },
+      p_usage_event: {
+        user_id: "user_1",
+        job_id: "job_1",
+        provider: "fal",
+        model: "fal-ai/frontier-video",
+        operation: "video_generation",
+        raw_provider_cost: 0.25,
+        charged_amount_usd_micros: 300_000,
+        markup_amount_usd_micros: 50_000,
+        metadata: { request_id: "provider_1" },
+      },
     });
   });
 
   it("catches adapter errors, releases the reservation, and returns failed", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
-    const touchStep = updateRowsQuery({ data: [{ id: "job_1" }], error: null });
-    const admin = mockAdminWith({ claimedJobs: [jobRow()], fromSteps: [touchStep] });
+    const admin = mockAdminWith({ claimedJobs: [jobRow()] });
     const adapter = {
       run: vi.fn(async () => {
         throw new Error("provider exploded with token secret");
@@ -249,13 +245,98 @@ describe("drainOneMediaJob", () => {
       status: "failed",
     });
 
-    expectClaimTouch(touchStep);
-    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_balance_reservation", {
+    expect(admin.tables).toEqual([]);
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_claimed_media_job", {
       p_job_id: "job_1",
+      p_claim_token: claimToken,
       p_status: "failed",
       p_error: "provider_failed",
       p_metadata: { reason: "provider_failed" },
     });
+  });
+
+  it("returns stale claim and does not insert usage when claim-aware settlement rejects the claim", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow()],
+      rpcResults: {
+        record_and_settle_claimed_media_job: {
+          data: null,
+          error: { message: "media_job_stale_claim" },
+        },
+      },
+    });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "succeeded" as const,
+        rawCostUsd: "0.25",
+        outputs: [
+          {
+            url: "https://provider.example/output.mp4",
+            contentType: "video/mp4",
+            type: "video" as const,
+          },
+        ],
+      })),
+    } satisfies MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toEqual({
+      claimed: true,
+      jobId: "job_1",
+      status: "stale_claim",
+    });
+
+    expect(admin.tables).toEqual([]);
+    expect(admin.rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns stale claim when claim-aware release rejects the claim", async () => {
+    mocks.getMediaModel.mockResolvedValue(null);
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow()],
+      rpcResults: {
+        release_claimed_media_job: {
+          data: null,
+          error: { message: "media_job_stale_claim" },
+        },
+      },
+    });
+
+    await expect(drainOneMediaJob({ adapters: {} })).resolves.toEqual({
+      claimed: true,
+      jobId: "job_1",
+      status: "stale_claim",
+    });
+
+    expect(admin.tables).toEqual([]);
+    expect(admin.rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not finalize a claimed job without a claim token", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    const admin = mockAdminWith({ claimedJobs: [jobRow({ claim_token: null })] });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "succeeded" as const,
+        rawCostUsd: "0.25",
+        outputs: [
+          {
+            url: "https://provider.example/output.mp4",
+            contentType: "video/mp4",
+            type: "video" as const,
+          },
+        ],
+      })),
+    } satisfies MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toEqual({
+      claimed: true,
+      jobId: "job_1",
+      status: "stale_claim",
+    });
+
+    expect(admin.tables).toEqual([]);
+    expect(admin.rpc).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -264,7 +345,7 @@ function jobRow(overrides: Record<string, unknown> = {}) {
     id: "job_1",
     user_id: "user_1",
     provider_job_id: null,
-    claim_token: "claim_1",
+    claim_token: claimToken,
     input: {
       media_model_id: "fal:frontier-video",
       parameters: { prompt: "a mountain" },
@@ -294,31 +375,14 @@ function updateRowsQuery<T>(result: SupabaseResult<T>): QueryStep {
   return step;
 }
 
-function insertRowsQuery<T>(result: SupabaseResult<T>): QueryStep {
-  const step: QueryStep = { root: {}, filters: [] };
-
-  step.root.insert = vi.fn(async (values: unknown) => {
-    step.inserted = values;
-    return result;
-  });
-
-  return step;
-}
-
-function expectClaimTouch(step: QueryStep) {
-  expect(step.updated).toEqual({ claim_expires_at: expect.any(String) });
-  expect(step.filters).toEqual([
-    ["id", "job_1"],
-    ["claim_token", "claim_1"],
-  ]);
-}
-
 function mockAdminWith({
   claimedJobs,
   fromSteps = [],
+  rpcResults = {},
 }: {
   claimedJobs: unknown[];
   fromSteps?: QueryStep[];
+  rpcResults?: Record<string, SupabaseResult<unknown>>;
 }) {
   const queryQueue = [...fromSteps];
   const tables: string[] = [];
@@ -330,8 +394,9 @@ function mockAdminWith({
   });
   const rpc: ReturnType<typeof vi.fn> = vi.fn(async (name: string, args: Record<string, unknown>) => {
     if (name === "claim_media_jobs") return { data: claimedJobs, error: null };
-    if (name === "release_balance_reservation") return { data: { id: args.p_job_id }, error: null };
-    if (name === "settle_balance_reservation") return { data: { id: args.p_job_id }, error: null };
+    if (name in rpcResults) return rpcResults[name];
+    if (name === "release_claimed_media_job") return { data: { id: args.p_job_id }, error: null };
+    if (name === "record_and_settle_claimed_media_job") return { data: { id: args.p_job_id }, error: null };
     throw new Error(`Unexpected RPC: ${name}`);
   });
 

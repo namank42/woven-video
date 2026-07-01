@@ -21,7 +21,6 @@ const PROVIDER_WAIT_PROGRESS = {
   message: "Waiting on provider",
 };
 
-const CLAIM_LEASE_SECONDS = 300;
 const SECRET_METADATA_KEY = /(?:api[_-]?key|authorization|bearer|password|secret|token)/i;
 
 export async function drainOneMediaJob({
@@ -87,7 +86,7 @@ export async function drainOneMediaJob({
     };
   }
 
-  if (!(await touchClaimLease(admin, job))) {
+  if (!job.claimToken) {
     return { claimed: true, jobId: job.id, status: "stale_claim" };
   }
 
@@ -100,7 +99,7 @@ export async function drainOneMediaJob({
     charged_amount_usd_micros: charge.chargedAmountUsdMicros,
   };
 
-  const { error: usageError } = await admin.from("usage_events").insert({
+  const usageEvent = {
     user_id: job.userId,
     job_id: job.id,
     provider: model.provider,
@@ -110,20 +109,22 @@ export async function drainOneMediaJob({
     charged_amount_usd_micros: charge.chargedAmountUsdMicros,
     markup_amount_usd_micros: charge.markupAmountUsdMicros,
     metadata: providerMetadata,
-  });
+  };
 
-  if (usageError) {
-    throw new Error(usageError.message);
-  }
-
-  const { error: settleError } = await admin.rpc("settle_balance_reservation", {
+  const { error: settleError } = await admin.rpc("record_and_settle_claimed_media_job", {
     p_job_id: job.id,
+    p_claim_token: job.claimToken,
     p_final_cost_usd_micros: charge.chargedAmountUsdMicros,
     p_output: outputPayload,
     p_metadata: outputPayload,
+    p_usage_event: usageEvent,
   });
 
   if (settleError) {
+    if (isStaleClaimError(settleError)) {
+      return { claimed: true, jobId: job.id, status: "stale_claim" };
+    }
+
     throw new Error(settleError.message);
   }
 
@@ -200,6 +201,10 @@ async function updateWaitingProviderJob({
   claimToken: string | null;
   providerJobId: string;
 }) {
+  if (!claimToken) {
+    return false;
+  }
+
   let updateQuery = admin
     .from("generation_jobs")
     .update({
@@ -209,9 +214,7 @@ async function updateWaitingProviderJob({
     })
     .eq("id", jobId);
 
-  if (claimToken) {
-    updateQuery = updateQuery.eq("claim_token", claimToken);
-  }
+  updateQuery = updateQuery.eq("claim_token", claimToken);
 
   const { data, error } = await updateQuery.select("id");
   if (error) {
@@ -226,45 +229,27 @@ async function releaseJob(
   job: { id: string; claimToken: string | null },
   reason: "model_not_enabled" | "provider_failed" | "provider_not_configured",
 ) {
-  if (!(await touchClaimLease(admin, job))) {
+  if (!job.claimToken) {
     return "stale_claim";
   }
 
-  const { error } = await admin.rpc("release_balance_reservation", {
+  const { error } = await admin.rpc("release_claimed_media_job", {
     p_job_id: job.id,
+    p_claim_token: job.claimToken,
     p_status: "failed",
     p_error: reason,
     p_metadata: { reason },
   });
 
   if (error) {
+    if (isStaleClaimError(error)) {
+      return "stale_claim";
+    }
+
     throw new Error(error.message);
   }
 
   return "failed";
-}
-
-async function touchClaimLease(
-  admin: SupabaseAdminClient,
-  job: { id: string; claimToken: string | null },
-) {
-  if (!job.claimToken) {
-    return true;
-  }
-
-  const claimExpiresAt = new Date(Date.now() + CLAIM_LEASE_SECONDS * 1000).toISOString();
-  const { data, error } = await admin
-    .from("generation_jobs")
-    .update({ claim_expires_at: claimExpiresAt })
-    .eq("id", job.id)
-    .eq("claim_token", job.claimToken)
-    .select("id");
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return updatedRowCount(data) > 0;
 }
 
 function updatedRowCount(data: unknown) {
@@ -273,6 +258,10 @@ function updatedRowCount(data: unknown) {
   }
 
   return data ? 1 : 0;
+}
+
+function isStaleClaimError(error: { message?: string }) {
+  return error.message === "media_job_stale_claim";
 }
 
 function rawProviderCostNumber(rawCostUsd: number | string) {
