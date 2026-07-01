@@ -6,8 +6,18 @@ type Env = {
   MEDIA_MAX_UPLOAD_BYTES: string;
 };
 
-type TokenPayload = {
-  kind: "upload" | "download";
+type UploadTokenPayload = {
+  kind: "upload";
+  sub: string;
+  key: string;
+  assetId: string;
+  contentType: string;
+  sizeBytes: number;
+  exp: number;
+};
+
+type DownloadTokenPayload = {
+  kind: "download";
   sub: string;
   key: string;
   assetId?: string;
@@ -17,6 +27,8 @@ type TokenPayload = {
   exp: number;
 };
 
+type TokenPayload = UploadTokenPayload | DownloadTokenPayload;
+
 const DEFAULT_MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -24,9 +36,10 @@ const decoder = new TextDecoder();
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const uploadAssetId = getSingleRouteValue(url.pathname, "/uploads/");
 
-    if (request.method === "PUT" && hasRouteKey(url.pathname, "/uploads/")) {
-      return handleUpload(request, env, url);
+    if (request.method === "PUT" && uploadAssetId) {
+      return handleUpload(request, env, url, uploadAssetId);
     }
 
     if (request.method === "GET" && hasRouteKey(url.pathname, "/objects/")) {
@@ -41,18 +54,18 @@ async function handleUpload(
   request: Request,
   env: Env,
   url: URL,
+  routeAssetId: string,
 ): Promise<Response> {
   const payload = await verifyToken(
     url.searchParams.get("token") ?? "",
     env.MEDIA_TOKEN_SECRET,
   );
-  if (!payload || payload.kind !== "upload" || !payload.assetId) {
+  if (!isValidUploadPayload(payload, routeAssetId)) {
     return textResponse("Unauthorized", 401);
   }
 
-  const expectedContentType = payload.contentType?.trim().toLowerCase();
-  const contentType = request.headers.get("content-type")?.trim().toLowerCase() ?? "";
-  if (!contentType || (expectedContentType && contentType !== expectedContentType)) {
+  const contentType = request.headers.get("content-type")?.trim() ?? "";
+  if (contentType !== payload.contentType) {
     return textResponse("Content-Type mismatch", 400);
   }
 
@@ -66,8 +79,8 @@ async function handleUpload(
   if (contentLength > maxUploadBytes) {
     return textResponse("Upload too large", 413);
   }
-  if (payload.sizeBytes !== undefined && contentLength !== payload.sizeBytes) {
-    return textResponse("Content-Length mismatch", 400);
+  if (contentLength > payload.sizeBytes) {
+    return textResponse("Upload too large", 413);
   }
 
   if (!request.body) {
@@ -82,22 +95,28 @@ async function handleUpload(
     },
   });
 
-  const completionResponse = await fetch(
-    `${env.WOVEN_API_BASE_URL.replace(/\/$/, "")}/api/internal/media/uploads/complete`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-woven-media-worker-secret": env.MEDIA_WORKER_SHARED_SECRET,
+  try {
+    const completionResponse = await fetch(
+      `${env.WOVEN_API_BASE_URL.replace(/\/$/, "")}/api/internal/media/uploads/complete`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-woven-media-worker-secret": env.MEDIA_WORKER_SHARED_SECRET,
+        },
+        body: JSON.stringify({
+          asset_id: payload.assetId,
+          storage_key: payload.key,
+          size_bytes: contentLength,
+        }),
       },
-      body: JSON.stringify({
-        asset_id: payload.assetId,
-        storage_key: payload.key,
-        size_bytes: contentLength,
-      }),
-    },
-  );
-  if (!completionResponse.ok) {
+    );
+    if (!completionResponse.ok) {
+      await rollbackUploadedObject(env, payload.key);
+      return textResponse("Upload completion failed", 502);
+    }
+  } catch {
+    await rollbackUploadedObject(env, payload.key);
     return textResponse("Upload completion failed", 502);
   }
 
@@ -228,14 +247,37 @@ function isTokenPayload(
   if (!isOptionalString(token.contentType)) return false;
 
   const sizeBytes = token.sizeBytes;
-  if (
-    sizeBytes !== undefined &&
-    (typeof sizeBytes !== "number" || !Number.isInteger(sizeBytes) || sizeBytes <= 0)
-  ) {
+  if (token.kind === "upload") {
+    return (
+      isNonEmptyString(token.assetId) &&
+      isNonEmptyString(token.contentType) &&
+      typeof sizeBytes === "number" &&
+      Number.isInteger(sizeBytes) &&
+      sizeBytes > 0
+    );
+  }
+
+  return (
+    sizeBytes === undefined ||
+    (typeof sizeBytes === "number" && Number.isInteger(sizeBytes) && sizeBytes > 0)
+  );
+}
+
+function isValidUploadPayload(
+  payload: TokenPayload | null,
+  routeAssetId: string,
+): payload is UploadTokenPayload {
+  if (!payload || payload.kind !== "upload") return false;
+  if (!isNonEmptyString(payload.assetId)) return false;
+  if (routeAssetId !== payload.assetId) return false;
+  if (!isNonEmptyString(payload.contentType)) return false;
+  if (!Number.isInteger(payload.sizeBytes) || payload.sizeBytes <= 0) {
     return false;
   }
 
-  return true;
+  return payload.key.startsWith(
+    `users/${payload.sub}/media/tmp/${payload.assetId}/`,
+  );
 }
 
 function parsePositiveInteger(value: string | null): number | null {
@@ -243,6 +285,21 @@ function parsePositiveInteger(value: string | null): number | null {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed <= 0) return null;
   return parsed;
+}
+
+async function rollbackUploadedObject(env: Env, key: string): Promise<void> {
+  try {
+    await env.MEDIA_BUCKET.delete(key);
+  } catch {
+    // Best-effort compensation. The client still receives the completion failure.
+  }
+}
+
+function getSingleRouteValue(pathname: string, prefix: string): string | null {
+  if (!hasRouteKey(pathname, prefix)) return null;
+  const value = pathname.slice(prefix.length);
+  if (!value || value.includes("/")) return null;
+  return value;
 }
 
 function hasRouteKey(pathname: string, prefix: string): boolean {

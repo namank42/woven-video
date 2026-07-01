@@ -22,6 +22,7 @@ type PutRecord = {
 class FakeBucket {
   readonly objects = new Map<string, FakeObject>();
   readonly puts: PutRecord[] = [];
+  readonly deletes: string[] = [];
 
   async put(
     key: string,
@@ -38,6 +39,11 @@ class FakeBucket {
 
   async get(key: string): Promise<FakeObject | null> {
     return this.objects.get(key) ?? null;
+  }
+
+  async delete(key: string): Promise<void> {
+    this.deletes.push(key);
+    this.objects.delete(key);
   }
 
   setObject(
@@ -147,6 +153,107 @@ describe("media Worker", () => {
     expect(completionFetch).not.toHaveBeenCalled();
   });
 
+  it("rejects uploads when the route asset does not match the token asset", async () => {
+    const env = testEnv();
+    const token = await uploadToken({
+      key: "users/user_1/media/tmp/asset_1/input.png",
+      sizeBytes: 5,
+    });
+
+    const response = await mediaWorker.fetch(uploadRequest("asset_2", token, {
+      body: "hello",
+      contentLength: "5",
+    }), env);
+
+    expect(response.status).toBe(401);
+    expect(env.MEDIA_BUCKET.puts).toEqual([]);
+  });
+
+  it("rejects upload tokens missing content type or size bytes", async () => {
+    const env = testEnv();
+    const missingContentType = await signMediaToken({
+      kind: "upload",
+      sub: "user_1",
+      key: "users/user_1/media/tmp/asset_1/input.png",
+      assetId: "asset_1",
+      sizeBytes: 5,
+      exp: futureExp(),
+    }, "token-secret");
+    const missingSizeBytes = await signMediaToken({
+      kind: "upload",
+      sub: "user_1",
+      key: "users/user_1/media/tmp/asset_1/input.png",
+      assetId: "asset_1",
+      contentType: "image/png",
+      exp: futureExp(),
+    }, "token-secret");
+
+    const contentTypeResponse = await mediaWorker.fetch(uploadRequest(
+      "asset_1",
+      missingContentType,
+      { body: "hello", contentLength: "5" },
+    ), env);
+    const sizeBytesResponse = await mediaWorker.fetch(uploadRequest(
+      "asset_1",
+      missingSizeBytes,
+      { body: "hello", contentLength: "5" },
+    ), env);
+
+    expect(contentTypeResponse.status).toBe(401);
+    expect(sizeBytesResponse.status).toBe(401);
+    expect(env.MEDIA_BUCKET.puts).toEqual([]);
+  });
+
+  it("rejects upload tokens whose key is outside the user asset temp prefix", async () => {
+    const env = testEnv();
+    const token = await uploadToken({
+      key: "users/user_1/media/tmp/asset_2/input.png",
+      sizeBytes: 5,
+    });
+
+    const response = await mediaWorker.fetch(uploadRequest("asset_1", token, {
+      body: "hello",
+      contentLength: "5",
+    }), env);
+
+    expect(response.status).toBe(401);
+    expect(env.MEDIA_BUCKET.puts).toEqual([]);
+  });
+
+  it("rejects download tokens used for uploads", async () => {
+    const env = testEnv();
+    const token = await signMediaToken({
+      kind: "download",
+      sub: "user_1",
+      key: "users/user_1/media/tmp/asset_1/input.png",
+      exp: futureExp(),
+    }, "token-secret");
+
+    const response = await mediaWorker.fetch(uploadRequest("asset_1", token, {
+      body: "hello",
+      contentLength: "5",
+    }), env);
+
+    expect(response.status).toBe(401);
+    expect(env.MEDIA_BUCKET.puts).toEqual([]);
+  });
+
+  it("requires Content-Length for uploads", async () => {
+    const env = testEnv();
+    const token = await uploadToken({
+      key: "users/user_1/media/tmp/asset_1/input.png",
+      sizeBytes: 5,
+    });
+
+    const response = await mediaWorker.fetch(uploadRequest("asset_1", token, {
+      body: "hello",
+      contentLength: null,
+    }), env);
+
+    expect(response.status).toBe(411);
+    expect(env.MEDIA_BUCKET.puts).toEqual([]);
+  });
+
   it("rejects uploads larger than the configured cap", async () => {
     const env = testEnv({ maxUploadBytes: "3" });
     const token = await uploadToken({
@@ -168,6 +275,27 @@ describe("media Worker", () => {
 
     expect(response.status).toBe(413);
     expect(env.MEDIA_BUCKET.puts).toEqual([]);
+  });
+
+  it("deletes the R2 object when the completion callback fails", async () => {
+    const env = testEnv();
+    const token = await uploadToken({
+      key: "users/user_1/media/tmp/asset_1/input.png",
+      sizeBytes: 14,
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("nope", { status: 500 })));
+
+    const response = await mediaWorker.fetch(uploadRequest("asset_1", token, {
+      body: "uploaded bytes",
+      contentLength: "14",
+    }), env);
+
+    expect(response.status).toBe(502);
+    expect(env.MEDIA_BUCKET.puts).toHaveLength(1);
+    expect(env.MEDIA_BUCKET.deletes).toEqual([
+      "users/user_1/media/tmp/asset_1/input.png",
+    ]);
+    expect(env.MEDIA_BUCKET.objects.has("users/user_1/media/tmp/asset_1/input.png")).toBe(false);
   });
 
   it("returns object bodies and metadata for valid downloads", async () => {
@@ -232,6 +360,23 @@ function uploadToken(options: { key: string; sizeBytes: number }): Promise<strin
     sizeBytes: options.sizeBytes,
     exp: futureExp(),
   }, "token-secret");
+}
+
+function uploadRequest(
+  assetId: string,
+  token: string,
+  options: { body: string; contentLength: string | null },
+): Request {
+  const headers = new Headers({ "content-type": "image/png" });
+  if (options.contentLength !== null) {
+    headers.set("content-length", options.contentLength);
+  }
+
+  return new Request(`https://media.example.test/uploads/${assetId}?token=${token}`, {
+    method: "PUT",
+    headers,
+    body: options.body,
+  });
 }
 
 function futureExp(): number {
