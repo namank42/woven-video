@@ -1,12 +1,13 @@
 import { requireApiAuth } from "@/lib/api/auth";
 import { apiError } from "@/lib/api/responses";
+import { getMediaEnv } from "@/lib/media/env";
+import { signMediaToken } from "@/lib/media/tokens";
 import { transcribeWithElevenLabs } from "@/lib/reel-captions/elevenlabs";
 import {
   chargeUsdMicrosForDuration,
   getReelCaptionPricing,
   markupUsdMicros,
   providerRawCostUsdForDuration,
-  REEL_CAPTION_BUCKET,
   REEL_CAPTION_OPERATION,
 } from "@/lib/reel-captions/pricing";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -27,6 +28,15 @@ type CaptionJob = {
   input: Record<string, unknown> | null;
   output: Record<string, unknown> | null;
   reserved_amount_usd_micros: number | string;
+};
+
+type CaptionInputAsset = {
+  id: string;
+  user_id: string;
+  kind: string;
+  status: string;
+  content_type: string | null;
+  storage_key: string | null;
 };
 
 export async function POST(request: Request, context: RouteContext) {
@@ -56,17 +66,11 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const input = job.input ?? {};
-  const storageBucket =
-    typeof input.storage_bucket === "string"
-      ? input.storage_bucket
-      : REEL_CAPTION_BUCKET;
-  const storagePath =
-    typeof input.storage_path === "string" ? input.storage_path : "";
-  const filename =
-    typeof input.filename === "string" ? input.filename : "voiceover.wav";
+  const mediaAssetId =
+    typeof input.media_asset_id === "string" ? input.media_asset_id : "";
   const durationSeconds = Number(input.duration_seconds);
 
-  if (!storagePath || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+  if (!mediaAssetId || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
     await releaseReservation(admin, job.id, "Caption job is missing upload metadata.");
     return apiError(
       "Caption job is missing upload metadata.",
@@ -75,25 +79,10 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const { data: uploadExists, error: existsError } = await admin.storage
-    .from(storageBucket)
-    .exists(storagePath);
-
-  if (existsError || !uploadExists) {
+  const asset = await loadInputAsset(admin, mediaAssetId, job.user_id);
+  if (!isAssetReadyForCaptioning(asset)) {
     return apiError(
       "Voiceover upload is not ready yet.",
-      409,
-      "caption_upload_not_ready",
-    );
-  }
-
-  const { data: signedAudio, error: signedAudioError } = await admin.storage
-    .from(storageBucket)
-    .createSignedUrl(storagePath, 10 * 60);
-
-  if (signedAudioError || !signedAudio?.signedUrl) {
-    return apiError(
-      signedAudioError?.message ?? "Unable to create signed audio URL.",
       409,
       "caption_upload_not_ready",
     );
@@ -111,7 +100,7 @@ export async function POST(request: Request, context: RouteContext) {
   const rule = await getReelCaptionPricing();
   if (!rule) {
     await releaseReservation(admin, job.id, "Auto captions pricing rule is not enabled.");
-    await removeUpload(admin, storageBucket, storagePath);
+    await markInputAssetDeleted(admin, asset.id, job.id, "caption_generation_not_enabled");
     return apiError(
       "Auto captions pricing rule is not enabled.",
       503,
@@ -120,17 +109,15 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    const transcription = isLocalSignedUrl(signedAudio.signedUrl)
-      ? await transcribeLocalUpload({
-          bucket: storageBucket,
-          path: storagePath,
-          filename,
-          signal: request.signal,
-        })
-      : await transcribeWithElevenLabs({
-          cloudStorageUrl: signedAudio.signedUrl,
-          signal: request.signal,
-        });
+    const signedAudioUrl = await signedMediaDownloadUrl({
+      asset,
+      jobId: job.id,
+      userId: job.user_id,
+    });
+    const transcription = await transcribeWithElevenLabs({
+      cloudStorageUrl: signedAudioUrl,
+      signal: request.signal,
+    });
 
     if (transcription.captions.length === 0) {
       throw new Error("No caption tokens were returned for this voiceover.");
@@ -200,7 +187,7 @@ export async function POST(request: Request, context: RouteContext) {
       throw new Error(settleError.message);
     }
 
-    await removeUpload(admin, storageBucket, storagePath);
+    await markInputAssetDeleted(admin, asset.id, job.id, "caption_job_succeeded");
     return Response.json(output, {
       headers: {
         "x-woven-job-id": job.id,
@@ -210,36 +197,8 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await releaseReservation(admin, job.id, message);
-    await removeUpload(admin, storageBucket, storagePath);
+    await markInputAssetDeleted(admin, asset.id, job.id, "caption_job_failed");
     return apiError(message, 502, "caption_generation_failed");
-  }
-}
-
-async function transcribeLocalUpload({
-  bucket,
-  path,
-  filename,
-  signal,
-}: {
-  bucket: string;
-  path: string;
-  filename: string;
-  signal: AbortSignal;
-}) {
-  const admin = createSupabaseAdminClient();
-  const { data: audio, error } = await admin.storage.from(bucket).download(path);
-  if (error || !audio) {
-    throw new Error(error?.message ?? "Unable to download uploaded voiceover.");
-  }
-  return transcribeWithElevenLabs({ audio, filename, signal });
-}
-
-function isLocalSignedUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.hostname === "localhost" || url.hostname === "127.0.0.1";
-  } catch {
-    return false;
   }
 }
 
@@ -264,6 +223,64 @@ async function loadJob(
   return data as CaptionJob | null;
 }
 
+async function loadInputAsset(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  assetId: string,
+  userId: string,
+): Promise<CaptionInputAsset | null> {
+  const { data, error } = await admin
+    .from("media_assets")
+    .select("id, user_id, kind, status, content_type, storage_key")
+    .eq("id", assetId)
+    .eq("user_id", userId)
+    .eq("kind", "input")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as CaptionInputAsset | null;
+}
+
+function isAssetReadyForCaptioning(
+  asset: CaptionInputAsset | null,
+): asset is CaptionInputAsset & { content_type: string; storage_key: string } {
+  return Boolean(
+    asset &&
+      asset.kind === "input" &&
+      (asset.status === "uploaded" || asset.status === "attached") &&
+      asset.content_type &&
+      asset.storage_key,
+  );
+}
+
+async function signedMediaDownloadUrl({
+  asset,
+  jobId,
+  userId,
+}: {
+  asset: CaptionInputAsset & { storage_key: string };
+  jobId: string;
+  userId: string;
+}): Promise<string> {
+  const env = getMediaEnv();
+  const exp = Math.floor(Date.now() / 1000) + env.downloadUrlTtlSeconds;
+  const token = await signMediaToken(
+    {
+      kind: "download",
+      sub: userId,
+      key: asset.storage_key,
+      assetId: asset.id,
+      jobId,
+      exp,
+    },
+    env.tokenSecret,
+  );
+
+  return `${env.baseUrl}/objects/${asset.id}?token=${encodeURIComponent(token)}`;
+}
+
 async function releaseReservation(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   jobId: string,
@@ -284,14 +301,27 @@ async function releaseReservation(
   }
 }
 
-async function removeUpload(
+async function markInputAssetDeleted(
   admin: ReturnType<typeof createSupabaseAdminClient>,
-  bucket: string,
-  path: string,
+  assetId: string,
+  jobId: string,
+  reason: string,
 ) {
-  if (!bucket || !path) return;
-  const { error } = await admin.storage.from(bucket).remove([path]);
+  const deletedAt = new Date().toISOString();
+  const { error } = await admin
+    .from("media_assets")
+    .update({
+      status: "deleted",
+      deleted_at: deletedAt,
+      metadata: {
+        deleted_at: deletedAt,
+        deletion_reason: reason,
+        caption_job_id: jobId,
+      },
+    })
+    .eq("id", assetId);
+
   if (error) {
-    console.error("Failed to remove caption upload", error);
+    console.error("Failed to mark caption input asset deleted", error);
   }
 }
