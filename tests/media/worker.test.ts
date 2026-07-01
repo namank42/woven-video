@@ -264,6 +264,40 @@ describe("drainOneMediaJob", () => {
     });
   });
 
+  it("releases the reservation instead of settling inline-only provider outputs", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    const admin = mockAdminWith({ claimedJobs: [jobRow()] });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "succeeded" as const,
+        rawCostUsd: "0.25",
+        outputs: [
+          {
+            data: Buffer.from([1, 2, 3, 4]),
+            contentType: "audio/mpeg",
+            type: "audio" as const,
+          },
+        ],
+      })),
+    } satisfies MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toEqual({
+      claimed: true,
+      jobId: "job_1",
+      status: "failed",
+    });
+
+    expect(admin.tables).toEqual([]);
+    expect(admin.rpc).toHaveBeenCalledTimes(2);
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_claimed_media_job", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_status: "failed",
+      p_error: "provider_output_not_persisted",
+      p_metadata: { reason: "provider_output_not_persisted" },
+    });
+  });
+
   it("catches adapter errors, releases the reservation, and returns failed", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJobs: [jobRow()] });

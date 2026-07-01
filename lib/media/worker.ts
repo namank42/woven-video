@@ -105,6 +105,11 @@ export async function drainOneMediaJob({
     return { claimed: true, jobId: job.id, status: "stale_claim" };
   }
 
+  if (hasUnpersistedInlineOutputs(result.outputs)) {
+    const status = await releaseJob(admin, job, "provider_output_not_persisted");
+    return { claimed: true, jobId: job.id, status };
+  }
+
   const charge = chargeMediaUsdMicros({ model, rawCostUsd: result.rawCostUsd });
   const providerMetadata = safeMetadata(result.metadata);
   const outputPayload = {
@@ -267,7 +272,11 @@ async function updateWaitingProviderJob({
 async function releaseJob(
   admin: SupabaseAdminClient,
   job: { id: string; claimToken: string | null },
-  reason: "model_not_enabled" | "provider_failed" | "provider_not_configured",
+  reason:
+    | "model_not_enabled"
+    | "provider_failed"
+    | "provider_not_configured"
+    | "provider_output_not_persisted",
 ) {
   if (!job.claimToken) {
     return "stale_claim";
@@ -313,6 +322,14 @@ function abortReason(signal: AbortSignal) {
 function rawProviderCostNumber(rawCostUsd: number | string) {
   const rawCost = Number(rawCostUsd);
   return Number.isFinite(rawCost) && rawCost > 0 ? rawCost : 0;
+}
+
+function hasUnpersistedInlineOutputs(outputs: ProviderOutput[]) {
+  return outputs.some((output) => output.data && !isDurableOutputUrl(output.url));
+}
+
+function isDurableOutputUrl(url: string | undefined) {
+  return typeof url === "string" && /^https?:\/\//i.test(url);
 }
 
 function safeMetadata(metadata: Record<string, unknown> | undefined) {
