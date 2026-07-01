@@ -60,10 +60,14 @@ export const falMediaAdapter: MediaProviderAdapter = {
       abortSignal: signal,
     });
     const payload = resultPayload(result);
+    const outputs = extractFalOutputs(payload, model.outputTypes);
+    if (outputs.length === 0) {
+      throw new Error("provider_no_outputs");
+    }
 
     return {
       status: "succeeded",
-      outputs: extractFalOutputs(payload, model.outputTypes),
+      outputs,
       rawCostUsd: providerCostUsd(model.metadata),
       metadata: {
         endpoint,

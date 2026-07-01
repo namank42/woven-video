@@ -1,7 +1,8 @@
 import type { MediaModel } from "@/lib/media/types";
 
 export type ProviderOutput = {
-  url: string;
+  url?: string;
+  data?: Uint8Array;
   contentType: string;
   type: "image" | "video" | "audio" | "json";
 };

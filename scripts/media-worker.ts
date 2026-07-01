@@ -59,11 +59,16 @@ function sleep(ms: number, signal: AbortSignal) {
   }
 
   return new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(resolve, ms);
-    signal.addEventListener("abort", () => {
+    const onAbort = () => {
       clearTimeout(timeout);
+      signal.removeEventListener("abort", onAbort);
       reject(abortReason(signal));
-    }, { once: true });
+    };
+    const timeout = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
   });
 }
 

@@ -129,6 +129,43 @@ describe("falMediaAdapter", () => {
       abortSignal: undefined,
     });
   });
+
+  it("keeps polling an existing Fal job while it is still in progress", async () => {
+    const { falMediaAdapter } = await import("@/lib/media/providers/fal");
+    mocks.falStatus.mockResolvedValue({ status: "IN_PROGRESS", request_id: "fal_req_1" });
+
+    await expect(falMediaAdapter.run({
+      model: mediaModel(),
+      parameters: { prompt: "a mountain" },
+      inputUrls: [],
+      providerJobId: "fal_req_1",
+    })).resolves.toEqual({
+      status: "waiting_provider",
+      providerJobId: "fal_req_1",
+      metadata: {
+        endpoint: "fal-ai/frontier-video",
+        fal_request_id: "fal_req_1",
+        fal_status: "IN_PROGRESS",
+      },
+    });
+
+    expect(mocks.falResult).not.toHaveBeenCalled();
+  });
+
+  it("rejects a completed Fal job when no output urls can be extracted", async () => {
+    const { falMediaAdapter } = await import("@/lib/media/providers/fal");
+    mocks.falStatus.mockResolvedValue({ status: "COMPLETED", request_id: "fal_req_1" });
+    mocks.falResult.mockResolvedValue({
+      data: { images: [], note: "provider returned no files" },
+    });
+
+    await expect(falMediaAdapter.run({
+      model: mediaModel({ outputTypes: ["image"] }),
+      parameters: { prompt: "a mountain" },
+      inputUrls: [],
+      providerJobId: "fal_req_1",
+    })).rejects.toThrow("provider_no_outputs");
+  });
 });
 
 describe("elevenLabsMediaAdapter", () => {
@@ -159,7 +196,7 @@ describe("elevenLabsMediaAdapter", () => {
     expect(mocks.ElevenLabsClient).not.toHaveBeenCalled();
   });
 
-  it("streams text-to-speech bytes into an audio data url", async () => {
+  it("streams text-to-speech bytes as inline audio data without a data url", async () => {
     const { elevenLabsMediaAdapter } = await import("@/lib/media/providers/elevenlabs");
     process.env.ELEVENLABS_API_KEY = "eleven_key";
     const stream = vi.fn(async () => streamFrom([1, 2, 3, 4]));
@@ -185,7 +222,7 @@ describe("elevenLabsMediaAdapter", () => {
       status: "succeeded",
       outputs: [
         {
-          url: "data:audio/mpeg;base64,AQIDBA==",
+          data: Buffer.from([1, 2, 3, 4]),
           type: "audio",
           contentType: "audio/mpeg",
         },
@@ -205,6 +242,101 @@ describe("elevenLabsMediaAdapter", () => {
       outputFormat: "mp3_44100_128",
     }, {
       abortSignal: abortController.signal,
+    });
+  });
+
+  it("maps sound effect parameters through the ElevenLabs SDK client", async () => {
+    const { elevenLabsMediaAdapter } = await import("@/lib/media/providers/elevenlabs");
+    process.env.ELEVENLABS_API_KEY = "eleven_key";
+    const convert = vi.fn(async () => streamFrom([5, 6]));
+    mocks.ElevenLabsClient.mockImplementation(function MockElevenLabsClient() {
+      return {
+        textToSoundEffects: { convert },
+      };
+    });
+    const abortController = new AbortController();
+
+    await expect(elevenLabsMediaAdapter.run({
+      model: mediaModel({
+        provider: "elevenlabs",
+        providerModel: "eleven_text_to_sound_v2",
+        operation: "sound_effects",
+        outputTypes: ["audio"],
+      }),
+      parameters: {
+        text: "cinematic hit",
+        duration_seconds: 1.5,
+        prompt_influence: 0.7,
+        loop: true,
+        output_format: "mp3_44100_128",
+      },
+      inputUrls: [],
+      signal: abortController.signal,
+    })).resolves.toMatchObject({
+      status: "succeeded",
+      outputs: [{ data: Buffer.from([5, 6]), type: "audio", contentType: "audio/mpeg" }],
+      metadata: {
+        endpoint: "sound-generation",
+        output_format: "mp3_44100_128",
+        byte_length: 2,
+      },
+    });
+
+    expect(convert).toHaveBeenCalledWith({
+      text: "cinematic hit",
+      modelId: "eleven_text_to_sound_v2",
+      outputFormat: "mp3_44100_128",
+      durationSeconds: 1.5,
+      promptInfluence: 0.7,
+      loop: true,
+    }, {
+      abortSignal: abortController.signal,
+    });
+  });
+
+  it("maps music parameters through the ElevenLabs SDK client", async () => {
+    const { elevenLabsMediaAdapter } = await import("@/lib/media/providers/elevenlabs");
+    process.env.ELEVENLABS_API_KEY = "eleven_key";
+    const compose = vi.fn(async () => streamFrom([7, 8, 9]));
+    mocks.ElevenLabsClient.mockImplementation(function MockElevenLabsClient() {
+      return {
+        music: { compose },
+      };
+    });
+
+    await expect(elevenLabsMediaAdapter.run({
+      model: mediaModel({
+        provider: "elevenlabs",
+        providerModel: "music_v2",
+        operation: "music_generation",
+        outputTypes: ["audio"],
+      }),
+      parameters: {
+        prompt: "ambient synth bed",
+        music_length_ms: 30_000,
+        seed: 42,
+        force_instrumental: true,
+      },
+      inputUrls: [],
+    })).resolves.toMatchObject({
+      status: "succeeded",
+      outputs: [{ data: Buffer.from([7, 8, 9]), type: "audio", contentType: "audio/mpeg" }],
+      metadata: {
+        endpoint: "music",
+        output_format: "mp3_44100_128",
+        byte_length: 3,
+      },
+    });
+
+    expect(compose).toHaveBeenCalledWith({
+      prompt: "ambient synth bed",
+      modelId: "music_v2",
+      outputFormat: "mp3_44100_128",
+      musicLengthMs: 30_000,
+      seed: 42,
+      forceInstrumental: true,
+    }, {
+      abortSignal: undefined,
     });
   });
 });

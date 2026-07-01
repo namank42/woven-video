@@ -151,14 +151,28 @@ export function materializeOutputs(
   jobId: string,
   outputs: ProviderOutput[],
 ) {
-  return outputs.map((output, index) => ({
-    id: `out_${index + 1}`,
-    type: output.type,
-    content_type: output.contentType,
-    source_url: output.url,
-    user_id: userId,
-    job_id: jobId,
-  }));
+  return outputs.map((output, index) => {
+    const base = {
+      id: `out_${index + 1}`,
+      type: output.type,
+      content_type: output.contentType,
+      user_id: userId,
+      job_id: jobId,
+    };
+
+    if (output.data) {
+      return {
+        ...base,
+        source: "inline_data",
+        byte_length: output.data.byteLength,
+      };
+    }
+
+    return {
+      ...base,
+      source_url: output.url,
+    };
+  });
 }
 
 function normalizeClaimedJob(job: ClaimedMediaJobRow) {
@@ -209,7 +223,7 @@ async function runProviderAdapter({
       throw abortReason(signal);
     }
 
-    if (isAbortError(error)) {
+    if (isAbortError(error) || isProviderNotConfiguredError(error)) {
       throw error;
     }
 
@@ -284,6 +298,10 @@ function isStaleClaimError(error: { message?: string }) {
 
 function isAbortError(error: unknown) {
   return isRecord(error) && error.name === "AbortError";
+}
+
+function isProviderNotConfiguredError(error: unknown) {
+  return error instanceof Error && error.message === "provider_not_configured";
 }
 
 function abortReason(signal: AbortSignal) {

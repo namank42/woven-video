@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MediaProviderAdapter } from "@/lib/media/provider";
-import { drainOneMediaJob } from "@/lib/media/worker";
+import { drainOneMediaJob, materializeOutputs } from "@/lib/media/worker";
 import type { MediaModel } from "@/lib/media/types";
 
 const mocks = vi.hoisted(() => ({
@@ -289,6 +289,22 @@ describe("drainOneMediaJob", () => {
     });
   });
 
+  it("propagates provider_not_configured adapter errors without releasing the reservation", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    const admin = mockAdminWith({ claimedJobs: [jobRow()] });
+    const adapter = {
+      run: vi.fn(async () => {
+        throw new Error("provider_not_configured");
+      }),
+    } satisfies MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } }))
+      .rejects.toThrow("provider_not_configured");
+
+    expect(admin.tables).toEqual([]);
+    expect(admin.rpc).toHaveBeenCalledTimes(1);
+  });
+
   it("propagates adapter AbortError and does not release the reservation", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJobs: [jobRow()] });
@@ -410,6 +426,28 @@ describe("drainOneMediaJob", () => {
 
     expect(admin.tables).toEqual([]);
     expect(admin.rpc).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("materializeOutputs", () => {
+  it("stores inline provider data as metadata without persisting base64 source urls", () => {
+    expect(materializeOutputs("user_1", "job_1", [
+      {
+        data: Buffer.from([1, 2, 3, 4]),
+        contentType: "audio/mpeg",
+        type: "audio",
+      },
+    ])).toEqual([
+      {
+        id: "out_1",
+        type: "audio",
+        content_type: "audio/mpeg",
+        source: "inline_data",
+        byte_length: 4,
+        user_id: "user_1",
+        job_id: "job_1",
+      },
+    ]);
   });
 });
 

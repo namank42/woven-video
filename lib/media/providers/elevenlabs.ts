@@ -148,7 +148,7 @@ function audioResult(
   return {
     status: "succeeded",
     outputs: [{
-      url: audioBytesToDataUrl(bytes, contentType),
+      data: bytes,
       type: "audio",
       contentType,
     }],
