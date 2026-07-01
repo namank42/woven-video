@@ -108,9 +108,17 @@ export async function drainOneMediaJob({
 
   const charge = chargeMediaUsdMicros({ model, rawCostUsd: result.rawCostUsd });
   const providerMetadata = safeMetadata(result.metadata);
+  let outputs;
+  try {
+    outputs = await materializeOutputs(job.userId, job.id, result.outputs);
+  } catch {
+    const status = await releaseJob(admin, job, "media_output_materialization_failed");
+    return { claimed: true, jobId: job.id, status };
+  }
+
   const outputPayload = {
     media_model_id: model.id,
-    outputs: await materializeOutputs(job.userId, job.id, result.outputs),
+    outputs,
     provider_metadata: providerMetadata,
     charged_amount_usd_micros: charge.chargedAmountUsdMicros,
   };
@@ -249,6 +257,7 @@ async function releaseJob(
   job: { id: string; claimToken: string | null },
   reason:
     | "model_not_enabled"
+    | "media_output_materialization_failed"
     | "provider_failed"
     | "provider_not_configured",
 ) {

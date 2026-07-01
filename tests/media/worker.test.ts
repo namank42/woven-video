@@ -348,6 +348,43 @@ describe("drainOneMediaJob", () => {
     expect(JSON.stringify(admin.rpc.mock.calls[1][1].p_output.outputs)).not.toContain("base64");
   });
 
+  it("releases the claimed job with a safe reason when output materialization fails", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    mocks.createOutputAssetRows.mockRejectedValueOnce(
+      new Error("media_output_upload_failed:network https://provider.example/output.mp4"),
+    );
+    const admin = mockAdminWith({ claimedJobs: [jobRow()] });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "succeeded" as const,
+        rawCostUsd: "0.25",
+        outputs: [
+          {
+            url: "https://provider.example/output.mp4",
+            contentType: "video/mp4",
+            type: "video" as const,
+          },
+        ],
+      })),
+    } satisfies MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toEqual({
+      claimed: true,
+      jobId: "job_1",
+      status: "failed",
+    });
+
+    expect(admin.rpc).toHaveBeenCalledTimes(2);
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_claimed_media_job", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_status: "failed",
+      p_error: "media_output_materialization_failed",
+      p_metadata: { reason: "media_output_materialization_failed" },
+    });
+    expect(JSON.stringify(admin.rpc.mock.calls[1][1])).not.toContain("provider.example");
+  });
+
   it("catches adapter errors, releases the reservation, and returns failed", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJobs: [jobRow()] });
