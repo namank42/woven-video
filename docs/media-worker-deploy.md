@@ -5,7 +5,10 @@ This runbook keeps the app, Supabase schema, media Worker, R2 bucket, and reel-c
 ## Required Infrastructure
 
 - Cloudflare R2 bucket: `woven-media`
-- Cloudflare Worker route: `https://media.woven.video`
+- Cloudflare Worker routes:
+  - `https://media.woven.video/uploads/*`
+  - `https://media.woven.video/objects/*`
+  - `https://media.woven.video/internal/*`
 - Vercel app route: `https://www.woven.video`
 - Supabase migrations through `20260702160000_media_job_readiness_deadlines_cleanup.sql`
 
@@ -19,6 +22,8 @@ wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangler.j
 ```
 
 The values must match the app's `MEDIA_TOKEN_SECRET` and `MEDIA_WORKER_SHARED_SECRET`.
+
+`npm run media:worker:deploy` uses `npx wrangler` so a clean checkout does not require a globally installed Wrangler binary. The deploy machine still needs npm network access to fetch Wrangler when it is not already cached or globally available.
 
 ## App Environment
 
@@ -39,6 +44,8 @@ FAL_WEBHOOK_JWKS_URL=<Fal JWKS URL from Fal webhook docs/dashboard>
 CRON_SECRET=<random 16+ character secret for Vercel Cron>
 ```
 
+The timeout, worker polling, Fal webhook, and cron values are consumed by follow-up hosted-media tasks in this plan. Set them before enabling the completed hosted media flow, but do not expect the cleanup cron or Fal webhook smoke tests to work at the Task 2-only head.
+
 ## Deployment Order
 
 1. Create or verify the `woven-media` R2 bucket.
@@ -48,8 +55,8 @@ CRON_SECRET=<random 16+ character secret for Vercel Cron>
 5. Apply Supabase migrations.
 6. Deploy the app.
 7. Start or restart the media worker process.
-8. Confirm Vercel Cron is active for `/api/internal/media/cleanup`.
-9. Smoke-test upload, job creation, job status, output download, Fal webhook, and cleanup.
+8. After the cleanup task lands, confirm Vercel Cron is active for `/api/internal/media/cleanup`.
+9. Smoke-test upload, job creation, job status, output download, and, after the follow-up tasks land, Fal webhook and cleanup.
 
 ## Smoke Tests
 
@@ -59,7 +66,7 @@ CRON_SECRET=<random 16+ character secret for Vercel Cron>
 4. Confirm the job starts as `queued`, then `running` or `waiting_provider`.
 5. Confirm output URLs are absent in stored `generation_jobs.output` and present in `GET /api/v1/media/jobs/:jobId`.
 6. Confirm `GET https://media.woven.video/objects/:assetId?token=...` returns the output before retention expiry.
-7. Invoke `GET /api/internal/media/cleanup` with `Authorization: Bearer $CRON_SECRET` in staging and confirm expired R2 keys are deleted.
+7. After Task 4 implements cleanup, invoke `GET /api/internal/media/cleanup` with `Authorization: Bearer $CRON_SECRET` in staging and confirm expired R2 keys are deleted.
 
 ## Rollback Notes
 

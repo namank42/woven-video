@@ -5,8 +5,16 @@
   "compatibility_date": "2026-07-02",
   "routes": [
     {
-      "pattern": "media.woven.video/*",
-      "custom_domain": true
+      "pattern": "media.woven.video/uploads/*",
+      "zone_name": "woven.video"
+    },
+    {
+      "pattern": "media.woven.video/objects/*",
+      "zone_name": "woven.video"
+    },
+    {
+      "pattern": "media.woven.video/internal/*",
+      "zone_name": "woven.video"
     }
   ],
   "r2_buckets": [

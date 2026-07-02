@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "media:worker": "tsx scripts/media-worker.ts",
-    "media:worker:deploy": "wrangler deploy --config workers/media/wrangler.jsonc",
+    "media:worker:deploy": "npx wrangler deploy --config workers/media/wrangler.jsonc",
     "test:media-db": "RUN_SUPABASE_DB_TESTS=1 vitest run tests/media/db-rpcs.integration.test.ts"
   },
   "dependencies": {
