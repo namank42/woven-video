@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { getMediaEnv } from "@/lib/media/env";
+import { getMediaEnv, getMediaJobTimeoutSeconds } from "@/lib/media/env";
 
 const originalEnv = process.env;
 const validSecret = "x".repeat(32);
@@ -135,6 +135,15 @@ describe("media env", () => {
       jobTimeoutSeconds: 3600,
       workerPollMs: 5000,
     });
+  });
+
+  it("reads job timeout without requiring unrelated secrets", () => {
+    process.env = {
+      ...originalEnv,
+      MEDIA_JOB_TIMEOUT_SECONDS: "7200",
+    } as NodeJS.ProcessEnv;
+
+    expect(getMediaJobTimeoutSeconds()).toBe(7200);
   });
 
   it("rejects non-positive and non-integer settings", () => {

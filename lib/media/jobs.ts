@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { getMediaEnv } from "@/lib/media/env";
+import { getMediaJobTimeoutSeconds } from "@/lib/media/env";
 import { reservationUsdMicros } from "@/lib/media/pricing";
 import type { MediaModel } from "@/lib/media/types";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -53,7 +53,7 @@ export async function createReservedMediaJob({
       model: model.providerModel,
       status: "creating",
       estimated_cost_usd_micros: reserveAmount,
-      expires_at: new Date(Date.now() + getMediaEnv().jobTimeoutSeconds * 1000).toISOString(),
+      expires_at: new Date(Date.now() + getMediaJobTimeoutSeconds() * 1000).toISOString(),
       input: {
         media_model_id: model.id,
         operation: model.operation,

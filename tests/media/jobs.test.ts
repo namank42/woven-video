@@ -161,6 +161,58 @@ describe("createReservedMediaJob", () => {
     ]);
   });
 
+  it("computes the job deadline without requiring token or worker secrets", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-02T12:00:00.000Z"));
+    process.env = {
+      ...originalEnv,
+      MEDIA_JOB_TIMEOUT_SECONDS: "7200",
+    } as NodeJS.ProcessEnv;
+    const assetsStep = selectAssetsQuery({
+      data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],
+      error: null,
+    });
+    const insertStep = insertJobQuery({
+      data: {
+        id: "job_1",
+        status: "creating",
+        estimated_cost_usd_micros: 500_000,
+        reserved_amount_usd_micros: 0,
+        created_at: "2026-07-01T12:00:00.000Z",
+      },
+      error: null,
+    });
+    const attachStep = attachAssetsQuery({
+      data: [{ id: "asset_1" }],
+      error: null,
+    });
+    const queueStep = updateJobQuery({
+      data: {
+        id: "job_1",
+        status: "queued",
+        estimated_cost_usd_micros: 500_000,
+        reserved_amount_usd_micros: 500_000,
+        created_at: "2026-07-01T12:00:00.000Z",
+      },
+      error: null,
+    });
+    const admin = mockAdminWith(assetsStep, insertStep, attachStep, queueStep);
+
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model,
+      parameters: { prompt: "a mountain" },
+      inputAssetIds: ["asset_1"],
+    })).resolves.toMatchObject({
+      id: "job_1",
+      status: "queued",
+    });
+
+    expect(admin.inserts[0]).toMatchObject({
+      expires_at: "2026-07-02T14:00:00.000Z",
+    });
+  });
+
   it("releases the reservation and fails the job when asset attachment fails after reservation", async () => {
     const assetsStep = selectAssetsQuery({
       data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],

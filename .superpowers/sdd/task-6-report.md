@@ -48,3 +48,32 @@
 ## Issues or concerns
 
 - No blocking issues.
+
+## Review Fix Follow-up
+
+### What I fixed
+
+- Split timeout reading from full media env validation by adding `getMediaJobTimeoutSeconds()` and switching media job creation to use it.
+- Added rejection handling in the worker heartbeat loop so rejected lease-extension RPC calls are logged and swallowed instead of surfacing as unhandled promise rejections.
+
+### Additional TDD evidence
+
+#### RED
+
+- `./node_modules/.bin/vitest run tests/media/env.test.ts`
+  - Failed because `getMediaJobTimeoutSeconds` did not exist yet.
+- `./node_modules/.bin/vitest run tests/media/jobs.test.ts`
+  - Failed because job creation still called `getMediaEnv()` and threw `Missing MEDIA_TOKEN_SECRET.` when only the timeout env var was set.
+- `./node_modules/.bin/vitest run tests/media/worker.test.ts`
+  - Failed because rejected heartbeat RPC calls were unhandled and never reached `console.error`.
+
+#### GREEN
+
+- `./node_modules/.bin/vitest run tests/media/env.test.ts`
+  - Passed after adding the narrow timeout reader.
+- `./node_modules/.bin/vitest run tests/media/jobs.test.ts`
+  - Passed after enqueueing switched to the narrow timeout reader.
+- `./node_modules/.bin/vitest run tests/media/worker.test.ts`
+  - Passed after adding heartbeat rejection handling.
+- `./node_modules/.bin/vitest run tests/media/env.test.ts tests/media/jobs.test.ts tests/media/worker.test.ts`
+  - Passed: 3 files, 48 tests.

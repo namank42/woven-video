@@ -70,3 +70,7 @@ export function getMediaEnv(): MediaEnv {
     falWebhookJwksUrl: optionalUrlEnv("FAL_WEBHOOK_JWKS_URL", DEFAULT_FAL_WEBHOOK_JWKS_URL),
   };
 }
+
+export function getMediaJobTimeoutSeconds(): number {
+  return integerEnv("MEDIA_JOB_TIMEOUT_SECONDS", 3600);
+}

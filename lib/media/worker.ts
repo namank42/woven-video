@@ -381,6 +381,8 @@ async function withLeaseHeartbeat<T>(
       if (error && !isStaleClaimError(error)) {
         console.error("Failed to extend media job lease", error);
       }
+    }).catch((error: unknown) => {
+      console.error("Failed to extend media job lease", error);
     });
   }, 120_000);
 

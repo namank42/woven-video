@@ -790,6 +790,37 @@ describe("drainOneMediaJob", () => {
       p_lease_seconds: 300,
     }));
   });
+
+  it("logs and swallows rejected heartbeat rpc calls", async () => {
+    vi.useFakeTimers();
+    mocks.getMediaModel.mockResolvedValue(model);
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow()],
+      rpcRejects: {
+        extend_claimed_media_job_lease: new Error("transport down"),
+      },
+    });
+    const adapterPromise = new Promise<ProviderRunResult>((resolve) => {
+      setTimeout(() => resolve({
+        status: "succeeded",
+        rawCostUsd: 0.01,
+        outputs: [{ type: "json", contentType: "application/json", data: new TextEncoder().encode("{}") }],
+      }), 130_000);
+    });
+    const adapter = { run: vi.fn(() => adapterPromise) } satisfies MediaProviderAdapter;
+
+    const drain = drainOneMediaJob({ adapters: { fal: adapter } });
+    await vi.advanceTimersByTimeAsync(121_000);
+    await vi.advanceTimersByTimeAsync(10_000);
+    await drain;
+
+    expect(admin.rpc).toHaveBeenCalledWith("extend_claimed_media_job_lease", expect.any(Object));
+    expect(consoleError).toHaveBeenCalledWith("Failed to extend media job lease", expect.objectContaining({
+      message: "transport down",
+    }));
+    consoleError.mockRestore();
+  });
 });
 
 describe("materializeOutputs", () => {
@@ -956,10 +987,12 @@ function mockAdminWith({
   claimedJobs,
   inputAssetRows = [],
   rpcResults = {},
+  rpcRejects = {},
 }: {
   claimedJobs: unknown[];
   inputAssetRows?: Array<{ id: string; storage_key: string }>;
   rpcResults?: Record<string, SupabaseResult<unknown>>;
+  rpcRejects?: Record<string, Error>;
 }) {
   const tables: string[] = [];
   const from = vi.fn((table: string) => {
@@ -978,6 +1011,7 @@ function mockAdminWith({
   });
   const rpc: ReturnType<typeof vi.fn> = vi.fn(async (name: string, args: Record<string, unknown>) => {
     if (name === "claim_media_jobs") return { data: claimedJobs, error: null };
+    if (name in rpcRejects) throw rpcRejects[name];
     if (name in rpcResults) return rpcResults[name];
     if (name === "extend_claimed_media_job_lease") return { data: { id: args.p_job_id }, error: null };
     if (name === "mark_media_job_waiting_provider") return { data: { id: args.p_job_id }, error: null };
