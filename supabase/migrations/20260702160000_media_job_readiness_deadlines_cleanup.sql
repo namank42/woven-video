@@ -163,15 +163,31 @@ begin
 
   return query
   with candidates as (
-    select assets.id, assets.status as previous_status
+    select
+      assets.id,
+      case
+        when assets.status = 'deleting' then nullif(assets.metadata->>'delete_previous_status', '')
+        else assets.status
+      end as previous_status
     from public.media_assets assets
     left join public.generation_jobs jobs on jobs.id = assets.job_id
-    where assets.status <> 'deleting'
-      and assets.status <> 'deleted'
+    where assets.status <> 'deleted'
       and (
-        (assets.status in ('pending', 'uploaded') and assets.upload_expires_at is not null and assets.upload_expires_at < p_now)
-        or (assets.kind = 'output' and assets.status = 'ready' and assets.download_expires_at is not null and assets.download_expires_at < p_now)
-        or (assets.kind = 'input' and assets.status = 'attached' and jobs.status in ('succeeded', 'failed', 'cancelled'))
+        (
+          assets.status = 'deleting'
+          and (
+            assets.metadata->>'delete_claimed_at' is null
+            or (assets.metadata->>'delete_claimed_at')::timestamptz < p_now - interval '1 hour'
+          )
+        )
+        or (
+          assets.status <> 'deleting'
+          and (
+            (assets.status in ('pending', 'uploaded') and assets.upload_expires_at is not null and assets.upload_expires_at < p_now)
+            or (assets.kind = 'output' and assets.status = 'ready' and assets.download_expires_at is not null and assets.download_expires_at < p_now)
+            or (assets.kind = 'input' and assets.status = 'attached' and jobs.status in ('succeeded', 'failed', 'cancelled'))
+          )
+        )
       )
     order by assets.created_at asc
     for update skip locked
@@ -180,7 +196,13 @@ begin
   update public.media_assets assets
   set status = 'deleting',
       metadata = coalesce(assets.metadata, '{}'::jsonb)
-        || jsonb_build_object('delete_previous_status', candidates.previous_status),
+        || jsonb_build_object(
+          'delete_claimed_at', p_now
+        )
+        || case
+          when candidates.previous_status is null then '{}'::jsonb
+          else jsonb_build_object('delete_previous_status', candidates.previous_status)
+        end,
       updated_at = now()
   from candidates
   where assets.id = candidates.id
@@ -206,7 +228,7 @@ begin
   update public.media_assets assets
   set status = 'deleted',
       deleted_at = coalesce(assets.deleted_at, p_now),
-      metadata = coalesce(assets.metadata, '{}'::jsonb) - 'delete_previous_status',
+      metadata = coalesce(assets.metadata, '{}'::jsonb) - 'delete_previous_status' - 'delete_claimed_at',
       updated_at = now()
   where assets.id = any(p_asset_ids)
     and assets.status = 'deleting'
@@ -230,7 +252,7 @@ begin
   return query
   update public.media_assets assets
   set status = coalesce(nullif(assets.metadata->>'delete_previous_status', ''), 'failed'),
-      metadata = coalesce(assets.metadata, '{}'::jsonb) - 'delete_previous_status',
+      metadata = coalesce(assets.metadata, '{}'::jsonb) - 'delete_previous_status' - 'delete_claimed_at',
       updated_at = now()
   where assets.id = any(p_asset_ids)
     and assets.status = 'deleting'

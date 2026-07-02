@@ -820,6 +820,16 @@ describe("media job readiness migration", () => {
     expect(migration).toContain("assets.kind = 'input'");
     expect(migration).toContain("assets.status = 'attached'");
   });
+
+  it("recovers stale media asset deletion claims", () => {
+    expect(migration).toContain("delete_claimed_at");
+    expect(migration).toContain("assets.status = 'deleting'");
+    expect(migration).toContain("(assets.metadata->>'delete_claimed_at')::timestamptz < p_now - interval '1 hour'");
+    expect(migration).toContain("when assets.status = 'deleting' then nullif(assets.metadata->>'delete_previous_status', '')");
+    expect(migration).toContain("else assets.status");
+    expect(migration).toContain("when candidates.previous_status is null then '{}'::jsonb");
+    expect(migration).toContain("- 'delete_previous_status' - 'delete_claimed_at'");
+  });
 });
 
 function jobRow(overrides: Record<string, unknown> = {}) {

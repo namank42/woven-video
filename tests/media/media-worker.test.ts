@@ -454,7 +454,10 @@ describe("media Worker", () => {
   it("deletes user-scoped objects from the internal delete endpoint", async () => {
     const env = testEnv();
     env.MEDIA_BUCKET.setObject("users/user_1/media/tmp/asset_1/input.png", "input");
-    env.MEDIA_BUCKET.setObject("users/user_1/media/outputs/job_1/out_1.mp4", "output");
+    env.MEDIA_BUCKET.setObject(
+      "users/user_1/media/outputs/job_1/asset_1/attempts/attempt_1/output.mp4",
+      "output",
+    );
 
     const response = await mediaWorker.fetch(new Request(
       "https://media.example.test/internal/delete",
@@ -467,7 +470,7 @@ describe("media Worker", () => {
         body: JSON.stringify({
           keys: [
             "users/user_1/media/tmp/asset_1/input.png",
-            "users/user_1/media/outputs/job_1/out_1.mp4",
+            "users/user_1/media/outputs/job_1/asset_1/attempts/attempt_1/output.mp4",
           ],
         }),
       },
@@ -477,7 +480,7 @@ describe("media Worker", () => {
     await expect(response.json()).resolves.toEqual({ deleted_count: 2 });
     expect(env.MEDIA_BUCKET.deletes).toEqual([
       "users/user_1/media/tmp/asset_1/input.png",
-      "users/user_1/media/outputs/job_1/out_1.mp4",
+      "users/user_1/media/outputs/job_1/asset_1/attempts/attempt_1/output.mp4",
     ]);
     expect(env.MEDIA_BUCKET.objects.size).toBe(0);
   });
@@ -520,6 +523,58 @@ describe("media Worker", () => {
     expect(response.status).toBe(400);
     expect(env.MEDIA_BUCKET.deletes).toEqual([]);
     expect(env.MEDIA_BUCKET.objects.has("woven-hero-v4.mp4")).toBe(true);
+  });
+
+  it("rejects internal delete requests for non-media user keys", async () => {
+    const env = testEnv();
+
+    for (const key of [
+      "users/user_1/profile/avatar.png",
+      "users/user_1/media/outputs/job_1/out_1.mp4",
+    ]) {
+      const response = await mediaWorker.fetch(new Request(
+        "https://media.example.test/internal/delete",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-woven-media-worker-secret": "worker-secret",
+          },
+          body: JSON.stringify({ keys: [key] }),
+        },
+      ), env);
+
+      expect(response.status).toBe(400);
+    }
+
+    expect(env.MEDIA_BUCKET.deletes).toEqual([]);
+  });
+
+  it("rejects internal delete requests with suspicious key segments", async () => {
+    const env = testEnv();
+
+    for (const key of [
+      "users//media/tmp/asset_1/input.png",
+      "users/user_1/media/tmp/../input.png",
+      "users/user_1/media/tmp/asset 1/input.png",
+      `users/user_1/media/tmp/asset_1/${"a".repeat(500)}.png`,
+    ]) {
+      const response = await mediaWorker.fetch(new Request(
+        "https://media.example.test/internal/delete",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-woven-media-worker-secret": "worker-secret",
+          },
+          body: JSON.stringify({ keys: [key] }),
+        },
+      ), env);
+
+      expect(response.status).toBe(400);
+    }
+
+    expect(env.MEDIA_BUCKET.deletes).toEqual([]);
   });
 
   it("rejects internal delete requests with more than 1000 keys", async () => {

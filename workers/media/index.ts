@@ -31,6 +31,8 @@ type DownloadTokenPayload = {
 type TokenPayload = UploadTokenPayload | DownloadTokenPayload;
 
 const DEFAULT_MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+const MAX_DELETE_KEY_LENGTH = 512;
+const SAFE_DELETE_KEY_SEGMENT = /^[A-Za-z0-9._-]+$/;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -203,7 +205,47 @@ function isDeletePayload(value: unknown): value is { keys: string[] } {
     Array.isArray(keys) &&
     keys.length > 0 &&
     keys.length <= 1000 &&
-    keys.every((key) => typeof key === "string" && key.startsWith("users/"))
+    keys.every(isValidDeleteKey)
+  );
+}
+
+function isValidDeleteKey(key: unknown): key is string {
+  if (typeof key !== "string" || key.length === 0 || key.length > MAX_DELETE_KEY_LENGTH) {
+    return false;
+  }
+
+  const segments = key.split("/");
+  if (!segments.every(isSafeDeleteKeySegment)) return false;
+
+  return isValidTempMediaDeleteKey(segments) || isValidOutputMediaDeleteKey(segments);
+}
+
+function isValidTempMediaDeleteKey(segments: string[]): boolean {
+  return (
+    segments.length >= 6 &&
+    segments[0] === "users" &&
+    segments[2] === "media" &&
+    segments[3] === "tmp"
+  );
+}
+
+function isValidOutputMediaDeleteKey(segments: string[]): boolean {
+  return (
+    segments.length === 9 &&
+    segments[0] === "users" &&
+    segments[2] === "media" &&
+    segments[3] === "outputs" &&
+    segments[6] === "attempts" &&
+    /^output\.[A-Za-z0-9]+$/.test(segments[8])
+  );
+}
+
+function isSafeDeleteKeySegment(segment: string): boolean {
+  return (
+    segment.length > 0 &&
+    segment !== "." &&
+    segment !== ".." &&
+    SAFE_DELETE_KEY_SEGMENT.test(segment)
   );
 }
 
