@@ -1,5 +1,5 @@
 import { createHash, generateKeyPairSync, sign } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   type FalWebhookHeaders,
@@ -7,6 +7,17 @@ import {
 } from "@/lib/media/providers/fal-webhooks";
 
 describe("Fal webhook signature verification", () => {
+  const originalEnv = process.env;
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    process.env = originalEnv;
+    globalThis.fetch = originalFetch;
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
   it("accepts a valid generated Ed25519 signature", async () => {
     const { privateKey, publicKey } = generateKeyPairSync("ed25519");
     const rawBody = Buffer.from(JSON.stringify({ request_id: "fal_req_123" }));
@@ -53,6 +64,80 @@ describe("Fal webhook signature verification", () => {
       jwks: { keys: [publicKey.export({ format: "jwk" })] },
       nowSeconds: 1_700_000_301,
     })).rejects.toThrow("Fal webhook timestamp is outside the tolerance window.");
+  });
+
+  it("caches fetched JWKS for repeated verifications", async () => {
+    process.env = {
+      ...originalEnv,
+      MEDIA_TOKEN_SECRET: "x".repeat(32),
+      MEDIA_WORKER_SHARED_SECRET: "y".repeat(32),
+    } as NodeJS.ProcessEnv;
+    const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+    const rawBody = Buffer.from(JSON.stringify({ request_id: "fal_req_123" }));
+    const headers: FalWebhookHeaders = {
+      requestId: "webhook_req_1",
+      userId: "fal_user_1",
+      timestamp: "1700000000",
+      signature: signFalWebhook({
+        privateKey,
+        rawBody,
+        requestId: "webhook_req_1",
+        userId: "fal_user_1",
+        timestamp: "1700000000",
+      }),
+    };
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      keys: [publicKey.export({ format: "jwk" })],
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const module = await import("@/lib/media/providers/fal-webhooks");
+    await expect(module.verifyFalWebhookSignature({
+      headers,
+      rawBody,
+      nowSeconds: 1_700_000_010,
+    })).resolves.toBe(true);
+    await expect(module.verifyFalWebhookSignature({
+      headers,
+      rawBody,
+      nowSeconds: 1_700_000_020,
+    })).resolves.toBe(true);
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledWith("https://rest.fal.ai/.well-known/jwks.json", {
+      cache: "no-store",
+      signal: expect.any(AbortSignal),
+    });
+  });
+
+  it("classifies JWKS fetch failures as infrastructure errors", async () => {
+    process.env = {
+      ...originalEnv,
+      MEDIA_TOKEN_SECRET: "x".repeat(32),
+      MEDIA_WORKER_SHARED_SECRET: "y".repeat(32),
+    } as NodeJS.ProcessEnv;
+    const rawBody = Buffer.from(JSON.stringify({ request_id: "fal_req_123" }));
+    const headers: FalWebhookHeaders = {
+      requestId: "webhook_req_1",
+      userId: "fal_user_1",
+      timestamp: "1700000000",
+      signature: "a".repeat(128),
+    };
+    globalThis.fetch = vi.fn(async () => new Response("unavailable", { status: 503 })) as unknown as typeof fetch;
+
+    const module = await import("@/lib/media/providers/fal-webhooks");
+    await expect(module.verifyFalWebhookSignature({
+      headers,
+      rawBody,
+      nowSeconds: 1_700_000_010,
+    })).rejects.toMatchObject({
+      name: "FalWebhookVerificationError",
+      kind: "infrastructure",
+      code: "jwks_fetch_failed",
+    });
   });
 });
 

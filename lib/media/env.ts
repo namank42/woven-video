@@ -13,6 +13,7 @@ export type MediaEnv = {
 };
 
 const PLACEHOLDER_SECRET = "replace_with_32_plus_random_bytes";
+const DEFAULT_FAL_WEBHOOK_JWKS_URL = "https://rest.fal.ai/.well-known/jwks.json";
 
 function integerEnv(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -36,9 +37,18 @@ function secretEnv(name: string): string {
   return secret;
 }
 
-function optionalUrlEnv(name: string): string | null {
-  const raw = process.env[name]?.trim();
+function optionalUrlEnv(name: string, fallback: string | null = null): string | null {
+  const raw = process.env[name]?.trim() || fallback;
   if (!raw) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error(`${name} must be a valid http(s) URL.`);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(`${name} must be a valid http(s) URL.`);
+  }
   return raw.replace(/\/+$/, "");
 }
 
@@ -57,6 +67,6 @@ export function getMediaEnv(): MediaEnv {
     jobTimeoutSeconds: integerEnv("MEDIA_JOB_TIMEOUT_SECONDS", 3600),
     workerPollMs: integerEnv("MEDIA_WORKER_POLL_MS", 5000),
     falWebhookBaseUrl: optionalUrlEnv("MEDIA_FAL_WEBHOOK_BASE_URL"),
-    falWebhookJwksUrl: optionalUrlEnv("FAL_WEBHOOK_JWKS_URL"),
+    falWebhookJwksUrl: optionalUrlEnv("FAL_WEBHOOK_JWKS_URL", DEFAULT_FAL_WEBHOOK_JWKS_URL),
   };
 }

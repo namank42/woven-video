@@ -1,7 +1,13 @@
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 describe("Fal media webhook route", () => {
+  const originalEnv = process.env;
+  const originalFetch = globalThis.fetch;
+
   afterEach(() => {
+    process.env = originalEnv;
+    globalThis.fetch = originalFetch;
     vi.doUnmock("@/lib/supabase/admin");
     vi.doUnmock("@/lib/media/providers/fal-webhooks");
     vi.resetModules();
@@ -83,7 +89,7 @@ describe("Fal media webhook route", () => {
   it("rejects invalid webhook signatures before touching Supabase", async () => {
     const { createSupabaseAdminClient } = mockSupabaseUpdate({ error: null });
     const { verifyFalWebhookSignature } = mockFalWebhookVerifier({
-      error: new Error("invalid signature"),
+      error: falVerifierError("invalid", "signature_mismatch"),
     });
 
     const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
@@ -92,6 +98,24 @@ describe("Fal media webhook route", () => {
     expect(response.status).toBe(401);
     expect(verifyFalWebhookSignature).toHaveBeenCalledOnce();
     expect(createSupabaseAdminClient).not.toHaveBeenCalled();
+  });
+
+  it("returns unavailable for verifier infrastructure failures before touching Supabase", async () => {
+    const { createSupabaseAdminClient } = mockSupabaseUpdate({ error: null });
+    const { verifyFalWebhookSignature } = mockFalWebhookVerifier({
+      error: falVerifierError("infrastructure", "jwks_fetch_failed"),
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
+    const response = await POST(signedJsonRequest({ request_id: "fal_req_infra" }));
+
+    expect(response.status).toBe(503);
+    expect(verifyFalWebhookSignature).toHaveBeenCalledOnce();
+    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith("Fal webhook verifier infrastructure failure", {
+      code: "jwks_fetch_failed",
+    });
   });
 
   it("rejects invalid JSON object bodies and missing request ids", async () => {
@@ -147,6 +171,54 @@ describe("Fal media webhook route", () => {
       },
     });
   });
+
+  it("verifies a real Ed25519 Fal webhook before mutating Supabase", async () => {
+    process.env = {
+      ...originalEnv,
+      MEDIA_TOKEN_SECRET: "x".repeat(32),
+      MEDIA_WORKER_SHARED_SECRET: "y".repeat(32),
+      FAL_WEBHOOK_JWKS_URL: undefined,
+    } as NodeJS.ProcessEnv;
+    const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+    const body = JSON.stringify({ request_id: "fal_req_real" });
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const signature = signFalWebhook({
+      privateKey,
+      rawBody: Buffer.from(body),
+      requestId: "webhook_req_real",
+      userId: "fal_user_real",
+      timestamp,
+    });
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      keys: [publicKey.export({ format: "jwk" })],
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const { createSupabaseAdminClient, eq } = mockSupabaseUpdate({ error: null });
+
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
+    const response = await POST(new Request("https://example.test/api/v1/media/webhooks/fal", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-fal-webhook-request-id": "webhook_req_real",
+        "x-fal-webhook-user-id": "fal_user_real",
+        "x-fal-webhook-timestamp": timestamp,
+        "x-fal-webhook-signature": signature,
+      },
+      body,
+    }));
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith("https://rest.fal.ai/.well-known/jwks.json", {
+      cache: "no-store",
+      signal: expect.any(AbortSignal),
+    });
+    expect(createSupabaseAdminClient).toHaveBeenCalledOnce();
+    expect(eq).toHaveBeenNthCalledWith(1, "provider_job_id", "fal_req_real");
+  });
 });
 
 function jsonRequest(body: unknown): Request {
@@ -178,7 +250,7 @@ function signedRequest(body: string): Request {
 function mockFalWebhookVerifier({
   error,
 }: {
-  error?: Error;
+  error?: unknown;
 } = {}) {
   const verifyFalWebhookSignature = vi.fn(() => {
     if (error) {
@@ -196,14 +268,51 @@ function mockFalWebhookVerifier({
         signature: request.headers.get("x-fal-webhook-signature")?.trim() ?? "",
       };
       if (!headers.requestId || !headers.userId || !headers.timestamp || !headers.signature) {
-        throw new Error("missing Fal webhook signature headers");
+        throw falVerifierError("invalid", "missing_headers");
       }
       return headers;
     },
     verifyFalWebhookSignature,
+    isFalWebhookVerificationError: (error: unknown) => (
+      typeof error === "object" &&
+      error !== null &&
+      (error as { name?: unknown }).name === "FalWebhookVerificationError" &&
+      ((error as { kind?: unknown }).kind === "invalid" ||
+        (error as { kind?: unknown }).kind === "infrastructure")
+    ),
   }));
 
   return { verifyFalWebhookSignature };
+}
+
+function falVerifierError(
+  kind: "invalid" | "infrastructure",
+  code: string,
+) {
+  return {
+    name: "FalWebhookVerificationError",
+    kind,
+    code,
+    message: code,
+  };
+}
+
+function signFalWebhook({
+  privateKey,
+  rawBody,
+  requestId,
+  userId,
+  timestamp,
+}: {
+  privateKey: ReturnType<typeof generateKeyPairSync>["privateKey"];
+  rawBody: Buffer;
+  requestId: string;
+  userId: string;
+  timestamp: string;
+}) {
+  const bodyDigest = createHash("sha256").update(rawBody).digest("hex");
+  const message = `${requestId}\n${userId}\n${timestamp}\n${bodyDigest}`;
+  return sign(null, Buffer.from(message), privateKey).toString("hex");
 }
 
 function mockSupabaseUpdate({

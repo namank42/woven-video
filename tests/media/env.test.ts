@@ -81,7 +81,7 @@ describe("media env", () => {
     });
   });
 
-  it("defaults optional Fal webhook URLs to null", () => {
+  it("uses the documented Fal JWKS URL by default", () => {
     setMediaEnv({
       MEDIA_FAL_WEBHOOK_BASE_URL: undefined,
       FAL_WEBHOOK_JWKS_URL: undefined,
@@ -89,8 +89,22 @@ describe("media env", () => {
 
     expect(getMediaEnv()).toMatchObject({
       falWebhookBaseUrl: null,
-      falWebhookJwksUrl: null,
+      falWebhookJwksUrl: "https://rest.fal.ai/.well-known/jwks.json",
     });
+  });
+
+  it("rejects optional URL settings that are not HTTP URLs", () => {
+    setMediaEnv({
+      MEDIA_FAL_WEBHOOK_BASE_URL: "not a url",
+    });
+
+    expect(() => getMediaEnv()).toThrow("MEDIA_FAL_WEBHOOK_BASE_URL must be a valid http(s) URL.");
+
+    setMediaEnv({
+      FAL_WEBHOOK_JWKS_URL: "ftp://fal.example.test/jwks.json",
+    });
+
+    expect(() => getMediaEnv()).toThrow("FAL_WEBHOOK_JWKS_URL must be a valid http(s) URL.");
   });
 
   it("parses positive integer settings", () => {

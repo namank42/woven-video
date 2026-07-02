@@ -34,8 +34,9 @@
 
 - Validate the timestamp within a 5-minute tolerance before accepting the payload.
 - The signature is hex-encoded Ed25519 and must verify against Fal JWKS public keys.
-- The current digest did not include a stable JWKS URL. The implementation plan therefore uses a required `FAL_WEBHOOK_JWKS_URL` env var instead of hard-coding an unverified endpoint.
-- Source: Context7 Fal docs, queried 2026-07-02; installed SDK source/types in `node_modules/@fal-ai/client/src/queue.d.ts`.
+- Fal documents the JWKS endpoint as `https://rest.fal.ai/.well-known/jwks.json`.
+- Cache the JWKS key set for no more than 24 hours. Keep `FAL_WEBHOOK_JWKS_URL` only as an optional override for the documented endpoint.
+- Source: official Fal webhook docs verified 2026-07-02; installed SDK source/types in `node_modules/@fal-ai/client/src/queue.d.ts`.
 
 ## Supabase CLI + Local DB
 

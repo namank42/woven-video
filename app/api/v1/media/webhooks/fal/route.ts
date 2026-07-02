@@ -1,6 +1,7 @@
 import { apiError } from "@/lib/api/responses";
 import {
   falWebhookHeaders,
+  isFalWebhookVerificationError,
   verifyFalWebhookSignature,
 } from "@/lib/media/providers/fal-webhooks";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -22,8 +23,25 @@ export async function POST(request: Request) {
   try {
     const headers = falWebhookHeaders(request);
     await verifyFalWebhookSignature({ headers, rawBody });
-  } catch {
-    return apiError("Invalid Fal webhook signature.", 401, "unauthorized");
+  } catch (error) {
+    if (isFalWebhookVerificationError(error)) {
+      if (error.kind === "invalid") {
+        return apiError("Invalid Fal webhook signature.", 401, "unauthorized");
+      }
+      console.error("Fal webhook verifier infrastructure failure", { code: error.code });
+      return apiError(
+        "Fal webhook verifier is temporarily unavailable.",
+        503,
+        "provider_unavailable",
+      );
+    }
+
+    console.error("Unexpected Fal webhook verifier failure");
+    return apiError(
+      "Fal webhook verifier is temporarily unavailable.",
+      503,
+      "provider_unavailable",
+    );
   }
 
   const payload = parseJsonObject(rawBody);
