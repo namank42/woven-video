@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -783,6 +784,30 @@ describe("claim-aware media output asset migration", () => {
     expect(sql).toContain("create or replace function public.fail_media_output_asset_attempt");
     expect(sql).toContain("and metadata->>'output_attempt_id' = p_output_attempt_id");
     expect(sql).toContain("revoke all on function public.fail_media_output_asset_attempt(uuid, uuid, uuid, text, text, jsonb)");
+  });
+});
+
+describe("media job readiness migration", () => {
+  const migration = readFileSync(
+    join(process.cwd(), "supabase/migrations/20260702160000_media_job_readiness_deadlines_cleanup.sql"),
+    "utf8",
+  );
+
+  it("adds a non-claimable creating status", () => {
+    expect(migration).toContain("'creating'");
+    expect(migration).toContain("status in ('queued', 'running', 'waiting_provider')");
+    expect(migration).not.toContain("status in ('creating', 'queued', 'running', 'waiting_provider')");
+  });
+
+  it("requires queued media jobs to have a reservation before claim", () => {
+    expect(migration).toContain("coalesce(jobs.reserved_amount_usd_micros, 0) > 0");
+  });
+
+  it("requires queued input_asset_ids to be attached to the job before claim", () => {
+    expect(migration).toContain("jsonb_array_elements_text");
+    expect(migration).toContain("assets.job_id = jobs.id");
+    expect(migration).toContain("assets.kind = 'input'");
+    expect(migration).toContain("assets.status = 'attached'");
   });
 });
 

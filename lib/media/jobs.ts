@@ -20,6 +20,8 @@ type CreatedMediaJobRow = {
 
 type SupabaseAdminClient = SupabaseClient;
 
+const JOB_SELECT = "id, status, estimated_cost_usd_micros, reserved_amount_usd_micros, created_at";
+
 export async function createReservedMediaJob({
   userId,
   model,
@@ -48,7 +50,7 @@ export async function createReservedMediaJob({
       type: "media_job",
       provider: model.provider,
       model: model.providerModel,
-      status: "queued",
+      status: "creating",
       estimated_cost_usd_micros: reserveAmount,
       input: {
         media_model_id: model.id,
@@ -56,9 +58,9 @@ export async function createReservedMediaJob({
         parameters,
         input_asset_ids: inputAssetIds,
       },
-      progress: { stage: "queued", percent: null },
+      progress: { stage: "creating", percent: null },
     })
-    .select("id, status, estimated_cost_usd_micros, reserved_amount_usd_micros, created_at")
+    .select(JOB_SELECT)
     .single();
 
   if (jobError || !job?.id) {
@@ -123,13 +125,48 @@ export async function createReservedMediaJob({
     throw new Error(message);
   }
 
+  const { data: queuedJob, error: queueError } = await admin
+    .from("generation_jobs")
+    .update({
+      status: "queued",
+      progress: { stage: "queued", percent: 0 },
+    })
+    .eq("id", createdJob.id)
+    .eq("status", "creating")
+    .select(JOB_SELECT)
+    .single();
+
+  if (queueError || !queuedJob) {
+    await detachInputAssets({
+      admin,
+      userId,
+      jobId: createdJob.id,
+      inputAssetIds,
+    });
+    await releaseReservation(
+      admin,
+      createdJob.id,
+      queueError?.message ?? "media_job_queue_failed",
+      "media_job_queue_failed",
+    );
+    throw new Error(queueError?.message ?? "media_job_queue_failed");
+  }
+
+  return normalizeMediaJobRow(queuedJob as CreatedMediaJobRow, model.id, reserveAmount);
+}
+
+function normalizeMediaJobRow(
+  job: CreatedMediaJobRow,
+  mediaModelId: string,
+  reserveAmount: number,
+) {
   return {
-    id: String(createdJob.id),
-    status: "queued",
-    model: model.id,
-    estimatedCostUsdMicros: reserveAmount,
-    reservedCreditsUsdMicros: reserveAmount,
-    createdAt: String(createdJob.created_at),
+    id: String(job.id),
+    status: String(job.status),
+    model: mediaModelId,
+    estimatedCostUsdMicros: Number(job.estimated_cost_usd_micros),
+    reservedCreditsUsdMicros: Number(job.reserved_amount_usd_micros) || reserveAmount,
+    createdAt: String(job.created_at),
   };
 }
 

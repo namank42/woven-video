@@ -19,6 +19,7 @@ type QueryRoot = {
 };
 type QueryStep = {
   root: QueryRoot;
+  table?: string;
   inserted?: unknown;
   updated?: unknown;
   selected?: string;
@@ -61,7 +62,7 @@ describe("createReservedMediaJob", () => {
     const insertStep = insertJobQuery({
       data: {
         id: "job_1",
-        status: "queued",
+        status: "creating",
         estimated_cost_usd_micros: 500_000,
         reserved_amount_usd_micros: 0,
         created_at: "2026-07-01T12:00:00.000Z",
@@ -72,7 +73,17 @@ describe("createReservedMediaJob", () => {
       data: [{ id: "asset_1" }],
       error: null,
     });
-    const admin = mockAdminWith(assetsStep, insertStep, attachStep);
+    const queueStep = updateJobQuery({
+      data: {
+        id: "job_1",
+        status: "queued",
+        estimated_cost_usd_micros: 500_000,
+        reserved_amount_usd_micros: 500_000,
+        created_at: "2026-07-01T12:00:00.000Z",
+      },
+      error: null,
+    });
+    const admin = mockAdminWith(assetsStep, insertStep, attachStep, queueStep);
 
     await expect(createReservedMediaJob({
       userId: "user_1",
@@ -88,13 +99,18 @@ describe("createReservedMediaJob", () => {
       createdAt: "2026-07-01T12:00:00.000Z",
     });
 
-    expect(admin.tables).toEqual(["media_assets", "generation_jobs", "media_assets"]);
-    expect(insertStep.inserted).toMatchObject({
+    expect(admin.tables).toEqual([
+      "media_assets",
+      "generation_jobs",
+      "media_assets",
+      "generation_jobs",
+    ]);
+    expect(admin.inserts[0]).toMatchObject({
       user_id: "user_1",
       type: "media_job",
       provider: "fal",
       model: "fal-ai/frontier-video",
-      status: "queued",
+      status: "creating",
       estimated_cost_usd_micros: 500_000,
       input: {
         media_model_id: "fal:frontier-video",
@@ -102,7 +118,11 @@ describe("createReservedMediaJob", () => {
         parameters: { prompt: "a mountain" },
         input_asset_ids: ["asset_1"],
       },
-      progress: { stage: "queued", percent: null },
+      progress: { stage: "creating", percent: null },
+    });
+    expect(admin.updates[0]).toMatchObject({
+      status: "queued",
+      progress: { stage: "queued", percent: 0 },
     });
     expect(admin.rpc).toHaveBeenCalledWith("reserve_balance", {
       p_user_id: "user_1",
@@ -168,6 +188,7 @@ describe("createReservedMediaJob", () => {
       ["user_id", "user_1"],
       ["id", ["asset_1"]],
     ]);
+    expect(admin.updates).not.toContainEqual(expect.objectContaining({ status: "queued" }));
   });
 
   it("does not swallow reservation release failures after asset attachment fails", async () => {
@@ -329,6 +350,29 @@ function attachAssetsQuery<T>(result: SupabaseResult<T>): QueryStep {
   return step;
 }
 
+function updateJobQuery<T>(result: SupabaseResult<T>): QueryStep {
+  const step: QueryStep = { root: {}, filters: [] };
+  const single = vi.fn(async () => result);
+  const select = vi.fn((columns: string) => {
+    step.selected = columns;
+    return { single };
+  });
+  const chain = {
+    eq: vi.fn((column: string, value: unknown) => {
+      step.filters.push([column, value]);
+      return chain;
+    }),
+    select,
+  };
+
+  step.root.update = vi.fn((values: unknown) => {
+    step.updated = values;
+    return chain;
+  });
+
+  return step;
+}
+
 function mockAdminWith(...steps: QueryStep[]) {
   const queue = [...steps];
   const tables: string[] = [];
@@ -336,6 +380,7 @@ function mockAdminWith(...steps: QueryStep[]) {
     tables.push(table);
     const step = queue.shift();
     if (!step) throw new Error(`Unexpected Supabase table: ${table}`);
+    step.table = table;
     return step.root;
   });
   const rpc: ReturnType<typeof vi.fn> = vi.fn(async (name: string): Promise<SupabaseResult<{ id: string }>> => {
@@ -345,5 +390,19 @@ function mockAdminWith(...steps: QueryStep[]) {
   });
 
   mocks.createSupabaseAdminClient.mockReturnValue({ from, rpc });
-  return { from, rpc, tables };
+  return {
+    from,
+    rpc,
+    tables,
+    get inserts() {
+      return steps
+        .filter((step) => step.table === "generation_jobs" && step.inserted !== undefined)
+        .map((step) => step.inserted);
+    },
+    get updates() {
+      return steps
+        .filter((step) => step.table === "generation_jobs" && step.updated !== undefined)
+        .map((step) => step.updated);
+    },
+  };
 }
