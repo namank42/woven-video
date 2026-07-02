@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MediaModel } from "@/lib/media/types";
 import { createReservedMediaJob } from "@/lib/media/jobs";
 
 const mocks = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
 }));
+const originalEnv = process.env;
 
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: mocks.createSupabaseAdminClient,
@@ -52,9 +53,21 @@ const model = {
 describe("createReservedMediaJob", () => {
   beforeEach(() => {
     mocks.createSupabaseAdminClient.mockReset();
+    process.env = {
+      ...originalEnv,
+      MEDIA_TOKEN_SECRET: "x".repeat(32),
+      MEDIA_WORKER_SHARED_SECRET: "y".repeat(32),
+    } as NodeJS.ProcessEnv;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    vi.useRealTimers();
   });
 
   it("validates uploaded input assets, reserves credits, attaches assets, and returns the queued job", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-02T12:00:00.000Z"));
     const assetsStep = selectAssetsQuery({
       data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],
       error: null,
@@ -112,6 +125,7 @@ describe("createReservedMediaJob", () => {
       model: "fal-ai/frontier-video",
       status: "creating",
       estimated_cost_usd_micros: 500_000,
+      expires_at: "2026-07-02T13:00:00.000Z",
       input: {
         media_model_id: "fal:frontier-video",
         operation: "video_generation",

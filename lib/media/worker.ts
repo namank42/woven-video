@@ -16,6 +16,7 @@ type ClaimedMediaJobRow = {
   input?: unknown;
   provider_job_id?: unknown;
   claim_token?: unknown;
+  expires_at?: unknown;
 };
 type MediaInputAssetRow = {
   id: string;
@@ -70,6 +71,11 @@ export async function drainOneMediaJob({
   }
 
   const job = normalizeClaimedJob(claimedJob);
+  if (isExpiredJob(job.expiresAt)) {
+    const status = await releaseJob(admin, job, "media_job_timed_out");
+    return { claimed: true, jobId: job.id, status };
+  }
+
   const model = job.mediaModelId ? await getMediaModel(job.mediaModelId) : null;
   if (!model) {
     const status = await releaseJob(admin, job, "model_not_enabled");
@@ -96,14 +102,14 @@ export async function drainOneMediaJob({
     return { claimed: true, jobId: job.id, status };
   }
 
-  const result = await runProviderAdapter({
+  const result = await withLeaseHeartbeat(admin, job, () => runProviderAdapter({
     adapter,
     model,
     parameters: objectValue(job.input.parameters),
     inputUrls,
     providerJobId: job.providerJobId,
     signal,
-  });
+  }));
 
   if (signal?.aborted) {
     throw abortReason(signal);
@@ -223,6 +229,7 @@ function normalizeClaimedJob(job: ClaimedMediaJobRow) {
     inputAssetIds: stringArrayValue(input.input_asset_ids),
     providerJobId: stringValue(job.provider_job_id),
     claimToken: stringValue(job.claim_token),
+    expiresAt: stringValue(job.expires_at),
   };
 }
 
@@ -358,10 +365,37 @@ async function updateWaitingProviderJob({
   return true;
 }
 
+async function withLeaseHeartbeat<T>(
+  admin: SupabaseAdminClient,
+  job: { id: string; claimToken: string | null },
+  action: () => Promise<T>,
+): Promise<T> {
+  if (!job.claimToken) return action();
+
+  const interval = setInterval(() => {
+    void admin.rpc("extend_claimed_media_job_lease", {
+      p_job_id: job.id,
+      p_claim_token: job.claimToken,
+      p_lease_seconds: 300,
+    }).then(({ error }) => {
+      if (error && !isStaleClaimError(error)) {
+        console.error("Failed to extend media job lease", error);
+      }
+    });
+  }, 120_000);
+
+  try {
+    return await action();
+  } finally {
+    clearInterval(interval);
+  }
+}
+
 async function releaseJob(
   admin: SupabaseAdminClient,
   job: { id: string; claimToken: string | null },
   reason:
+    | "media_job_timed_out"
     | "model_not_enabled"
     | "media_input_unavailable"
     | "media_output_materialization_failed"
@@ -394,6 +428,12 @@ async function releaseJob(
 
 function isStaleClaimError(error: unknown) {
   return isRecord(error) && error.message === "media_job_stale_claim";
+}
+
+function isExpiredJob(expiresAt: string | null): boolean {
+  if (!expiresAt) return false;
+  const timestamp = Date.parse(expiresAt);
+  return Number.isFinite(timestamp) && timestamp <= Date.now();
 }
 
 function isAbortError(error: unknown) {

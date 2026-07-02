@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MediaProviderAdapter, ProviderOutput } from "@/lib/media/provider";
+import type { MediaProviderAdapter, ProviderOutput, ProviderRunResult } from "@/lib/media/provider";
 import { drainOneMediaJob, materializeOutputs } from "@/lib/media/worker";
 import type { MediaModel } from "@/lib/media/types";
 
@@ -88,6 +88,10 @@ describe("drainOneMediaJob", () => {
     mocks.failOutputAssetRowsForAttempt.mockResolvedValue(undefined);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("returns unclaimed when the claim RPC returns no jobs", async () => {
     const admin = mockAdminWith({ claimedJobs: [] });
 
@@ -98,6 +102,27 @@ describe("drainOneMediaJob", () => {
       p_lease_seconds: 300,
     });
     expect(mocks.getMediaModel).not.toHaveBeenCalled();
+  });
+
+  it("releases expired media jobs before calling the provider", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-02T12:00:00.000Z"));
+    mocks.getMediaModel.mockResolvedValue(model);
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow({
+        expires_at: "2026-07-02T11:59:00.000Z",
+        claim_token: "11111111-1111-4111-8111-111111111111",
+      })],
+    });
+    const adapter = { run: vi.fn() } satisfies MediaProviderAdapter;
+
+    await drainOneMediaJob({ adapters: { fal: adapter } });
+
+    expect(adapter.run).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenCalledWith("release_claimed_media_job", expect.objectContaining({
+      p_error: "media_job_timed_out",
+    }));
+    vi.useRealTimers();
   });
 
   it("releases the reservation when the media model is missing", async () => {
@@ -742,6 +767,29 @@ describe("drainOneMediaJob", () => {
     expect(admin.tables).toEqual([]);
     expect(admin.rpc).toHaveBeenCalledTimes(1);
   });
+
+  it("extends the claim lease while a provider call is in flight", async () => {
+    vi.useFakeTimers();
+    mocks.getMediaModel.mockResolvedValue(model);
+    const admin = mockAdminWith({ claimedJobs: [jobRow()] });
+    const adapterPromise = new Promise<ProviderRunResult>((resolve) => {
+      setTimeout(() => resolve({
+        status: "succeeded",
+        rawCostUsd: 0.01,
+        outputs: [{ type: "json", contentType: "application/json", data: new TextEncoder().encode("{}") }],
+      }), 130_000);
+    });
+    const adapter = { run: vi.fn(() => adapterPromise) } satisfies MediaProviderAdapter;
+
+    const drain = drainOneMediaJob({ adapters: { fal: adapter } });
+    await vi.advanceTimersByTimeAsync(121_000);
+    await vi.advanceTimersByTimeAsync(10_000);
+    await drain;
+
+    expect(admin.rpc).toHaveBeenCalledWith("extend_claimed_media_job_lease", expect.objectContaining({
+      p_lease_seconds: 300,
+    }));
+  });
 });
 
 describe("materializeOutputs", () => {
@@ -931,6 +979,7 @@ function mockAdminWith({
   const rpc: ReturnType<typeof vi.fn> = vi.fn(async (name: string, args: Record<string, unknown>) => {
     if (name === "claim_media_jobs") return { data: claimedJobs, error: null };
     if (name in rpcResults) return rpcResults[name];
+    if (name === "extend_claimed_media_job_lease") return { data: { id: args.p_job_id }, error: null };
     if (name === "mark_media_job_waiting_provider") return { data: { id: args.p_job_id }, error: null };
     if (name === "release_claimed_media_job") return { data: { id: args.p_job_id }, error: null };
     if (name === "record_and_settle_claimed_media_job") return { data: { id: args.p_job_id }, error: null };
