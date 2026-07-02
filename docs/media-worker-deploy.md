@@ -42,7 +42,8 @@ MEDIA_OUTPUT_RETENTION_SECONDS=2592000
 MEDIA_JOB_TIMEOUT_SECONDS=3600
 MEDIA_WORKER_POLL_MS=5000
 MEDIA_FAL_WEBHOOK_BASE_URL=https://www.woven.video
-FAL_WEBHOOK_JWKS_URL=<Fal JWKS URL from Fal webhook docs/dashboard>
+# Optional override. Defaults to https://rest.fal.ai/.well-known/jwks.json.
+FAL_WEBHOOK_JWKS_URL=
 CRON_SECRET=<random 16+ character secret for Vercel Cron>
 ```
 

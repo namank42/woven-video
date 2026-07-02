@@ -95,7 +95,7 @@ export async function verifyFalWebhookSignature({
   }
 
   const resolvedJwks = jwks ?? await fetchFalWebhookJwks();
-  const keys = falWebhookJwksKeys(resolvedJwks);
+  const keys = falWebhookUsableKeys(resolvedJwks);
   const rawBodyBuffer = bodyBuffer(rawBody);
   const bodyDigest = createHash("sha256").update(rawBodyBuffer).digest("hex");
   const message = Buffer.from([
@@ -194,8 +194,7 @@ async function fetchFreshFalWebhookJwks(): Promise<FalWebhookJwks> {
 
   let jwks: FalWebhookJwks;
   try {
-    jwks = await response.json() as FalWebhookJwks;
-    falWebhookJwksKeys(jwks);
+    jwks = normalizeFalWebhookJwks(await response.json() as FalWebhookJwks);
   } catch (error) {
     throw falWebhookError(
       "infrastructure",
@@ -238,10 +237,41 @@ function falWebhookError(
   return new FalWebhookVerificationError({ kind, code, message, cause });
 }
 
-function falWebhookJwksKeys(jwks: FalWebhookJwks): JsonWebKey[] {
+function falWebhookUsableKeys(jwks: FalWebhookJwks): JsonWebKey[] {
+  try {
+    return normalizeFalWebhookJwks(jwks).keys;
+  } catch (error) {
+    throw falWebhookError(
+      "infrastructure",
+      "jwks_malformed",
+      "Invalid Fal webhook JWKS.",
+      error,
+    );
+  }
+}
+
+function normalizeFalWebhookJwks(jwks: FalWebhookJwks): FalWebhookJwks {
   if (!jwks || !Array.isArray(jwks.keys) || jwks.keys.length === 0) {
     throw new Error("Invalid Fal webhook JWKS.");
   }
 
-  return jwks.keys;
+  const keys = jwks.keys.filter(isUsableFalWebhookJwk);
+  if (keys.length === 0) {
+    throw new Error("Invalid Fal webhook JWKS.");
+  }
+
+  return { keys };
+}
+
+function isUsableFalWebhookJwk(key: JsonWebKey): boolean {
+  if (key.kty !== "OKP" || key.crv !== "Ed25519") {
+    return false;
+  }
+
+  try {
+    createPublicKey({ key, format: "jwk" });
+    return true;
+  } catch {
+    return false;
+  }
 }

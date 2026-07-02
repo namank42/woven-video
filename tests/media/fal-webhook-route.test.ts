@@ -219,6 +219,44 @@ describe("Fal media webhook route", () => {
     expect(createSupabaseAdminClient).toHaveBeenCalledOnce();
     expect(eq).toHaveBeenNthCalledWith(1, "provider_job_id", "fal_req_real");
   });
+
+  it("returns unavailable for malformed fetched JWKS before mutating Supabase", async () => {
+    process.env = {
+      ...originalEnv,
+      MEDIA_TOKEN_SECRET: "x".repeat(32),
+      MEDIA_WORKER_SHARED_SECRET: "y".repeat(32),
+      FAL_WEBHOOK_JWKS_URL: undefined,
+    } as NodeJS.ProcessEnv;
+    const body = JSON.stringify({ request_id: "fal_req_malformed_jwks" });
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({
+      keys: [{ kty: "OKP", crv: "X25519", x: "not-ed25519" }],
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    })) as unknown as typeof fetch;
+    const { createSupabaseAdminClient } = mockSupabaseUpdate({ error: null });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
+    const response = await POST(new Request("https://example.test/api/v1/media/webhooks/fal", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-fal-webhook-request-id": "webhook_req_bad_jwks",
+        "x-fal-webhook-user-id": "fal_user_bad_jwks",
+        "x-fal-webhook-timestamp": timestamp,
+        "x-fal-webhook-signature": "a".repeat(128),
+      },
+      body,
+    }));
+
+    expect(response.status).toBe(503);
+    expect(createSupabaseAdminClient).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith("Fal webhook verifier infrastructure failure", {
+      code: "jwks_malformed",
+    });
+  });
 });
 
 function jsonRequest(body: unknown): Request {
