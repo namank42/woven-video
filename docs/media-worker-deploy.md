@@ -12,6 +12,8 @@ This runbook keeps the app, Supabase schema, media Worker, R2 bucket, and reel-c
 - Vercel app route: `https://www.woven.video`
 - Supabase migrations through `20260702160000_media_job_readiness_deadlines_cleanup.sql`
 
+Do not route all of `media.woven.video/*` to this Worker. The host also serves existing top-level landing and hero assets such as `woven-hero-v*.mp4` and `woven-hero-v*.png`; the Worker must only own `/uploads/*`, `/objects/*`, and `/internal/*`.
+
 ## Worker Secrets
 
 Set these before deploying the Worker:
