@@ -19,13 +19,13 @@ Do not route all of `media.woven.video/*` to this Worker. The host also serves e
 Set these before deploying the Worker:
 
 ```bash
-wrangler secret put MEDIA_TOKEN_SECRET --config workers/media/wrangler.jsonc
-wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangler.jsonc
+npx wrangler secret put MEDIA_TOKEN_SECRET --config workers/media/wrangler.jsonc
+npx wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangler.jsonc
 ```
 
 The values must match the app's `MEDIA_TOKEN_SECRET` and `MEDIA_WORKER_SHARED_SECRET`.
 
-`npm run media:worker:deploy` uses `npx wrangler` so a clean checkout does not require a globally installed Wrangler binary. The deploy machine still needs npm network access to fetch Wrangler when it is not already cached or globally available.
+`npm run media:worker:deploy` uses `npx wrangler` so a clean checkout does not require a globally installed Wrangler binary. The deploy machine still needs npm network access to fetch Wrangler when it is not already cached or globally available. Production deploy pipelines may pin or add Wrangler as a dev dependency for repeatable deploys.
 
 ## App Environment
 
@@ -51,7 +51,7 @@ The timeout, worker polling, Fal webhook, and cron values are consumed by follow
 ## Deployment Order
 
 1. Create or verify the `woven-media` R2 bucket.
-2. Set Worker secrets with `wrangler secret put`.
+2. Set Worker secrets with `npx wrangler secret put`.
 3. Deploy the Worker with `npm run media:worker:deploy`.
 4. Set app env vars in Vercel.
 5. Apply Supabase migrations.
@@ -74,4 +74,4 @@ The timeout, worker polling, Fal webhook, and cron values are consumed by follow
 
 - Do not roll back the app to a build that writes Supabase Storage reel-captions jobs after applying hosted-media-only client changes.
 - If the Worker is unavailable, disable hosted media creation at the app/router layer before users create jobs.
-- The cleanup path is idempotent for already-deleted R2 keys because R2 `delete` succeeds even when the object is absent.
+- After Task 4 adds Worker `/internal/delete`, the R2 physical cleanup path is idempotent for already-deleted keys because R2 `delete` succeeds even when the object is absent.
