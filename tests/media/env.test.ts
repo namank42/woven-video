@@ -74,13 +74,21 @@ describe("media env", () => {
       MEDIA_MAX_UPLOAD_BYTES: "123",
       MEDIA_UPLOAD_URL_TTL_SECONDS: "456",
       MEDIA_DOWNLOAD_URL_TTL_SECONDS: "789",
+      MEDIA_OUTPUT_RETENTION_SECONDS: "3600",
     });
 
     expect(getMediaEnv()).toMatchObject({
       maxUploadBytes: 123,
       uploadUrlTtlSeconds: 456,
       downloadUrlTtlSeconds: 789,
+      outputRetentionSeconds: 3600,
     });
+  });
+
+  it("defaults output retention to 30 days", () => {
+    setMediaEnv();
+
+    expect(getMediaEnv().outputRetentionSeconds).toBe(2_592_000);
   });
 
   it("rejects non-positive and non-integer settings", () => {

@@ -5,6 +5,7 @@ export type MediaEnv = {
   maxUploadBytes: number;
   uploadUrlTtlSeconds: number;
   downloadUrlTtlSeconds: number;
+  outputRetentionSeconds: number;
 };
 
 const PLACEHOLDER_SECRET = "replace_with_32_plus_random_bytes";
@@ -42,5 +43,6 @@ export function getMediaEnv(): MediaEnv {
     maxUploadBytes: integerEnv("MEDIA_MAX_UPLOAD_BYTES", 100 * 1024 * 1024),
     uploadUrlTtlSeconds: integerEnv("MEDIA_UPLOAD_URL_TTL_SECONDS", 15 * 60),
     downloadUrlTtlSeconds: integerEnv("MEDIA_DOWNLOAD_URL_TTL_SECONDS", 15 * 60),
+    outputRetentionSeconds: integerEnv("MEDIA_OUTPUT_RETENTION_SECONDS", 30 * 24 * 60 * 60),
   };
 }

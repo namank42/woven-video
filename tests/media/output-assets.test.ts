@@ -29,6 +29,7 @@ const mediaEnv: MediaEnv = {
   maxUploadBytes: 1_000,
   uploadUrlTtlSeconds: 60,
   downloadUrlTtlSeconds: 120,
+  outputRetentionSeconds: 2_592_000,
 };
 const claimToken = "00000000-0000-4000-8000-000000000001";
 const originalFetch = globalThis.fetch;

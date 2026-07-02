@@ -28,6 +28,7 @@ const mediaEnv: MediaEnv = {
   maxUploadBytes: 1_000,
   uploadUrlTtlSeconds: 60,
   downloadUrlTtlSeconds: 60,
+  outputRetentionSeconds: 2_592_000,
 };
 
 type SupabaseError = { message: string };
