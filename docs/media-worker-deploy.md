@@ -71,6 +71,16 @@ The timeout, worker polling, Fal webhook, and cron values are consumed by follow
 6. Confirm `GET https://media.woven.video/objects/:assetId?token=...` returns the output before retention expiry.
 7. After Task 4 implements cleanup, invoke `GET /api/internal/media/cleanup` with `Authorization: Bearer $CRON_SECRET` in staging and confirm expired R2 keys are deleted.
 
+## Local SQL RPC Tests
+
+Run these before shipping schema changes:
+
+```bash
+supabase start
+supabase db reset
+RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<local-service-role-key> npm run test:media-db
+```
+
 ## Rollback Notes
 
 - Do not roll back the app to a build that writes Supabase Storage reel-captions jobs after applying hosted-media-only client changes.
