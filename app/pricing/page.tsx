@@ -347,21 +347,9 @@ function MediaModelsTable() {
             {mediaModelRates.map((model) => (
               <tr key={model.name}>
                 <td className="px-6 py-4 align-top">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="font-medium text-foreground">
-                      {model.name}
-                    </span>
-                    <div className="flex flex-col gap-1">
-                      {model.modelIds.map((modelId) => (
-                        <code
-                          key={modelId}
-                          className="break-all font-mono text-xs leading-relaxed text-muted-foreground"
-                        >
-                          {modelId}
-                        </code>
-                      ))}
-                    </div>
-                  </div>
+                  <span className="font-medium text-foreground">
+                    {model.name}
+                  </span>
                 </td>
                 <td className="px-6 py-4 align-top text-muted-foreground">
                   {model.capability}
@@ -386,16 +374,6 @@ function MediaModelsTable() {
           >
             <div className="flex flex-col gap-1.5">
               <span className="font-medium">{model.name}</span>
-              <div className="flex flex-col gap-1">
-                {model.modelIds.map((modelId) => (
-                  <code
-                    key={modelId}
-                    className="break-all font-mono text-xs leading-relaxed text-muted-foreground"
-                  >
-                    {modelId}
-                  </code>
-                ))}
-              </div>
             </div>
             <dl className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-x-4 gap-y-2 text-sm">
               <dt className="text-muted-foreground">Capability</dt>

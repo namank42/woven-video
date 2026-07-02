@@ -21,4 +21,10 @@ describe("pricing page source", () => {
       /createSupabase|api\/v1\/media\/models|fetch\(|listMediaModels/,
     );
   });
+
+  it("does not render internal media provider endpoint IDs", async () => {
+    const pageSource = await readFile("app/pricing/page.tsx", "utf8");
+
+    expect(pageSource).not.toMatch(/model\.modelIds|modelIds\.map/);
+  });
 });
