@@ -1,0 +1,98 @@
+import { describe, expect, it } from "vitest";
+import type { ModelPricingRule } from "@/lib/billing/model-pricing";
+import { parseMediaModel } from "@/lib/media/model-registry";
+
+describe("parseMediaModel", () => {
+  it("normalizes curated pricing metadata into a public model", () => {
+    const model = parseMediaModel(validRule());
+
+    expect(model).toMatchObject({
+      id: "fal:frontier-video",
+      provider: "fal",
+      kind: "video",
+      pricing: { unit: "job", reserveUsdMicros: 500000, markupBps: 2000 },
+    });
+  });
+
+  it("excludes rows missing a public id", () => {
+    expect(parseMediaModel(validRule({
+      metadata: { public_id: undefined },
+    }))).toBeNull();
+  });
+
+  it("excludes rows missing a provider endpoint", () => {
+    expect(parseMediaModel(validRule({
+      metadata: { provider_endpoint: undefined },
+    }))).toBeNull();
+  });
+
+  it("excludes rows with an invalid media kind", () => {
+    expect(parseMediaModel(validRule({
+      metadata: { kind: "document" },
+    }))).toBeNull();
+  });
+
+  it("excludes rows with invalid provider or operation", () => {
+    expect(parseMediaModel(validRule({ provider: "other" }))).toBeNull();
+    expect(parseMediaModel(validRule({ operation: "chat" }))).toBeNull();
+  });
+
+  it("excludes rows with malformed required parameters", () => {
+    expect(parseMediaModel(validRule({
+      metadata: { parameter_schema: { type: "object", required: "prompt" } },
+    }))).toBeNull();
+  });
+
+  it("defaults missing parameter schemas to an empty object schema", () => {
+    const model = parseMediaModel(validRule({
+      metadata: { parameter_schema: undefined },
+    }));
+
+    expect(model?.parameterSchema).toEqual({ type: "object", properties: {} });
+  });
+
+  it("excludes rows with malformed parameter properties", () => {
+    expect(parseMediaModel(validRule({
+      metadata: { parameter_schema: { type: "object", properties: [] } },
+    }))).toBeNull();
+    expect(parseMediaModel(validRule({
+      metadata: { parameter_schema: { type: "object", properties: { prompt: { type: "integer" } } } },
+    }))).toBeNull();
+  });
+
+  it("does not coerce uploaded input support strings to true", () => {
+    const model = parseMediaModel(validRule({
+      metadata: { supports_uploaded_inputs: "false" },
+    }));
+
+    expect(model?.supportsUploadedInputs).toBe(false);
+  });
+});
+
+function validRule(overrides: Partial<ModelPricingRule> & { metadata?: Record<string, unknown> } = {}): ModelPricingRule {
+  const metadata = {
+    public_id: "fal:frontier-video",
+    provider_endpoint: "fal-ai/frontier-video",
+    kind: "video",
+    supports_uploaded_inputs: true,
+    supported_input_types: ["image"],
+    output_types: ["video"],
+    pricing_unit: "job",
+    parameter_schema: { type: "object", required: ["prompt"] },
+    ...overrides.metadata,
+  };
+
+  return {
+    id: "rule_1",
+    provider: "fal",
+    model: "fal-ai/frontier-video",
+    operation: "video_generation",
+    display_name: "Frontier Video",
+    markup_bps: 2000,
+    minimum_charge_usd_micros: 100000,
+    reserve_amount_usd_micros: 500000,
+    enabled: true,
+    ...overrides,
+    metadata,
+  };
+}

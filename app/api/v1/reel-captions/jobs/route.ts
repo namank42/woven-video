@@ -1,11 +1,13 @@
 import { requireApiAuth } from "@/lib/api/auth";
 import { licenseGateResponse } from "@/lib/api/license";
 import { apiError } from "@/lib/api/responses";
+import { createInputAssetUpload } from "@/lib/media/assets";
 import {
   chargeUsdMicrosForDuration,
+  DEFAULT_MINIMUM_CHARGE_USD_MICROS,
+  DEFAULT_PUBLIC_RATE_USD_PER_MINUTE,
   getReelCaptionPricing,
   MAX_REEL_CAPTION_DURATION_SECONDS,
-  REEL_CAPTION_BUCKET,
   REEL_CAPTION_JOB_TYPE,
 } from "@/lib/reel-captions/pricing";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -17,6 +19,7 @@ type CreateCaptionJobBody = {
   durationSeconds?: unknown;
   filename?: unknown;
   contentType?: unknown;
+  sizeBytes?: unknown;
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -35,7 +38,7 @@ export async function POST(request: Request) {
     return apiError("Request body must be a JSON object.");
   }
 
-  const { durationSeconds, filename, contentType } =
+  const { durationSeconds, filename, contentType, sizeBytes } =
     payload as CreateCaptionJobBody;
   const duration = Number(durationSeconds);
   if (
@@ -56,6 +59,17 @@ export async function POST(request: Request) {
     typeof filename === "string" && filename.trim()
       ? filename.trim().slice(0, 120)
       : "voiceover.wav";
+  if (
+    typeof sizeBytes !== "number" ||
+    !Number.isInteger(sizeBytes) ||
+    sizeBytes <= 0
+  ) {
+    return apiError(
+      "sizeBytes must be a positive integer.",
+      400,
+      "invalid_media_input",
+    );
+  }
 
   const rule = await getReelCaptionPricing();
   if (!rule) {
@@ -82,45 +96,17 @@ export async function POST(request: Request) {
         duration_seconds: duration,
         filename: originalFilename,
         content_type: uploadContentType,
-        storage_bucket: REEL_CAPTION_BUCKET,
       },
     })
     .select("id")
     .single();
 
   if (jobError || !job?.id) {
-    return apiError(
-      jobError?.message ?? "Unable to create caption job.",
-      500,
-      "caption_job_create_failed",
-    );
+    console.error("Failed to create caption job", jobError);
+    return apiError("Unable to create caption job.", 500, "caption_job_create_failed");
   }
 
   const jobId = String(job.id);
-  const storagePath = `${authResult.auth.user.id}/reel-captions/${jobId}/${uploadFilename(originalFilename, uploadContentType)}`;
-
-  const { error: updateError } = await admin
-    .from("generation_jobs")
-    .update({
-      input: {
-        duration_seconds: duration,
-        filename: originalFilename,
-        content_type: uploadContentType,
-        storage_bucket: REEL_CAPTION_BUCKET,
-        storage_path: storagePath,
-      },
-    })
-    .eq("id", jobId);
-
-  if (updateError) {
-    await markJobFailed(admin, jobId, updateError.message);
-    return apiError(
-      updateError.message,
-      500,
-      "caption_job_update_failed",
-    );
-  }
-
   const { error: reserveError } = await admin.rpc("reserve_balance", {
     p_user_id: authResult.auth.user.id,
     p_job_id: jobId,
@@ -134,33 +120,64 @@ export async function POST(request: Request) {
   });
 
   if (reserveError) {
-    await markJobFailed(admin, jobId, reserveError.message);
     const insufficient = reserveError.message === "insufficient_balance";
+    await markJobFailed(
+      admin,
+      jobId,
+      insufficient ? "insufficient_balance" : "caption_reservation_failed",
+    );
+    if (!insufficient) {
+      console.error("Failed to reserve caption balance", reserveError);
+    }
     return apiError(
       insufficient
         ? "Insufficient balance. Add funds before generating captions."
-        : reserveError.message,
+        : "Unable to reserve caption credits.",
       insufficient ? 402 : 500,
       insufficient ? "insufficient_balance" : "caption_reservation_failed",
     );
   }
 
-  const { data: signedUpload, error: signedUploadError } =
-    await admin.storage
-      .from(REEL_CAPTION_BUCKET)
-      .createSignedUploadUrl(storagePath, { upsert: false });
+  let upload: Awaited<ReturnType<typeof createInputAssetUpload>>;
+  try {
+    upload = await createInputAssetUpload({
+      userId: authResult.auth.user.id,
+      filename: originalFilename,
+      contentType: uploadContentType,
+      sizeBytes,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to create upload URL.";
+    if (message === "invalid_media_input") {
+      await releaseReservation(admin, jobId, "invalid_media_input");
+      return apiError("Invalid media input.", 400, "invalid_media_input");
+    }
+    if (message === "upload_too_large") {
+      await releaseReservation(admin, jobId, "upload_too_large");
+      return apiError("Upload is too large.", 413, "upload_too_large");
+    }
 
-  if (signedUploadError || !signedUpload?.signedUrl || !signedUpload.token) {
-    await releaseReservation(
-      admin,
-      jobId,
-      signedUploadError?.message ?? "Unable to create upload URL.",
-    );
-    return apiError(
-      signedUploadError?.message ?? "Unable to create upload URL.",
-      500,
-      "caption_upload_url_failed",
-    );
+    console.error("Failed to create caption media upload", error);
+    await releaseReservation(admin, jobId, "caption_upload_url_failed");
+    return apiError("Unable to create caption upload.", 500, "caption_upload_url_failed");
+  }
+
+  const input = {
+    duration_seconds: duration,
+    filename: originalFilename,
+    content_type: uploadContentType,
+    media_asset_id: upload.asset.id,
+  };
+  const { error: updateError } = await admin
+    .from("generation_jobs")
+    .update({ input })
+    .eq("id", jobId);
+
+  if (updateError) {
+    console.error("Failed to attach caption media asset to job", updateError);
+    await releaseReservation(admin, jobId, "caption_job_update_failed");
+    await markInputAssetDeleted(admin, upload.asset.id, jobId, "caption_job_update_failed");
+    return apiError("Unable to update caption job.", 500, "caption_job_update_failed");
   }
 
   return Response.json(
@@ -168,17 +185,16 @@ export async function POST(request: Request) {
       id: jobId,
       status: "queued",
       upload: {
-        bucket: REEL_CAPTION_BUCKET,
-        path: storagePath,
-        signedUrl: signedUpload.signedUrl,
-        token: signedUpload.token,
-        expiresInSeconds: 7200,
+        assetId: upload.asset.id,
+        method: "PUT",
+        url: upload.uploadUrl,
+        expiresAt: upload.expiresAt,
         contentType: uploadContentType,
       },
       estimatedCostUsdMicros: amountUsdMicros,
       pricing: {
-        publicRateUsdPerMinute: 0.01,
-        minimumUsdMicros: rule.minimum_charge_usd_micros,
+        publicRateUsdPerMinute: publicRateUsdPerMinute(rule),
+        minimumUsdMicros: minimumUsdMicros(rule),
       },
     },
     {
@@ -189,25 +205,33 @@ export async function POST(request: Request) {
   );
 }
 
-function uploadFilename(filename: string, contentType: string): string {
-  const ext = filename.match(/\.[a-z0-9]{1,8}$/i)?.[0] ?? extensionFor(contentType);
-  return `voiceover${ext.toLowerCase()}`;
+function publicRateUsdPerMinute(
+  rule: Awaited<ReturnType<typeof getReelCaptionPricing>>,
+): number {
+  return (
+    numberFromMetadata(rule?.metadata?.public_rate_usd_per_minute) ??
+    DEFAULT_PUBLIC_RATE_USD_PER_MINUTE
+  );
 }
 
-function extensionFor(contentType: string): string {
-  switch (contentType) {
-    case "audio/mpeg":
-      return ".mp3";
-    case "audio/mp4":
-    case "audio/x-m4a":
-      return ".m4a";
-    case "audio/aac":
-      return ".aac";
-    case "audio/flac":
-      return ".flac";
-    default:
-      return ".wav";
+function minimumUsdMicros(
+  rule: Awaited<ReturnType<typeof getReelCaptionPricing>>,
+): number {
+  return (
+    Number(rule?.minimum_charge_usd_micros) ||
+    DEFAULT_MINIMUM_CHARGE_USD_MICROS
+  );
+}
+
+function numberFromMetadata(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return value;
   }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return null;
 }
 
 async function markJobFailed(
@@ -242,5 +266,30 @@ async function releaseReservation(
 
   if (releaseError) {
     console.error("Failed to release caption reservation", releaseError);
+  }
+}
+
+async function markInputAssetDeleted(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  assetId: string,
+  jobId: string,
+  reason: string,
+) {
+  const deletedAt = new Date().toISOString();
+  const { error } = await admin
+    .from("media_assets")
+    .update({
+      status: "deleted",
+      deleted_at: deletedAt,
+      metadata: {
+        deleted_at: deletedAt,
+        deletion_reason: reason,
+        caption_job_id: jobId,
+      },
+    })
+    .eq("id", assetId);
+
+  if (error) {
+    console.error("Failed to mark caption input asset deleted", error);
   }
 }

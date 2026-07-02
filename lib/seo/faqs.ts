@@ -34,7 +34,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "Can Woven generate AI voiceover?",
-    a: "Yes. As part of reel assembly, Woven generates voice from your script alongside footage. Auto captions from the voiceover are available at $0.01/min — see the pricing page for details.",
+    a: "Yes. As part of reel assembly, Woven generates voice from your script alongside footage. Auto captions from the voiceover are available at $0.10/min — see the pricing page for details.",
   },
   {
     q: "Which models can I use?",
@@ -54,7 +54,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "How much do hosted AI models cost?",
-    a: "Hosted models are billed per token from your prepaid balance — for example, Claude Sonnet 4.6 from $3.60/M input and $18.00/M output. Auto captions are $0.01/min. See woven.video/pricing for the full rate table.",
+    a: "Hosted models are billed per token from your prepaid balance — for example, Claude Sonnet 4.6 from $3.60/M input and $18.00/M output. Auto captions are $0.10/min. See woven.video/pricing for the full rate table.",
   },
   {
     q: "Can I bring my own provider keys?",
@@ -85,7 +85,7 @@ export const pricingFaqs: FaqItem[] = [
   },
   {
     q: "How do hosted model rates work?",
-    a: "Each request is charged per token from your prepaid balance at the published rates on this page. Auto captions are $0.01/min. There are no surprise bills.",
+    a: "Each request is charged per token from your prepaid balance at the published rates on this page. Auto captions are $0.10/min. There are no surprise bills.",
   },
   {
     q: "Can I bring my own API keys?",

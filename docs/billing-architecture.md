@@ -137,6 +137,14 @@ The route flow:
 
 Shared logic lives in `lib/billing/charge-flat-tool.ts` and is reusable for any future flat-fee external API.
 
+## Hosted Media Jobs
+
+Woven-hosted media jobs use `/api/v1/media/*` routes. Supabase stores auth, pricing, job, media asset, ledger, and usage-event rows. Cloudflare R2 stores media bytes behind `media.woven.video`; normal clients receive Woven-domain upload/download URLs, not raw R2 presigned URLs.
+
+Job creation reserves credits before provider work starts. The media worker claims queued jobs with `claim_media_jobs`, calls Fal or ElevenLabs using server-owned keys, records `usage_events`, settles or releases the reservation, and writes final output refs into the job output.
+
+Auto captions use the same R2 media input path and charge `$0.10/min` with a `$0.10` minimum.
+
 ## Job Flow
 
 The intended hosted media/model flow is:

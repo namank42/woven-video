@@ -1,16 +1,15 @@
 import type { ModelPricingRule } from "@/lib/billing/model-pricing";
-import { USD_MICROS_PER_CENT, USD_MICROS_PER_USD } from "@/lib/billing/money";
+import { USD_MICROS_PER_USD } from "@/lib/billing/money";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const REEL_CAPTION_PROVIDER = "elevenlabs";
 export const REEL_CAPTION_MODEL = "scribe_v2";
 export const REEL_CAPTION_OPERATION = "reel_captions";
 export const REEL_CAPTION_JOB_TYPE = "reel_captions";
-export const REEL_CAPTION_BUCKET = "generated-media";
 
-export const DEFAULT_PUBLIC_RATE_USD_PER_MINUTE = 0.01;
+export const DEFAULT_PUBLIC_RATE_USD_PER_MINUTE = 0.10;
 export const DEFAULT_PROVIDER_RATE_USD_PER_HOUR = 0.4;
-export const DEFAULT_MINIMUM_CHARGE_USD_MICROS = USD_MICROS_PER_CENT;
+export const DEFAULT_MINIMUM_CHARGE_USD_MICROS = 100_000;
 export const MAX_REEL_CAPTION_DURATION_SECONDS = 10 * 60;
 
 type CacheEntry = {
@@ -62,11 +61,17 @@ export function chargeUsdMicrosForDuration(
     Number(rule?.minimum_charge_usd_micros) ||
     DEFAULT_MINIMUM_CHARGE_USD_MICROS;
 
-  const micros = Math.ceil(
+  const micros = ceilMicros(
     (durationSeconds / 60) * publicRateUsdPerMinute * USD_MICROS_PER_USD,
   );
 
   return Math.max(minimum, micros);
+}
+
+function ceilMicros(value: number): number {
+  const rounded = Math.round(value);
+  if (Math.abs(value - rounded) < 1e-6) return rounded;
+  return Math.ceil(value);
 }
 
 export function providerRawCostUsdForDuration(

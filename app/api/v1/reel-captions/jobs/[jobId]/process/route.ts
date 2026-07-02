@@ -1,12 +1,13 @@
 import { requireApiAuth } from "@/lib/api/auth";
 import { apiError } from "@/lib/api/responses";
+import { getMediaEnv } from "@/lib/media/env";
+import { signMediaToken } from "@/lib/media/tokens";
 import { transcribeWithElevenLabs } from "@/lib/reel-captions/elevenlabs";
 import {
   chargeUsdMicrosForDuration,
   getReelCaptionPricing,
   markupUsdMicros,
   providerRawCostUsdForDuration,
-  REEL_CAPTION_BUCKET,
   REEL_CAPTION_OPERATION,
 } from "@/lib/reel-captions/pricing";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -29,13 +30,32 @@ type CaptionJob = {
   reserved_amount_usd_micros: number | string;
 };
 
+type CaptionInputAsset = {
+  id: string;
+  user_id: string;
+  kind: string;
+  status: string;
+  content_type: string | null;
+  storage_key: string | null;
+};
+
 export async function POST(request: Request, context: RouteContext) {
   const authResult = await requireApiAuth(request);
   if (!authResult.ok) return authResult.response;
 
   const { jobId } = await context.params;
+  if (!isUuid(jobId)) {
+    return apiError("Invalid media input.", 400, "invalid_media_input");
+  }
+
   const admin = createSupabaseAdminClient();
-  const job = await loadJob(admin, jobId, authResult.auth.user.id);
+  let job: CaptionJob | null;
+  try {
+    job = await loadJob(admin, jobId, authResult.auth.user.id);
+  } catch (error) {
+    console.error("Failed to load caption job for processing", error);
+    return apiError("Unable to load caption job.", 500, "caption_job_lookup_failed");
+  }
 
   if (!job) {
     return apiError("Caption job not found.", 404, "caption_job_not_found");
@@ -47,7 +67,15 @@ export async function POST(request: Request, context: RouteContext) {
     });
   }
 
-  if (job.status === "failed" || job.status === "cancelled") {
+  if (job.status === "running") {
+    return apiError(
+      "Caption job is already running.",
+      409,
+      "caption_job_running",
+    );
+  }
+
+  if (job.status !== "queued") {
     return apiError(
       "Caption job is no longer processable.",
       409,
@@ -56,17 +84,15 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const input = job.input ?? {};
-  const storageBucket =
-    typeof input.storage_bucket === "string"
-      ? input.storage_bucket
-      : REEL_CAPTION_BUCKET;
-  const storagePath =
-    typeof input.storage_path === "string" ? input.storage_path : "";
-  const filename =
-    typeof input.filename === "string" ? input.filename : "voiceover.wav";
+  const mediaAssetId =
+    typeof input.media_asset_id === "string" ? input.media_asset_id : "";
   const durationSeconds = Number(input.duration_seconds);
 
-  if (!storagePath || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+  if (
+    !isUuid(mediaAssetId) ||
+    !Number.isFinite(durationSeconds) ||
+    durationSeconds <= 0
+  ) {
     await releaseReservation(admin, job.id, "Caption job is missing upload metadata.");
     return apiError(
       "Caption job is missing upload metadata.",
@@ -75,11 +101,14 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const { data: uploadExists, error: existsError } = await admin.storage
-    .from(storageBucket)
-    .exists(storagePath);
-
-  if (existsError || !uploadExists) {
+  let asset: CaptionInputAsset | null;
+  try {
+    asset = await loadInputAsset(admin, mediaAssetId, job.user_id);
+  } catch (error) {
+    console.error("Failed to load caption input asset", error);
+    return apiError("Unable to load caption upload.", 500, "caption_asset_lookup_failed");
+  }
+  if (!isAssetReadyForCaptioning(asset)) {
     return apiError(
       "Voiceover upload is not ready yet.",
       409,
@@ -87,50 +116,36 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const { data: signedAudio, error: signedAudioError } = await admin.storage
-    .from(storageBucket)
-    .createSignedUrl(storagePath, 10 * 60);
-
-  if (signedAudioError || !signedAudio?.signedUrl) {
-    return apiError(
-      signedAudioError?.message ?? "Unable to create signed audio URL.",
-      409,
-      "caption_upload_not_ready",
-    );
+  let claim: boolean;
+  try {
+    claim = await claimQueuedJob(admin, job.id);
+  } catch (error) {
+    console.error("Failed to claim caption job", error);
+    return apiError("Unable to claim caption job.", 500, "caption_job_claim_failed");
   }
-
-  await admin
-    .from("generation_jobs")
-    .update({
-      status: "running",
-      started_at: new Date().toISOString(),
-    })
-    .eq("id", job.id)
-    .in("status", ["queued", "running"]);
-
-  const rule = await getReelCaptionPricing();
-  if (!rule) {
-    await releaseReservation(admin, job.id, "Auto captions pricing rule is not enabled.");
-    await removeUpload(admin, storageBucket, storagePath);
+  if (!claim) {
     return apiError(
-      "Auto captions pricing rule is not enabled.",
-      503,
-      "caption_generation_not_enabled",
+      "Caption job is already running.",
+      409,
+      "caption_job_running",
     );
   }
 
   try {
-    const transcription = isLocalSignedUrl(signedAudio.signedUrl)
-      ? await transcribeLocalUpload({
-          bucket: storageBucket,
-          path: storagePath,
-          filename,
-          signal: request.signal,
-        })
-      : await transcribeWithElevenLabs({
-          cloudStorageUrl: signedAudio.signedUrl,
-          signal: request.signal,
-        });
+    const rule = await getReelCaptionPricing();
+    if (!rule) {
+      throw new Error("caption_generation_not_enabled");
+    }
+
+    const signedAudioUrl = await signedMediaDownloadUrl({
+      asset,
+      jobId: job.id,
+      userId: job.user_id,
+    });
+    const transcription = await transcribeWithElevenLabs({
+      cloudStorageUrl: signedAudioUrl,
+      signal: request.signal,
+    });
 
     if (transcription.captions.length === 0) {
       throw new Error("No caption tokens were returned for this voiceover.");
@@ -158,7 +173,7 @@ export async function POST(request: Request, context: RouteContext) {
       chargedAmountUsdMicros,
     };
 
-    const { error: usageError } = await admin.from("usage_events").insert({
+    const usageEvent = {
       user_id: authResult.auth.user.id,
       job_id: job.id,
       provider: rule.provider,
@@ -175,14 +190,10 @@ export async function POST(request: Request, context: RouteContext) {
         language_probability: transcription.languageProbability,
         caption_count: transcription.captions.length,
       },
-    });
-
-    if (usageError) {
-      throw new Error(usageError.message);
-    }
+    };
 
     const { error: settleError } = await admin.rpc(
-      "settle_balance_reservation",
+      "record_and_settle_reel_caption_job",
       {
         p_job_id: job.id,
         p_final_cost_usd_micros: chargedAmountUsdMicros,
@@ -193,6 +204,7 @@ export async function POST(request: Request, context: RouteContext) {
           charged_amount_usd_micros: chargedAmountUsdMicros,
           caption_count: transcription.captions.length,
         },
+        p_usage_event: usageEvent,
       },
     );
 
@@ -200,7 +212,7 @@ export async function POST(request: Request, context: RouteContext) {
       throw new Error(settleError.message);
     }
 
-    await removeUpload(admin, storageBucket, storagePath);
+    await markInputAssetDeleted(admin, asset.id, job.id, "caption_job_succeeded");
     return Response.json(output, {
       headers: {
         "x-woven-job-id": job.id,
@@ -208,38 +220,14 @@ export async function POST(request: Request, context: RouteContext) {
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await releaseReservation(admin, job.id, message);
-    await removeUpload(admin, storageBucket, storagePath);
-    return apiError(message, 502, "caption_generation_failed");
-  }
-}
-
-async function transcribeLocalUpload({
-  bucket,
-  path,
-  filename,
-  signal,
-}: {
-  bucket: string;
-  path: string;
-  filename: string;
-  signal: AbortSignal;
-}) {
-  const admin = createSupabaseAdminClient();
-  const { data: audio, error } = await admin.storage.from(bucket).download(path);
-  if (error || !audio) {
-    throw new Error(error?.message ?? "Unable to download uploaded voiceover.");
-  }
-  return transcribeWithElevenLabs({ audio, filename, signal });
-}
-
-function isLocalSignedUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.hostname === "localhost" || url.hostname === "127.0.0.1";
-  } catch {
-    return false;
+    console.error("Caption generation failed", { jobId: job.id }, err);
+    await releaseReservation(admin, job.id, "caption_generation_failed");
+    await markInputAssetDeleted(admin, asset.id, job.id, "caption_job_failed");
+    return apiError(
+      "Caption generation failed. Try again later.",
+      502,
+      "caption_generation_failed",
+    );
   }
 }
 
@@ -264,6 +252,90 @@ async function loadJob(
   return data as CaptionJob | null;
 }
 
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+async function claimQueuedJob(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  jobId: string,
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from("generation_jobs")
+    .update({
+      status: "running",
+      started_at: new Date().toISOString(),
+    })
+    .eq("id", jobId)
+    .eq("status", "queued")
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return Boolean(data?.id);
+}
+
+async function loadInputAsset(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  assetId: string,
+  userId: string,
+): Promise<CaptionInputAsset | null> {
+  const { data, error } = await admin
+    .from("media_assets")
+    .select("id, user_id, kind, status, content_type, storage_key")
+    .eq("id", assetId)
+    .eq("user_id", userId)
+    .eq("kind", "input")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as CaptionInputAsset | null;
+}
+
+function isAssetReadyForCaptioning(
+  asset: CaptionInputAsset | null,
+): asset is CaptionInputAsset & { content_type: string; storage_key: string } {
+  return Boolean(
+    asset &&
+      asset.kind === "input" &&
+      (asset.status === "uploaded" || asset.status === "attached") &&
+      asset.content_type &&
+      asset.storage_key,
+  );
+}
+
+async function signedMediaDownloadUrl({
+  asset,
+  jobId,
+  userId,
+}: {
+  asset: CaptionInputAsset & { storage_key: string };
+  jobId: string;
+  userId: string;
+}): Promise<string> {
+  const env = getMediaEnv();
+  const exp = Math.floor(Date.now() / 1000) + env.downloadUrlTtlSeconds;
+  const token = await signMediaToken(
+    {
+      kind: "download",
+      sub: userId,
+      key: asset.storage_key,
+      assetId: asset.id,
+      jobId,
+      exp,
+    },
+    env.tokenSecret,
+  );
+
+  return `${env.baseUrl}/objects/${asset.id}?token=${encodeURIComponent(token)}`;
+}
+
 async function releaseReservation(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   jobId: string,
@@ -284,14 +356,27 @@ async function releaseReservation(
   }
 }
 
-async function removeUpload(
+async function markInputAssetDeleted(
   admin: ReturnType<typeof createSupabaseAdminClient>,
-  bucket: string,
-  path: string,
+  assetId: string,
+  jobId: string,
+  reason: string,
 ) {
-  if (!bucket || !path) return;
-  const { error } = await admin.storage.from(bucket).remove([path]);
+  const deletedAt = new Date().toISOString();
+  const { error } = await admin
+    .from("media_assets")
+    .update({
+      status: "deleted",
+      deleted_at: deletedAt,
+      metadata: {
+        deleted_at: deletedAt,
+        deletion_reason: reason,
+        caption_job_id: jobId,
+      },
+    })
+    .eq("id", assetId);
+
   if (error) {
-    console.error("Failed to remove caption upload", error);
+    console.error("Failed to mark caption input asset deleted", error);
   }
 }

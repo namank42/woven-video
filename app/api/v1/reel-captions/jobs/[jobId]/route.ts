@@ -25,7 +25,8 @@ export async function GET(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (error) {
-    return apiError(error.message, 500, "caption_job_lookup_failed");
+    console.error("Failed to load caption job", error);
+    return apiError("Unable to load caption job.", 500, "caption_job_lookup_failed");
   }
 
   if (!data) {
