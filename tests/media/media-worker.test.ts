@@ -41,9 +41,12 @@ class FakeBucket {
     return this.objects.get(key) ?? null;
   }
 
-  async delete(key: string): Promise<void> {
-    this.deletes.push(key);
-    this.objects.delete(key);
+  async delete(key: string | string[]): Promise<void> {
+    const keys = Array.isArray(key) ? key : [key];
+    this.deletes.push(...keys);
+    for (const objectKey of keys) {
+      this.objects.delete(objectKey);
+    }
   }
 
   setObject(
@@ -446,6 +449,98 @@ describe("media Worker", () => {
     expect(response.headers.get("content-type")).toBe("video/mp4");
     expect(response.headers.get("etag")).toBe('"object-etag"');
     expect(response.headers.get("cache-control")).toBe("private, max-age=60");
+  });
+
+  it("deletes user-scoped objects from the internal delete endpoint", async () => {
+    const env = testEnv();
+    env.MEDIA_BUCKET.setObject("users/user_1/media/tmp/asset_1/input.png", "input");
+    env.MEDIA_BUCKET.setObject("users/user_1/media/outputs/job_1/out_1.mp4", "output");
+
+    const response = await mediaWorker.fetch(new Request(
+      "https://media.example.test/internal/delete",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-woven-media-worker-secret": "worker-secret",
+        },
+        body: JSON.stringify({
+          keys: [
+            "users/user_1/media/tmp/asset_1/input.png",
+            "users/user_1/media/outputs/job_1/out_1.mp4",
+          ],
+        }),
+      },
+    ), env);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ deleted_count: 2 });
+    expect(env.MEDIA_BUCKET.deletes).toEqual([
+      "users/user_1/media/tmp/asset_1/input.png",
+      "users/user_1/media/outputs/job_1/out_1.mp4",
+    ]);
+    expect(env.MEDIA_BUCKET.objects.size).toBe(0);
+  });
+
+  it("rejects internal delete requests without the shared secret", async () => {
+    const env = testEnv();
+
+    const response = await mediaWorker.fetch(new Request(
+      "https://media.example.test/internal/delete",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-woven-media-worker-secret": "wrong",
+        },
+        body: JSON.stringify({ keys: ["users/user_1/media/tmp/asset_1/input.png"] }),
+      },
+    ), env);
+
+    expect(response.status).toBe(401);
+    expect(env.MEDIA_BUCKET.deletes).toEqual([]);
+  });
+
+  it("rejects internal delete requests for non-user keys", async () => {
+    const env = testEnv();
+    env.MEDIA_BUCKET.setObject("woven-hero-v4.mp4", "hero");
+
+    const response = await mediaWorker.fetch(new Request(
+      "https://media.example.test/internal/delete",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-woven-media-worker-secret": "worker-secret",
+        },
+        body: JSON.stringify({ keys: ["woven-hero-v4.mp4"] }),
+      },
+    ), env);
+
+    expect(response.status).toBe(400);
+    expect(env.MEDIA_BUCKET.deletes).toEqual([]);
+    expect(env.MEDIA_BUCKET.objects.has("woven-hero-v4.mp4")).toBe(true);
+  });
+
+  it("rejects internal delete requests with more than 1000 keys", async () => {
+    const env = testEnv();
+
+    const response = await mediaWorker.fetch(new Request(
+      "https://media.example.test/internal/delete",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-woven-media-worker-secret": "worker-secret",
+        },
+        body: JSON.stringify({
+          keys: Array.from({ length: 1001 }, (_, index) => `users/user_1/media/${index}.png`),
+        }),
+      },
+    ), env);
+
+    expect(response.status).toBe(400);
+    expect(env.MEDIA_BUCKET.deletes).toEqual([]);
   });
 
   it("rejects tampered tokens", async () => {

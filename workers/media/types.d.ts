@@ -14,5 +14,5 @@ type R2Bucket = {
     },
   ): Promise<void>;
   get(key: string): Promise<R2Object | null>;
-  delete(key: string): Promise<void>;
+  delete(key: string | string[]): Promise<void>;
 };

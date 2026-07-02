@@ -1,27 +1,55 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
-export async function markExpiredMediaForDeletion(nowIso = new Date().toISOString()) {
-  const admin = createSupabaseAdminClient();
-  const expiredPendingUploads = await admin
-    .from("media_assets")
-    .update({ status: "deleted", deleted_at: nowIso })
-    .eq("status", "pending")
-    .lt("upload_expires_at", nowIso)
-    .select("id, storage_key");
+export type MediaDeletionCandidate = {
+  id: string;
+  storage_key: string;
+};
 
-  if (expiredPendingUploads.error) throw new Error(expiredPendingUploads.error.message);
+export async function claimExpiredMediaForDeletion({
+  limit = 100,
+  nowIso = new Date().toISOString(),
+}: {
+  limit?: number;
+  nowIso?: string;
+} = {}): Promise<MediaDeletionCandidate[]> {
+  const { data, error } = await createSupabaseAdminClient().rpc(
+    "claim_expired_media_assets_for_deletion",
+    {
+      p_now: nowIso,
+      p_limit: limit,
+    },
+  );
 
-  const expiredReadyDownloads = await admin
-    .from("media_assets")
-    .update({ status: "deleted", deleted_at: nowIso })
-    .eq("status", "ready")
-    .lt("download_expires_at", nowIso)
-    .select("id, storage_key");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as MediaDeletionCandidate[];
+}
 
-  if (expiredReadyDownloads.error) throw new Error(expiredReadyDownloads.error.message);
+export async function completeMediaAssetDeletions(
+  assetIds: string[],
+  nowIso = new Date().toISOString(),
+): Promise<void> {
+  if (assetIds.length === 0) return;
 
-  return [
-    ...(expiredPendingUploads.data ?? []),
-    ...(expiredReadyDownloads.data ?? []),
-  ];
+  const { error } = await createSupabaseAdminClient().rpc(
+    "complete_media_asset_deletions",
+    {
+      p_asset_ids: assetIds,
+      p_now: nowIso,
+    },
+  );
+
+  if (error) throw new Error(error.message);
+}
+
+export async function releaseMediaAssetDeletionClaims(assetIds: string[]): Promise<void> {
+  if (assetIds.length === 0) return;
+
+  const { error } = await createSupabaseAdminClient().rpc(
+    "release_media_asset_deletion_claims",
+    {
+      p_asset_ids: assetIds,
+    },
+  );
+
+  if (error) throw new Error(error.message);
 }

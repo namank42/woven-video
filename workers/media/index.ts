@@ -43,6 +43,10 @@ export default {
       return handleUpload(request, env, url, uploadAssetId);
     }
 
+    if (request.method === "POST" && url.pathname === "/internal/delete") {
+      return handleInternalDelete(request, env);
+    }
+
     if (request.method === "GET" && hasRouteKey(url.pathname, "/objects/")) {
       return handleDownload(env, url);
     }
@@ -129,6 +133,21 @@ async function handleUpload(
   return jsonResponse({ ok: true });
 }
 
+async function handleInternalDelete(request: Request, env: Env): Promise<Response> {
+  const provided = request.headers.get("x-woven-media-worker-secret") ?? "";
+  if (!timingSafeEqual(provided, env.MEDIA_WORKER_SHARED_SECRET)) {
+    return textResponse("Unauthorized", 401);
+  }
+
+  const payload = await request.json().catch(() => null);
+  if (!isDeletePayload(payload)) {
+    return textResponse("Invalid delete payload", 400);
+  }
+
+  await env.MEDIA_BUCKET.delete(payload.keys);
+  return jsonResponse({ deleted_count: payload.keys.length });
+}
+
 async function handleDownload(env: Env, url: URL): Promise<Response> {
   const payload = await verifyToken(
     url.searchParams.get("token") ?? "",
@@ -174,6 +193,18 @@ async function verifyToken(
 
   if (!isTokenPayload(payload, nowSeconds)) return null;
   return payload;
+}
+
+function isDeletePayload(value: unknown): value is { keys: string[] } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+
+  const keys = (value as { keys?: unknown }).keys;
+  return (
+    Array.isArray(keys) &&
+    keys.length > 0 &&
+    keys.length <= 1000 &&
+    keys.every((key) => typeof key === "string" && key.startsWith("users/"))
+  );
 }
 
 async function hmacSha256(value: string, secret: string): Promise<string> {
