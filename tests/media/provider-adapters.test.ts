@@ -82,6 +82,24 @@ describe("falMediaAdapter", () => {
     ]);
   });
 
+  it("falls back to generic Fal URL extraction when declared paths produce no outputs and fallback is enabled", async () => {
+    const { extractFalOutputs } = await import("@/lib/media/providers/fal");
+
+    expect(extractFalOutputs({
+      preview: { url: "https://cdn.example.com/preview.png" },
+      result: { files: [] },
+    }, ["video"], {
+      outputPaths: [{ path: "result.files", type: "video" }],
+      allowGenericUrlFallback: true,
+    })).toEqual([
+      {
+        url: "https://cdn.example.com/preview.png",
+        type: "video",
+        contentType: "video/mp4",
+      },
+    ]);
+  });
+
   it("submits a queued job with merged parameters and input urls", async () => {
     const { falMediaAdapter } = await import("@/lib/media/providers/fal");
     const abortController = new AbortController();

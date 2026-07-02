@@ -117,7 +117,9 @@ export function extractFalOutputs(
         collectFalUrls(value, outputs, outputTypes, seenUrls, selector.type);
       }
     }
-    return outputs;
+    if (outputs.length > 0) {
+      return outputs;
+    }
   }
 
   if (options.allowGenericUrlFallback === true) {
