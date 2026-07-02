@@ -15,6 +15,10 @@ export type ProviderRunResult =
       metadata?: Record<string, unknown>;
     }
   | {
+      status: "provider_failed";
+      metadata?: Record<string, unknown>;
+    }
+  | {
       status: "succeeded";
       outputs: ProviderOutput[];
       rawCostUsd: number | string;

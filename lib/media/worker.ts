@@ -38,7 +38,10 @@ const SAFE_PROVIDER_METADATA_KEYS = new Set([
   "fal_request_id",
   "fal_status",
   "output_format",
+  "provider_error_message",
+  "provider_error_name",
   "provider_request_id",
+  "provider_status",
   "request_id",
   "status",
 ]);
@@ -107,7 +110,7 @@ export async function drainOneMediaJob({
   }
 
   if (result.status === "provider_failed") {
-    const status = await releaseJob(admin, job, "provider_failed");
+    const status = await releaseJob(admin, job, "provider_failed", safeMetadata(result.metadata));
     return { claimed: true, jobId: job.id, status };
   }
 
@@ -259,7 +262,10 @@ async function runProviderAdapter({
       throw error;
     }
 
-    return { status: "provider_failed" as const };
+    return {
+      status: "provider_failed" as const,
+      metadata: providerFailureMetadata(error),
+    };
   }
 }
 
@@ -361,6 +367,7 @@ async function releaseJob(
     | "media_output_materialization_failed"
     | "provider_failed"
     | "provider_not_configured",
+  metadata: Record<string, unknown> = {},
 ) {
   if (!job.claimToken) {
     return "stale_claim";
@@ -371,7 +378,7 @@ async function releaseJob(
     p_claim_token: job.claimToken,
     p_status: "failed",
     p_error: reason,
-    p_metadata: { reason },
+    p_metadata: { reason, ...metadata },
   });
 
   if (error) {
@@ -427,6 +434,29 @@ function safeMetadataPrimitive(value: unknown) {
   }
 
   return undefined;
+}
+
+function providerFailureMetadata(error: unknown): Record<string, unknown> {
+  const record = isRecord(error) ? error : {};
+  const metadata: Record<string, unknown> = {};
+  const name = error instanceof Error ? error.name : stringValue(record.name);
+  const message = error instanceof Error ? error.message : stringValue(record.message);
+
+  if (name) metadata.provider_error_name = name;
+  if (message && !SECRET_METADATA_VALUE.test(message)) {
+    metadata.provider_error_message = truncate(message, 500);
+  }
+
+  const requestId = stringValue(record.requestId) ?? stringValue(record.request_id);
+  const status = typeof record.status === "number" ? record.status : undefined;
+  if (requestId) metadata.provider_request_id = requestId;
+  if (status) metadata.provider_status = status;
+
+  return metadata;
+}
+
+function truncate(value: string, maxLength: number) {
+  return value.length > maxLength ? value.slice(0, maxLength) : value;
 }
 
 function objectValue(value: unknown): Record<string, unknown> {

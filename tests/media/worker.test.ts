@@ -546,8 +546,41 @@ describe("drainOneMediaJob", () => {
       p_claim_token: claimToken,
       p_status: "failed",
       p_error: "provider_failed",
-      p_metadata: { reason: "provider_failed" },
+      p_metadata: {
+        reason: "provider_failed",
+        provider_error_name: "Error",
+      },
     });
+  });
+
+  it("stores sanitized provider failure diagnostics", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    const secretMessage = "Provider failed with api_key=secret and request id req_123";
+    const admin = mockAdminWith({ claimedJobs: [jobRow()] });
+    const adapter = {
+      run: vi.fn(async () => {
+        const error = new Error(secretMessage);
+        Object.assign(error, { requestId: "req_123", status: 429 });
+        throw error;
+      }),
+    } satisfies MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toEqual({
+      claimed: true,
+      jobId: "job_1",
+      status: "failed",
+    });
+
+    expect(admin.rpc).toHaveBeenCalledWith("release_claimed_media_job", expect.objectContaining({
+      p_error: "provider_failed",
+      p_metadata: expect.objectContaining({
+        reason: "provider_failed",
+        provider_error_name: "Error",
+        provider_request_id: "req_123",
+        provider_status: 429,
+      }),
+    }));
+    expect(JSON.stringify(admin.rpc.mock.calls)).not.toContain("api_key=secret");
   });
 
   it("propagates provider_not_configured adapter errors without releasing the reservation", async () => {
