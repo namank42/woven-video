@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 const inputStorageKey = "users/u1/media/tmp/asset_1/input.mp4";
+const outputStorageKey = "users/u1/media/outputs/job_1/output_1/attempts/attempt_1/output.mp4";
+const pendingStorageKey = "pending/123e4567-e89b-12d3-a456-426614174000";
 
 vi.mock("@/lib/media/cleanup", () => mocks);
 vi.mock("@/lib/media/env", () => ({
@@ -89,6 +91,66 @@ describe("POST /api/internal/media/cleanup", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { code: "media_cleanup_failed" },
     });
+  });
+
+  it("completes pending placeholder keys without sending them to the Worker", async () => {
+    mocks.claimExpiredMediaForDeletion.mockResolvedValue([
+      { id: "asset_1", storage_key: inputStorageKey },
+      { id: "asset_2", storage_key: pendingStorageKey },
+    ]);
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ deleted_count: 1 }), { status: 200 }),
+    );
+    const { POST } = await import("@/app/api/internal/media/cleanup/route");
+
+    const response = await POST(new Request("https://www.woven.video/api/internal/media/cleanup", {
+      method: "POST",
+      headers: { "x-woven-media-worker-secret": "s".repeat(32) },
+    }));
+
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledWith("https://media.woven.video/internal/delete", expect.objectContaining({
+      body: JSON.stringify({ keys: [inputStorageKey] }),
+    }));
+    expect(mocks.completeMediaAssetDeletions).toHaveBeenCalledWith(["asset_1", "asset_2"]);
+    expect(mocks.releaseMediaAssetDeletionClaims).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toEqual({
+      deleted_count: 2,
+      object_delete_count: 1,
+    });
+  });
+
+  it("releases unknown invalid keys while continuing valid object deletion", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mocks.claimExpiredMediaForDeletion.mockResolvedValue([
+      { id: "asset_1", storage_key: outputStorageKey },
+      { id: "asset_2", storage_key: "users/u1/profile/avatar.png" },
+    ]);
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ deleted_count: 1 }), { status: 200 }),
+    );
+    const { POST } = await import("@/app/api/internal/media/cleanup/route");
+
+    const response = await POST(new Request("https://www.woven.video/api/internal/media/cleanup", {
+      method: "POST",
+      headers: { "x-woven-media-worker-secret": "s".repeat(32) },
+    }));
+
+    expect(response.status).toBe(200);
+    expect(fetch).toHaveBeenCalledWith("https://media.woven.video/internal/delete", expect.objectContaining({
+      body: JSON.stringify({ keys: [outputStorageKey] }),
+    }));
+    expect(mocks.completeMediaAssetDeletions).toHaveBeenCalledWith(["asset_1"]);
+    expect(mocks.releaseMediaAssetDeletionClaims).toHaveBeenCalledWith(["asset_2"]);
+    expect(warn).toHaveBeenCalledWith("Releasing invalid media cleanup keys", {
+      asset_ids: ["asset_2"],
+      storage_keys: ["users/u1/profile/avatar.png"],
+    });
+    await expect(response.json()).resolves.toEqual({
+      deleted_count: 1,
+      object_delete_count: 1,
+    });
+    warn.mockRestore();
   });
 
   it("releases DB deletion claims when Worker deletion rejects", async () => {

@@ -557,6 +557,8 @@ describe("media Worker", () => {
       "users//media/tmp/asset_1/input.png",
       "users/user_1/media/tmp/../input.png",
       "users/user_1/media/tmp/asset 1/input.png",
+      "users/user_1/media/tmp/asset_1/nested/input.png",
+      "users/user_1/media/tmp/asset_1/preview.png",
       `users/user_1/media/tmp/asset_1/${"a".repeat(500)}.png`,
     ]) {
       const response = await mediaWorker.fetch(new Request(

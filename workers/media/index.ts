@@ -222,10 +222,11 @@ function isValidDeleteKey(key: unknown): key is string {
 
 function isValidTempMediaDeleteKey(segments: string[]): boolean {
   return (
-    segments.length >= 6 &&
+    segments.length === 6 &&
     segments[0] === "users" &&
     segments[2] === "media" &&
-    segments[3] === "tmp"
+    segments[3] === "tmp" &&
+    /^input\.[A-Za-z0-9]+$/.test(segments[5])
   );
 }
 

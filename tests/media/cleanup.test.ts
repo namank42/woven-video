@@ -4,6 +4,8 @@ const mocks = vi.hoisted(() => ({
   createSupabaseAdminClient: vi.fn(),
 }));
 
+const inputStorageKey = "users/u1/media/tmp/asset_1/input.mp4";
+
 vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: mocks.createSupabaseAdminClient,
 }));
@@ -22,12 +24,12 @@ describe("media cleanup", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(nowIso));
     const admin = createCleanupAdmin({
-      claimRows: [{ id: "asset_1", storage_key: "users/u1/tmp/a.mp4" }],
+      claimRows: [{ id: "asset_1", storage_key: inputStorageKey }],
     });
     const { claimExpiredMediaForDeletion } = await import("@/lib/media/cleanup");
 
     await expect(claimExpiredMediaForDeletion({ limit: 100 })).resolves.toEqual([
-      { id: "asset_1", storage_key: "users/u1/tmp/a.mp4" },
+      { id: "asset_1", storage_key: inputStorageKey },
     ]);
 
     expect(admin.rpc).toHaveBeenCalledWith("claim_expired_media_assets_for_deletion", {
