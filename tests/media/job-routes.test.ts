@@ -21,6 +21,7 @@ describe("media job routes", () => {
       estimatedCostUsdMicros: 500_000,
       reservedCreditsUsdMicros: 500_000,
       createdAt: "2026-07-01T12:00:00.000Z",
+      expiresAt: "2026-07-01T13:00:00.000Z",
     }));
 
     vi.doMock("@/lib/api/auth", () => ({
@@ -74,6 +75,7 @@ describe("media job routes", () => {
       estimatedCostUsdMicros: 500_000,
       reservedCreditsUsdMicros: 500_000,
       createdAt: "2026-07-01T12:00:00.000Z",
+      expiresAt: "2026-07-01T13:00:00.000Z",
     }));
 
     vi.doMock("@/lib/api/auth", () => ({
@@ -119,7 +121,7 @@ describe("media job routes", () => {
       estimated_cost_usd_micros: 500_000,
       reserved_credits_usd_micros: 500_000,
       created_at: "2026-07-01T12:00:00.000Z",
-      expires_at: null,
+      expires_at: "2026-07-01T13:00:00.000Z",
     });
     expect(createReservedMediaJob).toHaveBeenCalledWith({
       userId: "user_1",
@@ -207,6 +209,7 @@ describe("media job routes", () => {
         },
         error: "provider stack trace with private details",
         created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-01T13:00:00.000Z",
         started_at: "2026-07-01T12:01:00.000Z",
         completed_at: "2026-07-01T12:02:00.000Z",
       },
@@ -254,6 +257,7 @@ describe("media job routes", () => {
         expires_at: "2026-07-01T12:17:00.000Z",
       }],
       error: { code: "provider_failed", message: "Generation failed." },
+      expires_at: "2026-07-01T13:00:00.000Z",
     });
   });
 
@@ -280,6 +284,7 @@ describe("media job routes", () => {
         },
         error: "provider stack trace with private details",
         created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-01T13:00:00.000Z",
         started_at: "2026-07-01T12:01:00.000Z",
         completed_at: "2026-07-01T12:02:00.000Z",
       },

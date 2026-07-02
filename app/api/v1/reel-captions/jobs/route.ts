@@ -176,7 +176,7 @@ export async function POST(request: Request) {
   if (updateError) {
     console.error("Failed to attach caption media asset to job", updateError);
     await releaseReservation(admin, jobId, "caption_job_update_failed");
-    await markInputAssetDeleted(admin, upload.asset.id, jobId, "caption_job_update_failed");
+    await markInputAssetCleanupClaimable(admin, upload.asset.id, jobId, "caption_job_update_failed");
     return apiError("Unable to update caption job.", 500, "caption_job_update_failed");
   }
 
@@ -269,20 +269,18 @@ async function releaseReservation(
   }
 }
 
-async function markInputAssetDeleted(
+async function markInputAssetCleanupClaimable(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   assetId: string,
   jobId: string,
   reason: string,
 ) {
-  const deletedAt = new Date().toISOString();
   const { error } = await admin
     .from("media_assets")
     .update({
-      status: "deleted",
-      deleted_at: deletedAt,
+      status: "attached",
+      job_id: jobId,
       metadata: {
-        deleted_at: deletedAt,
         deletion_reason: reason,
         caption_job_id: jobId,
       },
@@ -290,6 +288,6 @@ async function markInputAssetDeleted(
     .eq("id", assetId);
 
   if (error) {
-    console.error("Failed to mark caption input asset deleted", error);
+    console.error("Failed to mark caption input asset cleanup-claimable", error);
   }
 }

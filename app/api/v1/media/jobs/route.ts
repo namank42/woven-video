@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         estimated_cost_usd_micros: job.estimatedCostUsdMicros,
         reserved_credits_usd_micros: job.reservedCreditsUsdMicros,
         created_at: job.createdAt,
-        expires_at: null,
+        expires_at: job.expiresAt,
       },
       { headers: { "cache-control": "no-store" } },
     );

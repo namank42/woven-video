@@ -8,6 +8,16 @@ type FalResultPayload = {
   data?: unknown;
 };
 
+type FalOutputPath = {
+  path: string;
+  type?: ProviderOutput["type"];
+};
+
+type FalOutputExtractionOptions = {
+  outputPaths?: FalOutputPath[];
+  allowGenericUrlFallback?: boolean;
+};
+
 const URL_PATTERN = /^https?:\/\//i;
 
 export const falMediaAdapter: MediaProviderAdapter = {
@@ -72,7 +82,10 @@ export const falMediaAdapter: MediaProviderAdapter = {
       abortSignal: signal,
     });
     const payload = resultPayload(result);
-    const outputs = extractFalOutputs(payload, model.outputTypes);
+    const outputs = extractFalOutputs(payload, model.outputTypes, {
+      outputPaths: falOutputPaths(model.metadata.fal_output_paths),
+      allowGenericUrlFallback: model.metadata.fal_allow_generic_url_fallback === true,
+    });
     if (outputs.length === 0) {
       throw new Error("provider_no_outputs");
     }
@@ -90,9 +103,27 @@ export const falMediaAdapter: MediaProviderAdapter = {
   },
 };
 
-export function extractFalOutputs(payload: unknown, outputTypes: string[]): ProviderOutput[] {
+export function extractFalOutputs(
+  payload: unknown,
+  outputTypes: string[],
+  options: FalOutputExtractionOptions = {},
+): ProviderOutput[] {
   const outputs: ProviderOutput[] = [];
-  collectFalUrls(payload, outputs, outputTypes, new Set());
+  const seenUrls = new Set<string>();
+
+  if (options.outputPaths && options.outputPaths.length > 0) {
+    for (const selector of options.outputPaths) {
+      for (const value of valuesAtPath(payload, selector.path)) {
+        collectFalUrls(value, outputs, outputTypes, seenUrls, selector.type);
+      }
+    }
+    return outputs;
+  }
+
+  if (options.allowGenericUrlFallback === true) {
+    collectFalUrls(payload, outputs, outputTypes, seenUrls);
+  }
+
   return outputs;
 }
 
@@ -114,10 +145,23 @@ function collectFalUrls(
   outputs: ProviderOutput[],
   outputTypes: string[],
   seenUrls: Set<string>,
+  typeOverride?: ProviderOutput["type"],
 ) {
+  const directUrl = stringValue(value);
+  if (directUrl && URL_PATTERN.test(directUrl) && !seenUrls.has(directUrl)) {
+    seenUrls.add(directUrl);
+    const type = typeOverride ?? firstOutputType(outputTypes);
+    outputs.push({
+      url: directUrl,
+      type,
+      contentType: defaultContentType(type),
+    });
+    return;
+  }
+
   if (Array.isArray(value)) {
     for (const item of value) {
-      collectFalUrls(item, outputs, outputTypes, seenUrls);
+      collectFalUrls(item, outputs, outputTypes, seenUrls, typeOverride);
     }
     return;
   }
@@ -129,7 +173,7 @@ function collectFalUrls(
   const url = stringValue(value.url);
   if (url && URL_PATTERN.test(url) && !seenUrls.has(url)) {
     seenUrls.add(url);
-    const type = outputTypeFor(value, outputTypes);
+    const type = typeOverride ?? outputTypeFor(value, outputTypes);
     outputs.push({
       url,
       type,
@@ -138,8 +182,34 @@ function collectFalUrls(
   }
 
   for (const child of Object.values(value)) {
-    collectFalUrls(child, outputs, outputTypes, seenUrls);
+    collectFalUrls(child, outputs, outputTypes, seenUrls, typeOverride);
   }
+}
+
+function valuesAtPath(value: unknown, path: string): unknown[] {
+  const segments = path.split(".").map((segment) => segment.trim()).filter(Boolean);
+  if (segments.length === 0) return [];
+
+  let current: unknown[] = [value];
+  for (const segment of segments) {
+    const next: unknown[] = [];
+    for (const item of current) {
+      if (Array.isArray(item)) {
+        for (const child of item) {
+          if (isRecord(child) && segment in child) {
+            next.push(child[segment]);
+          }
+        }
+        continue;
+      }
+      if (isRecord(item) && segment in item) {
+        next.push(item[segment]);
+      }
+    }
+    current = next;
+  }
+
+  return current;
 }
 
 function outputTypeFor(
@@ -165,6 +235,14 @@ function outputTypeFor(
   if (outputTypes.includes("image")) return "image";
   if (outputTypes.includes("json")) return "json";
 
+  return "image";
+}
+
+function firstOutputType(outputTypes: string[]): ProviderOutput["type"] {
+  if (outputTypes.includes("video")) return "video";
+  if (outputTypes.includes("audio")) return "audio";
+  if (outputTypes.includes("image")) return "image";
+  if (outputTypes.includes("json")) return "json";
   return "image";
 }
 
@@ -197,6 +275,25 @@ function resultPayload(result: unknown) {
 function providerCostUsd(metadata: Record<string, unknown>) {
   const cost = Number(metadata.provider_cost_usd ?? 0);
   return Number.isFinite(cost) && cost > 0 ? cost : 0;
+}
+
+function falOutputPaths(value: unknown): FalOutputPath[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item): FalOutputPath[] => {
+    if (!isRecord(item)) return [];
+    const path = stringValue(item.path);
+    if (!path) return [];
+
+    const type = mediaOutputType(item.type);
+    return [{ path, ...(type ? { type } : {}) }];
+  });
+}
+
+function mediaOutputType(value: unknown): ProviderOutput["type"] | null {
+  return value === "image" || value === "video" || value === "audio" || value === "json"
+    ? value
+    : null;
 }
 
 function stringValue(value: unknown): string | null {

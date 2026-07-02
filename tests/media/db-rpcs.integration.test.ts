@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
+import { listMediaModels } from "@/lib/media/model-registry";
 
 const runDbTests = process.env.RUN_SUPABASE_DB_TESTS === "1";
 const describeDb = runDbTests ? describe : describe.skip;
@@ -19,6 +20,44 @@ function getAdminClient() {
 }
 
 describeDb("media SQL RPC integration", () => {
+  it("returns the disabled launch placeholder model after manual enablement", async () => {
+    const admin = getAdminClient();
+
+    try {
+      const { data: enabled, error: enableError } = await admin
+        .from("model_pricing_rules")
+        .update({ enabled: true })
+        .eq("provider", "fal")
+        .eq("model", "woven-launch-placeholder")
+        .eq("operation", "video_generation")
+        .select("id")
+        .maybeSingle();
+
+      expect(enableError).toBeNull();
+      expect(enabled?.id).toBeTruthy();
+
+      const models = await listMediaModels();
+      expect(models).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: "fal:launch-placeholder-video",
+          provider: "fal",
+          providerModel: "woven-launch-placeholder",
+          providerEndpoint: "fal-ai/woven-launch-placeholder",
+          operation: "video_generation",
+          kind: "video",
+          outputTypes: ["video"],
+        }),
+      ]));
+    } finally {
+      await admin
+        .from("model_pricing_rules")
+        .update({ enabled: false })
+        .eq("provider", "fal")
+        .eq("model", "woven-launch-placeholder")
+        .eq("operation", "video_generation");
+    }
+  });
+
   it("does not claim creating or unreserved queued jobs", async () => {
     const admin = getAdminClient();
     const { userId, accountId } = await createUserAndAccount();
@@ -82,6 +121,42 @@ describeDb("media SQL RPC integration", () => {
     expect(error).toBeNull();
     expect(data.status).toBe("cancelled");
   });
+
+  it("claims attached input assets for terminal caption jobs", async () => {
+    const admin = getAdminClient();
+    const { userId, accountId } = await createUserAndAccount();
+    const jobId = await insertCaptionJob({
+      userId,
+      accountId,
+      status: "succeeded",
+    });
+    const assetId = randomUUID();
+    const storageKey = `users/${userId}/media/tmp/${assetId}/input.wav`;
+
+    const { error: assetError } = await admin
+      .from("media_assets")
+      .insert({
+        id: assetId,
+        user_id: userId,
+        job_id: jobId,
+        kind: "input",
+        status: "attached",
+        content_type: "audio/wav",
+        size_bytes: 1234,
+        storage_key: storageKey,
+      });
+    if (assetError) throw assetError;
+
+    const { data, error } = await admin.rpc("claim_expired_media_assets_for_deletion", {
+      p_now: new Date().toISOString(),
+      p_limit: 10,
+    });
+
+    expect(error).toBeNull();
+    expect(data ?? []).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: assetId, storage_key: storageKey }),
+    ]));
+  });
 });
 
 async function createUserAndAccount() {
@@ -139,6 +214,42 @@ async function insertMediaJob({
       },
       progress: {},
       expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return data.id as string;
+}
+
+async function insertCaptionJob({
+  userId,
+  accountId,
+  status,
+}: {
+  userId: string;
+  accountId: string;
+  status: string;
+}) {
+  const admin = getAdminClient();
+  const { data, error } = await admin
+    .from("generation_jobs")
+    .insert({
+      user_id: userId,
+      account_id: accountId,
+      type: "reel_captions",
+      provider: "elevenlabs",
+      model: "scribe_v2",
+      status,
+      estimated_cost_usd_micros: 100000,
+      reserved_amount_usd_micros: 0,
+      input: {
+        duration_seconds: 12,
+        filename: "voice.wav",
+        content_type: "audio/wav",
+      },
+      output: {},
+      progress: {},
     })
     .select("id")
     .single();

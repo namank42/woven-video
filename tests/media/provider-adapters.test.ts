@@ -37,27 +37,47 @@ describe("falMediaAdapter", () => {
     mocks.getMediaEnv.mockReturnValue({ falWebhookBaseUrl: null });
   });
 
-  it("extracts nested output urls with inferred media type and content type", async () => {
+  it("extracts output urls only from declared Fal result paths when selectors are provided", async () => {
     const { extractFalOutputs } = await import("@/lib/media/providers/fal");
 
     expect(extractFalOutputs({
       preview: { url: "https://cdn.example.com/preview.png" },
+      echoed_input: { url: "https://media.example.test/objects/input_1?token=secret" },
       result: {
         files: [
           { url: "https://cdn.example.com/final.webm", content_type: "video/webm" },
           { url: "data:video/mp4;base64,ignored" },
         ],
       },
-    }, ["video"])).toEqual([
+    }, ["video"], {
+      outputPaths: [{ path: "result.files", type: "video" }],
+    })).toEqual([
+      {
+        url: "https://cdn.example.com/final.webm",
+        type: "video",
+        contentType: "video/webm",
+      },
+    ]);
+  });
+
+  it("does not use generic recursive Fal URL extraction unless metadata opts in", async () => {
+    const { extractFalOutputs } = await import("@/lib/media/providers/fal");
+    const payload = {
+      preview: { url: "https://cdn.example.com/preview.png" },
+      result: { video: { url: "https://cdn.example.com/final.mp4" } },
+    };
+
+    expect(extractFalOutputs(payload, ["video"])).toEqual([]);
+    expect(extractFalOutputs(payload, ["video"], { allowGenericUrlFallback: true })).toEqual([
       {
         url: "https://cdn.example.com/preview.png",
         type: "video",
         contentType: "video/mp4",
       },
       {
-        url: "https://cdn.example.com/final.webm",
+        url: "https://cdn.example.com/final.mp4",
         type: "video",
-        contentType: "video/webm",
+        contentType: "video/mp4",
       },
     ]);
   });
@@ -156,8 +176,11 @@ describe("falMediaAdapter", () => {
 
     await expect(falMediaAdapter.run({
       model: mediaModel({
-        metadata: { provider_cost_usd: "0.42" },
         outputTypes: ["video"],
+        metadata: {
+          provider_cost_usd: "0.42",
+          fal_output_paths: [{ path: "video", type: "video" }],
+        },
       }),
       parameters: { prompt: "a mountain" },
       inputUrls: [],

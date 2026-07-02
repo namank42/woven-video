@@ -437,6 +437,7 @@ describe("media Worker", () => {
       kind: "download",
       sub: "user_1",
       key: "users/user_1/media/outputs/job_1/out_1.mp4",
+      assetId: "out_1",
       exp: futureExp(),
     }, "token-secret");
 
@@ -449,6 +450,49 @@ describe("media Worker", () => {
     expect(response.headers.get("content-type")).toBe("video/mp4");
     expect(response.headers.get("etag")).toBe('"object-etag"');
     expect(response.headers.get("cache-control")).toBe("private, max-age=60");
+  });
+
+  it("rejects downloads when the route asset does not match the token asset", async () => {
+    const env = testEnv();
+    env.MEDIA_BUCKET.setObject(
+      "users/user_1/media/outputs/job_1/out_1.mp4",
+      "downloaded bytes",
+      { contentType: "video/mp4" },
+    );
+    const token = await signMediaToken({
+      kind: "download",
+      sub: "user_1",
+      key: "users/user_1/media/outputs/job_1/out_1.mp4",
+      assetId: "out_1",
+      exp: futureExp(),
+    }, "token-secret");
+
+    const response = await mediaWorker.fetch(new Request(
+      `https://media.example.test/objects/out_2?token=${token}`,
+    ), env);
+
+    expect(response.status).toBe(401);
+  });
+
+  it("rejects downloads when the token omits an asset id", async () => {
+    const env = testEnv();
+    env.MEDIA_BUCKET.setObject(
+      "users/user_1/media/outputs/job_1/out_1.mp4",
+      "downloaded bytes",
+      { contentType: "video/mp4" },
+    );
+    const token = await signMediaToken({
+      kind: "download",
+      sub: "user_1",
+      key: "users/user_1/media/outputs/job_1/out_1.mp4",
+      exp: futureExp(),
+    }, "token-secret");
+
+    const response = await mediaWorker.fetch(new Request(
+      `https://media.example.test/objects/out_1?token=${token}`,
+    ), env);
+
+    expect(response.status).toBe(401);
   });
 
   it("deletes user-scoped objects from the internal delete endpoint", async () => {

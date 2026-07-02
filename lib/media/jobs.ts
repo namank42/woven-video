@@ -17,11 +17,12 @@ type CreatedMediaJobRow = {
   estimated_cost_usd_micros: number | string;
   reserved_amount_usd_micros: number | string;
   created_at: string;
+  expires_at: string | null;
 };
 
 type SupabaseAdminClient = SupabaseClient;
 
-const JOB_SELECT = "id, status, estimated_cost_usd_micros, reserved_amount_usd_micros, created_at";
+const JOB_SELECT = "id, status, estimated_cost_usd_micros, reserved_amount_usd_micros, created_at, expires_at";
 
 export async function createReservedMediaJob({
   userId,
@@ -185,6 +186,7 @@ function normalizeMediaJobRow(
     estimatedCostUsdMicros: Number(job.estimated_cost_usd_micros),
     reservedCreditsUsdMicros: Number(job.reserved_amount_usd_micros) || reserveAmount,
     createdAt: String(job.created_at),
+    expiresAt: job.expires_at ? String(job.expires_at) : null,
   };
 }
 

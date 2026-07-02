@@ -136,6 +136,52 @@ describe("reel captions routes", () => {
     expect(admin.storage.from).not.toHaveBeenCalled();
   });
 
+  it("makes caption upload cleanup-claimable when attaching it to the job fails", async () => {
+    const createInputAssetUpload = vi.fn(async () => ({
+      asset: { id: ASSET_ID },
+      uploadUrl: `https://media.example.test/uploads/${ASSET_ID}?token=upload-token`,
+      expiresAt: "2026-07-01T12:15:00.000Z",
+    }));
+    const admin = mockCreateJobAdmin({
+      jobUpdateError: { message: "job update failed" },
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    mockCaptionRouteDependencies({ admin, createInputAssetUpload });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/reel-captions/jobs", {
+      durationSeconds: 90,
+      filename: "voice.m4a",
+      contentType: "audio/mp4",
+      sizeBytes: 123_456,
+    }));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_job_update_failed" },
+    });
+    expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
+      p_job_id: JOB_ID,
+      p_status: "failed",
+      p_error: "caption_job_update_failed",
+      p_metadata: { reason: "caption_job_update_failed" },
+    });
+    expect(admin.cleanupAssetUpdate).toMatchObject({
+      status: "attached",
+      job_id: JOB_ID,
+      metadata: {
+        deletion_reason: "caption_job_update_failed",
+        caption_job_id: JOB_ID,
+      },
+    });
+    expect(admin.cleanupAssetFilters).toEqual([["id", ASSET_ID]]);
+    expect(consoleError).toHaveBeenCalledWith(
+      "Failed to attach caption media asset to job",
+      { message: "job update failed" },
+    );
+  });
+
   it("returns upload-not-ready when the caption media asset is not uploaded", async () => {
     const admin = mockProcessAdmin({
       asset: {
@@ -406,7 +452,7 @@ describe("reel captions routes", () => {
     );
   });
 
-  it("transcribes caption jobs through a signed Woven media URL and deletes the input asset", async () => {
+  it("transcribes caption jobs through a signed Woven media URL and leaves the input asset cleanup-claimable", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
@@ -498,15 +544,15 @@ describe("reel captions routes", () => {
         },
       },
     });
-    expect(admin.deletedAssetUpdate).toMatchObject({
-      status: "deleted",
-      deleted_at: "2026-07-01T12:00:00.000Z",
+    expect(admin.cleanupAssetUpdate).toMatchObject({
+      status: "attached",
+      job_id: JOB_ID,
       metadata: {
-        deleted_at: "2026-07-01T12:00:00.000Z",
         deletion_reason: "caption_job_succeeded",
         caption_job_id: JOB_ID,
       },
     });
+    expect(admin.cleanupAssetFilters).toEqual([["id", ASSET_ID]]);
   });
 
   it("logs internal transcription errors and returns a safe public caption failure", async () => {
@@ -601,13 +647,15 @@ describe("reel captions routes", () => {
       p_error: "caption_generation_failed",
       p_metadata: { reason: "caption_generation_failed" },
     });
-    expect(admin.deletedAssetUpdate).toMatchObject({
-      status: "deleted",
+    expect(admin.cleanupAssetUpdate).toMatchObject({
+      status: "attached",
+      job_id: JOB_ID,
       metadata: expect.objectContaining({
         deletion_reason: "caption_job_failed",
         caption_job_id: JOB_ID,
       }),
     });
+    expect(admin.cleanupAssetFilters).toEqual([["id", ASSET_ID]]);
     expect(consoleError).toHaveBeenCalledWith(
       "Caption generation failed",
       expect.objectContaining({ jobId: JOB_ID }),
@@ -666,16 +714,37 @@ function mockCaptionRouteDependencies({
   }));
 }
 
-function mockCreateJobAdmin() {
+function mockCreateJobAdmin({
+  jobUpdateError = null,
+}: {
+  jobUpdateError?: { message: string } | null;
+} = {}) {
   const admin = {
     insertedJob: null as unknown,
     updatedJobInput: null as unknown,
+    cleanupAssetUpdate: null as unknown,
+    cleanupAssetFilters: [] as Array<[string, unknown]>,
     from: vi.fn((table: string) => {
+      if (table === "media_assets") {
+        return {
+          update: vi.fn((values: unknown) => {
+            admin.cleanupAssetUpdate = values;
+            const chain = {
+              eq: vi.fn(async (column: string, value: unknown) => {
+                admin.cleanupAssetFilters.push([column, value]);
+                return { data: null, error: null };
+              }),
+            };
+            return chain;
+          }),
+        };
+      }
+
       if (table !== "generation_jobs") {
         throw new Error(`Unexpected table ${table}`);
       }
 
-      const eq = vi.fn(async () => ({ data: null, error: null }));
+      const eq = vi.fn(async () => ({ data: null, error: jobUpdateError }));
       return {
         insert: vi.fn((values: unknown) => {
           admin.insertedJob = values;
@@ -739,7 +808,8 @@ function mockProcessAdmin({
   };
 
   const admin = {
-    deletedAssetUpdate: null as unknown,
+    cleanupAssetUpdate: null as unknown,
+    cleanupAssetFilters: [] as Array<[string, unknown]>,
     claimUpdate: vi.fn(),
     usageInsert: vi.fn(),
     from: vi.fn((table: string) => {
@@ -785,9 +855,12 @@ function mockProcessAdmin({
             return chain;
           }),
           update: vi.fn((values: unknown) => {
-            admin.deletedAssetUpdate = values;
+            admin.cleanupAssetUpdate = values;
             return {
-              eq: vi.fn(async () => ({ data: null, error: null })),
+              eq: vi.fn(async (column: string, value: unknown) => {
+                admin.cleanupAssetFilters.push([column, value]);
+                return { data: null, error: null };
+              }),
             };
           }),
         };

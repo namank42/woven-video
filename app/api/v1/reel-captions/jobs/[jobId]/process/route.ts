@@ -212,7 +212,7 @@ export async function POST(request: Request, context: RouteContext) {
       throw new Error(settleError.message);
     }
 
-    await markInputAssetDeleted(admin, asset.id, job.id, "caption_job_succeeded");
+    await markInputAssetCleanupClaimable(admin, asset.id, job.id, "caption_job_succeeded");
     return Response.json(output, {
       headers: {
         "x-woven-job-id": job.id,
@@ -222,7 +222,7 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (err) {
     console.error("Caption generation failed", { jobId: job.id }, err);
     await releaseReservation(admin, job.id, "caption_generation_failed");
-    await markInputAssetDeleted(admin, asset.id, job.id, "caption_job_failed");
+    await markInputAssetCleanupClaimable(admin, asset.id, job.id, "caption_job_failed");
     return apiError(
       "Caption generation failed. Try again later.",
       502,
@@ -356,20 +356,18 @@ async function releaseReservation(
   }
 }
 
-async function markInputAssetDeleted(
+async function markInputAssetCleanupClaimable(
   admin: ReturnType<typeof createSupabaseAdminClient>,
   assetId: string,
   jobId: string,
   reason: string,
 ) {
-  const deletedAt = new Date().toISOString();
   const { error } = await admin
     .from("media_assets")
     .update({
-      status: "deleted",
-      deleted_at: deletedAt,
+      status: "attached",
+      job_id: jobId,
       metadata: {
-        deleted_at: deletedAt,
         deletion_reason: reason,
         caption_job_id: jobId,
       },
@@ -377,6 +375,6 @@ async function markInputAssetDeleted(
     .eq("id", assetId);
 
   if (error) {
-    console.error("Failed to mark caption input asset deleted", error);
+    console.error("Failed to mark caption input asset cleanup-claimable", error);
   }
 }

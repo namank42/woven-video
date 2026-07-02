@@ -79,6 +79,7 @@ describe("createReservedMediaJob", () => {
         estimated_cost_usd_micros: 500_000,
         reserved_amount_usd_micros: 0,
         created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-02T13:00:00.000Z",
       },
       error: null,
     });
@@ -93,6 +94,7 @@ describe("createReservedMediaJob", () => {
         estimated_cost_usd_micros: 500_000,
         reserved_amount_usd_micros: 500_000,
         created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-02T13:00:00.000Z",
       },
       error: null,
     });
@@ -110,6 +112,7 @@ describe("createReservedMediaJob", () => {
       estimatedCostUsdMicros: 500_000,
       reservedCreditsUsdMicros: 500_000,
       createdAt: "2026-07-01T12:00:00.000Z",
+      expiresAt: "2026-07-02T13:00:00.000Z",
     });
 
     expect(admin.tables).toEqual([
@@ -179,6 +182,7 @@ describe("createReservedMediaJob", () => {
         estimated_cost_usd_micros: 500_000,
         reserved_amount_usd_micros: 0,
         created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-02T14:00:00.000Z",
       },
       error: null,
     });
@@ -193,6 +197,7 @@ describe("createReservedMediaJob", () => {
         estimated_cost_usd_micros: 500_000,
         reserved_amount_usd_micros: 500_000,
         created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-02T14:00:00.000Z",
       },
       error: null,
     });

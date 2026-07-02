@@ -61,6 +61,41 @@ The timeout, worker polling, Fal webhook, and cron values are consumed by follow
 8. After the cleanup task lands, confirm Vercel Cron is active for `/api/internal/media/cleanup`.
 9. Smoke-test upload, job creation, job status, output download, and, after the follow-up tasks land, Fal webhook and cleanup.
 
+## Curated Media Model Enablement
+
+Clean schema deployments seed `model_pricing_rules` with a disabled launch-placeholder media row:
+
+- `provider = 'fal'`
+- `model = 'woven-launch-placeholder'`
+- `operation = 'video_generation'`
+- public catalog id: `fal:launch-placeholder-video`
+
+This row exists to make the curated media metadata contract deployable without exposing arbitrary provider models. It stays hidden from `GET /api/v1/media/models` because `enabled = false`.
+
+Before enabling a production model, manually verify the Fal endpoint and update the curated row metadata in SQL:
+
+```sql
+update public.model_pricing_rules
+set model = '<verified-fal-model-id>',
+    display_name = '<public display name>',
+    minimum_charge_usd_micros = <minimum-charge>,
+    reserve_amount_usd_micros = <reservation-amount>,
+    metadata = metadata
+      || jsonb_build_object(
+        'provider_endpoint', '<verified-fal-endpoint>',
+        'fal_output_paths', jsonb_build_array(
+          jsonb_build_object('path', '<result-field-path>', 'type', 'video')
+        ),
+        'launch_placeholder', false
+      ),
+    enabled = true
+where provider = 'fal'
+  and model = 'woven-launch-placeholder'
+  and operation = 'video_generation';
+```
+
+Do not enable a row that depends on generic recursive Fal URL extraction. If a manually verified Fal model truly needs generic extraction, set `"fal_allow_generic_url_fallback": true` in metadata as an explicit exception and document the provider response shape in the rollout notes.
+
 ## Smoke Tests
 
 1. Create a temp upload asset through `POST /api/v1/media/uploads`.

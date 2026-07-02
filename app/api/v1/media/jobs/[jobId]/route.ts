@@ -21,6 +21,7 @@ type MediaJobRow = {
   output: unknown;
   error: string | null;
   created_at: string;
+  expires_at: string | null;
   started_at: string | null;
   completed_at: string | null;
 };
@@ -34,7 +35,7 @@ export async function GET(request: Request, context: RouteContext) {
   const { data, error } = await admin
     .from("generation_jobs")
     .select(
-      "id, status, estimated_cost_usd_micros, reserved_amount_usd_micros, final_cost_usd_micros, progress, input, output, error, created_at, started_at, completed_at",
+      "id, status, estimated_cost_usd_micros, reserved_amount_usd_micros, final_cost_usd_micros, progress, input, output, error, created_at, expires_at, started_at, completed_at",
     )
     .eq("id", jobId)
     .eq("user_id", authResult.auth.user.id)
@@ -79,6 +80,7 @@ export async function GET(request: Request, context: RouteContext) {
       outputs,
       error: job.error ? { code: "provider_failed", message: "Generation failed." } : null,
       created_at: job.created_at,
+      expires_at: job.expires_at,
       started_at: job.started_at,
       completed_at: job.completed_at,
     },

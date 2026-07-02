@@ -36,7 +36,7 @@ const SAFE_DELETE_KEY_SEGMENT = /^[A-Za-z0-9._-]+$/;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-export default {
+const mediaWorker = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const uploadAssetId = getSingleRouteValue(url.pathname, "/uploads/");
@@ -49,13 +49,16 @@ export default {
       return handleInternalDelete(request, env);
     }
 
-    if (request.method === "GET" && hasRouteKey(url.pathname, "/objects/")) {
-      return handleDownload(env, url);
+    const downloadAssetId = getSingleRouteValue(url.pathname, "/objects/");
+    if (request.method === "GET" && downloadAssetId) {
+      return handleDownload(env, url, downloadAssetId);
     }
 
     return textResponse("Not found", 404);
   },
 };
+
+export default mediaWorker;
 
 async function handleUpload(
   request: Request,
@@ -150,12 +153,17 @@ async function handleInternalDelete(request: Request, env: Env): Promise<Respons
   return jsonResponse({ deleted_count: payload.keys.length });
 }
 
-async function handleDownload(env: Env, url: URL): Promise<Response> {
+async function handleDownload(env: Env, url: URL, routeAssetId: string): Promise<Response> {
   const payload = await verifyToken(
     url.searchParams.get("token") ?? "",
     env.MEDIA_TOKEN_SECRET,
   );
-  if (!payload || payload.kind !== "download") {
+  if (
+    !payload ||
+    payload.kind !== "download" ||
+    !payload.assetId ||
+    payload.assetId !== routeAssetId
+  ) {
     return textResponse("Unauthorized", 401);
   }
 
