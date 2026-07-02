@@ -11,7 +11,7 @@ describe("pricing page source", () => {
     );
 
     expect(pageSource).toMatch(
-      /import\s*{[^}]*chatModelRates[^}]*featureRates[^}]*mediaModelRates[^}]*}\s*from\s*"@\/lib\/pricing-page-rates"/s,
+      /import\s*{[\s\S]*chatModelRates[\s\S]*featureRates[\s\S]*mediaModelRates[\s\S]*}\s*from\s*"@\/lib\/pricing-page-rates"/,
     );
     expect(pageSource).not.toMatch(/\bconst\s+(models|otherFeatures)\b/);
     expect(pageSource).not.toMatch(/["']use client["']/);
