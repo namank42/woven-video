@@ -141,6 +141,10 @@ describe("createReservedMediaJob", () => {
       ["user_id", "user_1"],
       ["status", "uploaded"],
     ]);
+    expect(queueStep.filters).toEqual([
+      ["id", "job_1"],
+      ["status", "creating"],
+    ]);
   });
 
   it("releases the reservation and fails the job when asset attachment fails after reservation", async () => {
@@ -151,7 +155,7 @@ describe("createReservedMediaJob", () => {
     const insertStep = insertJobQuery({
       data: {
         id: "job_1",
-        status: "queued",
+        status: "creating",
         estimated_cost_usd_micros: 500_000,
         reserved_amount_usd_micros: 0,
         created_at: "2026-07-01T12:00:00.000Z",
@@ -199,7 +203,7 @@ describe("createReservedMediaJob", () => {
     const insertStep = insertJobQuery({
       data: {
         id: "job_1",
-        status: "queued",
+        status: "creating",
         estimated_cost_usd_micros: 500_000,
         reserved_amount_usd_micros: 0,
         created_at: "2026-07-01T12:00:00.000Z",
@@ -242,7 +246,7 @@ describe("createReservedMediaJob", () => {
     const insertStep = insertJobQuery({
       data: {
         id: "job_1",
-        status: "queued",
+        status: "creating",
         estimated_cost_usd_micros: 500_000,
         reserved_amount_usd_micros: 0,
         created_at: "2026-07-01T12:00:00.000Z",
@@ -284,6 +288,57 @@ describe("createReservedMediaJob", () => {
       p_error: "media_asset_attach_failed",
       p_metadata: { reason: "media_asset_attach_failed" },
     });
+  });
+
+  it("still releases the reservation when queue publish fails and input detach fails", async () => {
+    const assetsStep = selectAssetsQuery({
+      data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],
+      error: null,
+    });
+    const insertStep = insertJobQuery({
+      data: {
+        id: "job_1",
+        status: "creating",
+        estimated_cost_usd_micros: 500_000,
+        reserved_amount_usd_micros: 0,
+        created_at: "2026-07-01T12:00:00.000Z",
+      },
+      error: null,
+    });
+    const attachStep = attachAssetsQuery({
+      data: [{ id: "asset_1" }],
+      error: null,
+    });
+    const queueStep = updateJobQuery({
+      data: null,
+      error: { message: "queue publish failed" },
+    });
+    const detachStep = attachAssetsQuery({
+      data: null,
+      error: { message: "asset detach failed" },
+    });
+    const admin = mockAdminWith(assetsStep, insertStep, attachStep, queueStep, detachStep);
+
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model,
+      parameters: { prompt: "a mountain" },
+      inputAssetIds: ["asset_1"],
+    })).rejects.toThrow("asset detach failed");
+
+    expect(admin.rpc).toHaveBeenNthCalledWith(1, "reserve_balance", expect.any(Object));
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_balance_reservation", {
+      p_job_id: "job_1",
+      p_status: "failed",
+      p_error: "queue publish failed",
+      p_metadata: { reason: "media_job_queue_failed" },
+    });
+    expect(detachStep.updated).toEqual({ job_id: null, status: "uploaded" });
+    expect(detachStep.filters).toEqual([
+      ["job_id", "job_1"],
+      ["user_id", "user_1"],
+      ["id", ["asset_1"]],
+    ]);
   });
 });
 

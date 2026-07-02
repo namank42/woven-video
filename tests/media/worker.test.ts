@@ -795,8 +795,19 @@ describe("media job readiness migration", () => {
 
   it("adds a non-claimable creating status", () => {
     expect(migration).toContain("'creating'");
+    expect(migration).toContain("add constraint generation_jobs_status_check_replacement");
+    expect(migration).toContain("not valid");
+    expect(migration).toContain("validate constraint generation_jobs_status_check_replacement");
+    expect(migration).toContain("rename constraint generation_jobs_status_check_replacement to generation_jobs_status_check");
     expect(migration).toContain("status in ('queued', 'running', 'waiting_provider')");
     expect(migration).not.toContain("status in ('creating', 'queued', 'running', 'waiting_provider')");
+  });
+
+  it("replaces media asset status check with a validated replacement constraint", () => {
+    expect(migration).toContain("add constraint media_assets_status_check_replacement");
+    expect(migration).toContain("validate constraint media_assets_status_check_replacement");
+    expect(migration).toContain("rename constraint media_assets_status_check_replacement to media_assets_status_check");
+    expect(migration).toContain("'deleting'");
   });
 
   it("requires queued media jobs to have a reservation before claim", () => {

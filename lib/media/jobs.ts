@@ -137,19 +137,35 @@ export async function createReservedMediaJob({
     .single();
 
   if (queueError || !queuedJob) {
-    await detachInputAssets({
-      admin,
-      userId,
-      jobId: createdJob.id,
-      inputAssetIds,
-    });
-    await releaseReservation(
-      admin,
-      createdJob.id,
-      queueError?.message ?? "media_job_queue_failed",
-      "media_job_queue_failed",
-    );
-    throw new Error(queueError?.message ?? "media_job_queue_failed");
+    const message = queueError?.message ?? "media_job_queue_failed";
+    let detachError: Error | null = null;
+    let releaseError: Error | null = null;
+
+    try {
+      await detachInputAssets({
+        admin,
+        userId,
+        jobId: createdJob.id,
+        inputAssetIds,
+      });
+    } catch (cleanupError) {
+      detachError = toError(cleanupError, "media_asset_detach_failed");
+    }
+
+    try {
+      await releaseReservation(admin, createdJob.id, message, "media_job_queue_failed");
+    } catch (cleanupError) {
+      releaseError = toError(cleanupError, "media_reservation_release_failed");
+    }
+
+    if (releaseError) {
+      throw releaseError;
+    }
+    if (detachError) {
+      throw detachError;
+    }
+
+    throw new Error(message);
   }
 
   return normalizeMediaJobRow(queuedJob as CreatedMediaJobRow, model.id, reserveAmount);

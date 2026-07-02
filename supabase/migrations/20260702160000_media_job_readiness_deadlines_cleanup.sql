@@ -1,8 +1,5 @@
 alter table public.generation_jobs
-  drop constraint if exists generation_jobs_status_check;
-
-alter table public.generation_jobs
-  add constraint generation_jobs_status_check
+  add constraint generation_jobs_status_check_replacement
   check (status in (
     'creating',
     'queued',
@@ -12,17 +9,32 @@ alter table public.generation_jobs
     'succeeded',
     'failed',
     'cancelled'
-  ));
+  )) not valid;
+
+alter table public.generation_jobs
+  validate constraint generation_jobs_status_check_replacement;
+
+alter table public.generation_jobs
+  drop constraint if exists generation_jobs_status_check;
+
+alter table public.generation_jobs
+  rename constraint generation_jobs_status_check_replacement to generation_jobs_status_check;
 
 alter table public.generation_jobs
   add column if not exists expires_at timestamptz;
 
 alter table public.media_assets
+  add constraint media_assets_status_check_replacement
+  check (status in ('pending', 'uploaded', 'attached', 'ready', 'deleting', 'deleted', 'failed')) not valid;
+
+alter table public.media_assets
+  validate constraint media_assets_status_check_replacement;
+
+alter table public.media_assets
   drop constraint if exists media_assets_status_check;
 
 alter table public.media_assets
-  add constraint media_assets_status_check
-  check (status in ('pending', 'uploaded', 'attached', 'ready', 'deleting', 'deleted', 'failed'));
+  rename constraint media_assets_status_check_replacement to media_assets_status_check;
 
 create or replace function public.claim_media_jobs(
   p_limit integer default 1,
