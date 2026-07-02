@@ -27,4 +27,28 @@ describe("validateMediaParameters", () => {
       error: "Invalid parameter type for prompt: expected string.",
     });
   });
+
+  it("rejects parameters not declared in the schema", () => {
+    expect(validateMediaParameters(
+      { prompt: "a cat", num_images: 10 },
+      {
+        type: "object",
+        required: ["prompt"],
+        properties: { prompt: { type: "string" } },
+      },
+    )).toEqual({
+      ok: false,
+      error: "Unknown parameter: num_images.",
+    });
+  });
+
+  it("accepts required keys that have no properties entry", () => {
+    expect(validateMediaParameters(
+      { prompt: "a cat" },
+      { type: "object", required: ["prompt"] },
+    )).toEqual({
+      ok: true,
+      value: { prompt: "a cat" },
+    });
+  });
 });

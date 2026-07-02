@@ -13,6 +13,16 @@ export function validateMediaParameters(
     if (!(key in value)) return { ok: false, error: `Missing required parameter: ${key}.` };
   }
 
+  const declared = new Set([
+    ...Object.keys(schema.properties ?? {}),
+    ...(schema.required ?? []),
+  ]);
+  for (const key of Object.keys(value)) {
+    if (!declared.has(key)) {
+      return { ok: false, error: `Unknown parameter: ${key}.` };
+    }
+  }
+
   for (const [key, rule] of Object.entries(schema.properties ?? {})) {
     if (!(key in value)) continue;
     if (!matchesType(value[key], rule.type)) {
