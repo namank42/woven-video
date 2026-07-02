@@ -63,6 +63,11 @@ describe("falMediaAdapter", () => {
     await expect(falMediaAdapter.run({
       model: mediaModel({
         defaultParameters: { guidance_scale: 3, safety_checker: true },
+        parameterSchema: {
+          type: "object",
+          required: ["prompt"],
+          properties: { prompt: { type: "string" }, guidance_scale: { type: "number" } },
+        },
       }),
       parameters: { prompt: "a mountain", guidance_scale: 5 },
       inputUrls: ["https://media.example.com/input.png"],
@@ -84,6 +89,29 @@ describe("falMediaAdapter", () => {
         input_urls: ["https://media.example.com/input.png"],
       },
       abortSignal: abortController.signal,
+    });
+  });
+
+  it("drops parameters not declared in the model schema", async () => {
+    const { falMediaAdapter } = await import("@/lib/media/providers/fal");
+    mocks.falSubmit.mockResolvedValue({ request_id: "fal_req_2" });
+
+    await falMediaAdapter.run({
+      model: mediaModel({
+        defaultParameters: { num_images: 1 },
+        parameterSchema: {
+          type: "object",
+          required: ["prompt"],
+          properties: { prompt: { type: "string" } },
+        },
+      }),
+      parameters: { prompt: "a mountain", num_images: 10, resolution: "4k" },
+      inputUrls: [],
+    });
+
+    expect(mocks.falSubmit).toHaveBeenCalledWith("fal-ai/frontier-video", {
+      input: { num_images: 1, prompt: "a mountain" },
+      abortSignal: undefined,
     });
   });
 

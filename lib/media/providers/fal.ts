@@ -1,6 +1,7 @@
 import { fal } from "@fal-ai/client";
 
 import type { MediaProviderAdapter, ProviderOutput } from "@/lib/media/provider";
+import type { MediaParameterSchema } from "@/lib/media/types";
 
 type FalResultPayload = {
   data?: unknown;
@@ -13,7 +14,7 @@ export const falMediaAdapter: MediaProviderAdapter = {
     const endpoint = model.providerEndpoint;
     const input: Record<string, unknown> = {
       ...model.defaultParameters,
-      ...parameters,
+      ...declaredParameters(parameters, model.parameterSchema),
     };
 
     if (inputUrls.length > 0) {
@@ -82,6 +83,19 @@ export function extractFalOutputs(payload: unknown, outputTypes: string[]): Prov
   const outputs: ProviderOutput[] = [];
   collectFalUrls(payload, outputs, outputTypes, new Set());
   return outputs;
+}
+
+function declaredParameters(
+  parameters: Record<string, unknown>,
+  schema: MediaParameterSchema,
+): Record<string, unknown> {
+  const declared = new Set([
+    ...Object.keys(schema.properties ?? {}),
+    ...(schema.required ?? []),
+  ]);
+  return Object.fromEntries(
+    Object.entries(parameters).filter(([key]) => declared.has(key)),
+  );
 }
 
 function collectFalUrls(
