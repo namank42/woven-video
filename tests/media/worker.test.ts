@@ -805,8 +805,6 @@ function wovenOutput() {
     id: "output_asset_1",
     type: "video",
     content_type: "video/mp4",
-    url: "https://media.example.test/objects/output_asset_1?token=download-token",
-    expires_at: "2026-07-01T12:15:00.000Z",
   };
 }
 

@@ -63,7 +63,7 @@ describe("createOutputAssetRows", () => {
     vi.restoreAllMocks();
   });
 
-  it("uses inline bytes without fetching the provider URL, claim-fences mutations, and returns a Woven download URL", async () => {
+  it("uses inline bytes without fetching the provider URL, claim-fences mutations, and returns output descriptors", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-01T12:00:00.000Z"));
 
@@ -154,7 +154,7 @@ describe("createOutputAssetRows", () => {
       p_claim_token: claimToken,
       p_asset_id: outputId,
       p_user_id: "user_1",
-      p_download_expires_at: "2026-07-01T12:02:00.000Z",
+      p_download_expires_at: "2026-07-31T12:00:00.000Z",
       p_metadata: {
         source: "provider_output",
         output_index: 0,
@@ -175,24 +175,11 @@ describe("createOutputAssetRows", () => {
         output_attempt_id: outputAttemptId,
       },
     }]);
-    expect(result.outputs).toHaveLength(1);
-    expect(result.outputs[0]).toMatchObject({
+    expect(result.outputs).toEqual([{
       id: outputId,
       type: "audio",
       content_type: "audio/mpeg",
-      expires_at: "2026-07-01T12:02:00.000Z",
-    });
-    const downloadUrl = new URL(result.outputs[0].url);
-    expect(`${downloadUrl.origin}${downloadUrl.pathname}`).toBe(`https://media.example.test/objects/${outputId}`);
-    const downloadToken = downloadUrl.searchParams.get("token") ?? "";
-    await expect(verifyMediaToken(downloadToken, mediaEnv.tokenSecret, nowSeconds)).resolves.toMatchObject({
-      kind: "download",
-      sub: "user_1",
-      key: storageKey,
-      assetId: outputId,
-      jobId: "job_1",
-      exp: nowSeconds + mediaEnv.downloadUrlTtlSeconds,
-    });
+    }]);
   });
 
   it("fetches HTTP provider outputs before uploading them to the Woven media URL", async () => {
@@ -245,8 +232,11 @@ describe("createOutputAssetRows", () => {
     }));
     expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain("provider.example");
     expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain(claimToken);
-    expect(result.outputs[0].url).toContain(`https://media.example.test/objects/${outputId}?token=`);
-    expect(result.outputs[0].url).not.toContain("provider.example");
+    expect(result.outputs).toEqual([{
+      id: outputId,
+      type: "audio",
+      content_type: "audio/mpeg",
+    }]);
   });
 
   it("marks the media asset failed through the claim-aware RPC when upload to Woven media fails", async () => {
@@ -456,19 +446,11 @@ describe("createOutputAssetRows", () => {
     });
     expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain(claimToken);
     expect(result.attemptAssets).toEqual([]);
-    expect(result.outputs[0]).toMatchObject({
-      id: existing.id,
+    expect(result.outputs).toEqual([{
+      id: existingId,
       type: "audio",
       content_type: "audio/mpeg",
-      expires_at: "2026-07-01T12:02:00.000Z",
-    });
-    const downloadToken = new URL(result.outputs[0].url).searchParams.get("token") ?? "";
-    await expect(verifyMediaToken(downloadToken, mediaEnv.tokenSecret, nowSeconds)).resolves.toMatchObject({
-      kind: "download",
-      key: existing.storage_key,
-      assetId: existing.id,
-      jobId: "job_1",
-    });
+    }]);
   });
 
   it("resets an existing failed output row and stores only safe data URL provenance", async () => {

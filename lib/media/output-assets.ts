@@ -167,14 +167,7 @@ async function materializeOutputAsset({
       storageKey: existing.storage_key,
       metadata: reuseMetadata,
       createdOrRetried: false,
-      output: await publicOutputObject({
-        env,
-        userId,
-        jobId,
-        outputId,
-        storageKey: existing.storage_key,
-        output,
-      }),
+      output: outputDescriptor(outputId, output),
     };
   }
 
@@ -231,7 +224,7 @@ async function materializeOutputAsset({
     storageKey,
     metadata,
     createdOrRetried: true,
-    output: await publicOutputObject({ env, userId, jobId, outputId, storageKey, output }),
+    output: outputDescriptor(outputId, output),
   };
 }
 
@@ -441,14 +434,17 @@ async function markOutputAssetReady({
   outputId: string;
   metadata: OutputMetadata;
 }): Promise<void> {
-  const downloadExp = Math.floor(Date.now() / 1000) + env.downloadUrlTtlSeconds;
+  // download_expires_at is the retention deadline consumed by
+  // markExpiredMediaForDeletion, not a URL TTL — download links are minted
+  // per status read in lib/media/output-urls.ts.
+  const retentionExp = Math.floor(Date.now() / 1000) + env.outputRetentionSeconds;
   const { error: readyError } = await admin
     .rpc("mark_claimed_media_output_asset_ready", {
       p_job_id: jobId,
       p_claim_token: claimToken,
       p_asset_id: outputId,
       p_user_id: userId,
-      p_download_expires_at: new Date(downloadExp * 1000).toISOString(),
+      p_download_expires_at: new Date(retentionExp * 1000).toISOString(),
       p_metadata: {
         ...metadata,
         copied_to_r2_at: new Date().toISOString(),
@@ -460,37 +456,11 @@ async function markOutputAssetReady({
   }
 }
 
-async function publicOutputObject({
-  env,
-  userId,
-  jobId,
-  outputId,
-  storageKey,
-  output,
-}: {
-  env: MediaEnv;
-  userId: string;
-  jobId: string;
-  outputId: string;
-  storageKey: string;
-  output: ProviderOutput;
-}) {
-  const downloadExp = Math.floor(Date.now() / 1000) + env.downloadUrlTtlSeconds;
-  const downloadToken = await signMediaToken({
-    kind: "download",
-    sub: userId,
-    key: storageKey,
-    assetId: outputId,
-    jobId,
-    exp: downloadExp,
-  }, env.tokenSecret);
-
+function outputDescriptor(outputId: string, output: ProviderOutput) {
   return {
     id: outputId,
     type: output.type,
     content_type: output.contentType,
-    url: `${env.baseUrl}/objects/${outputId}?token=${encodeURIComponent(downloadToken)}`,
-    expires_at: new Date(downloadExp * 1000).toISOString(),
   };
 }
 
