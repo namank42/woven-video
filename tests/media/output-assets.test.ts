@@ -30,6 +30,10 @@ const mediaEnv: MediaEnv = {
   uploadUrlTtlSeconds: 60,
   downloadUrlTtlSeconds: 120,
   outputRetentionSeconds: 2_592_000,
+  jobTimeoutSeconds: 3600,
+  workerPollMs: 5000,
+  falWebhookBaseUrl: null,
+  falWebhookJwksUrl: null,
 };
 const claimToken = "00000000-0000-4000-8000-000000000001";
 const originalFetch = globalThis.fetch;

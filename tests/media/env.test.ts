@@ -69,12 +69,38 @@ describe("media env", () => {
     expect(getMediaEnv().baseUrl).toBe("https://media.example.test");
   });
 
+  it("parses optional Fal webhook URLs and trims trailing slashes", () => {
+    setMediaEnv({
+      MEDIA_FAL_WEBHOOK_BASE_URL: "https://www.example.test/",
+      FAL_WEBHOOK_JWKS_URL: "https://fal.example.test/.well-known/jwks/",
+    });
+
+    expect(getMediaEnv()).toMatchObject({
+      falWebhookBaseUrl: "https://www.example.test",
+      falWebhookJwksUrl: "https://fal.example.test/.well-known/jwks",
+    });
+  });
+
+  it("defaults optional Fal webhook URLs to null", () => {
+    setMediaEnv({
+      MEDIA_FAL_WEBHOOK_BASE_URL: undefined,
+      FAL_WEBHOOK_JWKS_URL: undefined,
+    });
+
+    expect(getMediaEnv()).toMatchObject({
+      falWebhookBaseUrl: null,
+      falWebhookJwksUrl: null,
+    });
+  });
+
   it("parses positive integer settings", () => {
     setMediaEnv({
       MEDIA_MAX_UPLOAD_BYTES: "123",
       MEDIA_UPLOAD_URL_TTL_SECONDS: "456",
       MEDIA_DOWNLOAD_URL_TTL_SECONDS: "789",
       MEDIA_OUTPUT_RETENTION_SECONDS: "3600",
+      MEDIA_JOB_TIMEOUT_SECONDS: "7200",
+      MEDIA_WORKER_POLL_MS: "2500",
     });
 
     expect(getMediaEnv()).toMatchObject({
@@ -82,13 +108,19 @@ describe("media env", () => {
       uploadUrlTtlSeconds: 456,
       downloadUrlTtlSeconds: 789,
       outputRetentionSeconds: 3600,
+      jobTimeoutSeconds: 7200,
+      workerPollMs: 2500,
     });
   });
 
-  it("defaults output retention to 30 days", () => {
+  it("defaults worker and retention settings", () => {
     setMediaEnv();
 
-    expect(getMediaEnv().outputRetentionSeconds).toBe(2_592_000);
+    expect(getMediaEnv()).toMatchObject({
+      outputRetentionSeconds: 2_592_000,
+      jobTimeoutSeconds: 3600,
+      workerPollMs: 5000,
+    });
   });
 
   it("rejects non-positive and non-integer settings", () => {

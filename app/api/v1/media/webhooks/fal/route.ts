@@ -1,4 +1,8 @@
 import { apiError } from "@/lib/api/responses";
+import {
+  falWebhookHeaders,
+  verifyFalWebhookSignature,
+} from "@/lib/media/providers/fal-webhooks";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +18,15 @@ function getFalRequestId(payload: Record<string, unknown>): string {
 }
 
 export async function POST(request: Request) {
-  const payload = await request.json().catch(() => null);
+  const rawBody = Buffer.from(await request.arrayBuffer());
+  try {
+    const headers = falWebhookHeaders(request);
+    await verifyFalWebhookSignature({ headers, rawBody });
+  } catch {
+    return apiError("Invalid Fal webhook signature.", 401, "unauthorized");
+  }
+
+  const payload = parseJsonObject(rawBody);
   if (!isObject(payload)) {
     return apiError("Request body must be a JSON object.");
   }
@@ -33,6 +45,7 @@ export async function POST(request: Request) {
         message: "Provider callback received",
       },
       last_provider_poll_at: new Date().toISOString(),
+      claim_expires_at: "1970-01-01T00:00:00.000Z",
     })
     .eq("provider_job_id", requestId)
     .eq("provider", "fal")
@@ -56,4 +69,12 @@ export async function POST(request: Request) {
       },
     },
   );
+}
+
+function parseJsonObject(rawBody: Buffer): unknown {
+  try {
+    return JSON.parse(rawBody.toString("utf8"));
+  } catch {
+    return null;
+  }
 }

@@ -1,5 +1,6 @@
 import { fal } from "@fal-ai/client";
 
+import { getMediaEnv } from "@/lib/media/env";
 import type { MediaProviderAdapter, ProviderOutput } from "@/lib/media/provider";
 import type { MediaParameterSchema } from "@/lib/media/types";
 
@@ -22,10 +23,20 @@ export const falMediaAdapter: MediaProviderAdapter = {
     }
 
     if (!providerJobId) {
-      const submitted = await fal.queue.submit(endpoint, {
+      const submitOptions: {
+        input: Record<string, unknown>;
+        abortSignal?: AbortSignal;
+        webhookUrl?: string;
+      } = {
         input,
         abortSignal: signal,
-      });
+      };
+      const webhookBaseUrl = getMediaEnv().falWebhookBaseUrl;
+      if (webhookBaseUrl) {
+        submitOptions.webhookUrl = `${webhookBaseUrl}/api/v1/media/webhooks/fal`;
+      }
+
+      const submitted = await fal.queue.submit(endpoint, submitOptions);
       const requestId = submitted.request_id;
       return {
         status: "waiting_provider",

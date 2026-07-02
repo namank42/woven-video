@@ -29,6 +29,10 @@ const mediaEnv: MediaEnv = {
   uploadUrlTtlSeconds: 60,
   downloadUrlTtlSeconds: 60,
   outputRetentionSeconds: 2_592_000,
+  jobTimeoutSeconds: 3600,
+  workerPollMs: 5000,
+  falWebhookBaseUrl: null,
+  falWebhookJwksUrl: null,
 };
 
 type SupabaseError = { message: string };

@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   falStatus: vi.fn(),
   falResult: vi.fn(),
   ElevenLabsClient: vi.fn(),
+  getMediaEnv: vi.fn(),
 }));
 
 vi.mock("@fal-ai/client", () => ({
@@ -23,11 +24,17 @@ vi.mock("@elevenlabs/elevenlabs-js", () => ({
   ElevenLabsClient: mocks.ElevenLabsClient,
 }));
 
+vi.mock("@/lib/media/env", () => ({
+  getMediaEnv: mocks.getMediaEnv,
+}));
+
 describe("falMediaAdapter", () => {
   beforeEach(() => {
     mocks.falSubmit.mockReset();
     mocks.falStatus.mockReset();
     mocks.falResult.mockReset();
+    mocks.getMediaEnv.mockReset();
+    mocks.getMediaEnv.mockReturnValue({ falWebhookBaseUrl: null });
   });
 
   it("extracts nested output urls with inferred media type and content type", async () => {
@@ -89,6 +96,31 @@ describe("falMediaAdapter", () => {
         input_urls: ["https://media.example.com/input.png"],
       },
       abortSignal: abortController.signal,
+    });
+  });
+
+  it("passes the Fal webhook URL when configured", async () => {
+    const { falMediaAdapter } = await import("@/lib/media/providers/fal");
+    mocks.getMediaEnv.mockReturnValue({
+      falWebhookBaseUrl: "https://www.woven.video",
+    });
+    mocks.falSubmit.mockResolvedValue({ request_id: "fal_req_webhook" });
+
+    await falMediaAdapter.run({
+      model: mediaModel({
+        parameterSchema: {
+          type: "object",
+          properties: { prompt: { type: "string" } },
+        },
+      }),
+      parameters: { prompt: "a mountain" },
+      inputUrls: [],
+    });
+
+    expect(mocks.falSubmit).toHaveBeenCalledWith("fal-ai/frontier-video", {
+      input: { prompt: "a mountain" },
+      webhookUrl: "https://www.woven.video/api/v1/media/webhooks/fal",
+      abortSignal: undefined,
     });
   });
 

@@ -25,6 +25,10 @@ const mediaEnv: MediaEnv = {
   uploadUrlTtlSeconds: 60,
   downloadUrlTtlSeconds: 120,
   outputRetentionSeconds: 2_592_000,
+  jobTimeoutSeconds: 3600,
+  workerPollMs: 5000,
+  falWebhookBaseUrl: null,
+  falWebhookJwksUrl: null,
 };
 const nowSeconds = Math.floor(Date.parse("2026-07-01T12:00:00.000Z") / 1000);
 
