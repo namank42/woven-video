@@ -94,13 +94,13 @@ describe("Fal webhook signature verification", () => {
     }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const module = await import("@/lib/media/providers/fal-webhooks");
-    await expect(module.verifyFalWebhookSignature({
+    const webhookModule = await import("@/lib/media/providers/fal-webhooks");
+    await expect(webhookModule.verifyFalWebhookSignature({
       headers,
       rawBody,
       nowSeconds: 1_700_000_010,
     })).resolves.toBe(true);
-    await expect(module.verifyFalWebhookSignature({
+    await expect(webhookModule.verifyFalWebhookSignature({
       headers,
       rawBody,
       nowSeconds: 1_700_000_020,
@@ -128,8 +128,8 @@ describe("Fal webhook signature verification", () => {
     };
     globalThis.fetch = vi.fn(async () => new Response("unavailable", { status: 503 })) as unknown as typeof fetch;
 
-    const module = await import("@/lib/media/providers/fal-webhooks");
-    await expect(module.verifyFalWebhookSignature({
+    const webhookModule = await import("@/lib/media/providers/fal-webhooks");
+    await expect(webhookModule.verifyFalWebhookSignature({
       headers,
       rawBody,
       nowSeconds: 1_700_000_010,
@@ -165,8 +165,8 @@ describe("Fal webhook signature verification", () => {
     }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const module = await import("@/lib/media/providers/fal-webhooks");
-    await expect(module.verifyFalWebhookSignature({
+    const webhookModule = await import("@/lib/media/providers/fal-webhooks");
+    await expect(webhookModule.verifyFalWebhookSignature({
       headers,
       rawBody,
       nowSeconds: 1_700_000_010,
@@ -175,7 +175,7 @@ describe("Fal webhook signature verification", () => {
       kind: "infrastructure",
       code: "jwks_malformed",
     });
-    await expect(module.verifyFalWebhookSignature({
+    await expect(webhookModule.verifyFalWebhookSignature({
       headers,
       rawBody,
       nowSeconds: 1_700_000_020,
@@ -212,13 +212,13 @@ describe("Fal webhook signature verification", () => {
     }));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const module = await import("@/lib/media/providers/fal-webhooks");
-    const firstVerification = module.verifyFalWebhookSignature({
+    const webhookModule = await import("@/lib/media/providers/fal-webhooks");
+    const firstVerification = webhookModule.verifyFalWebhookSignature({
       headers,
       rawBody,
       nowSeconds: 1_700_000_010,
     });
-    const secondVerification = module.verifyFalWebhookSignature({
+    const secondVerification = webhookModule.verifyFalWebhookSignature({
       headers,
       rawBody,
       nowSeconds: 1_700_000_010,

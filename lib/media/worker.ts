@@ -373,17 +373,21 @@ async function withLeaseHeartbeat<T>(
   if (!job.claimToken) return action();
 
   const interval = setInterval(() => {
-    void admin.rpc("extend_claimed_media_job_lease", {
-      p_job_id: job.id,
-      p_claim_token: job.claimToken,
-      p_lease_seconds: 300,
-    }).then(({ error }) => {
-      if (error && !isStaleClaimError(error)) {
+    void (async () => {
+      try {
+        const { error } = await admin.rpc("extend_claimed_media_job_lease", {
+          p_job_id: job.id,
+          p_claim_token: job.claimToken,
+          p_lease_seconds: 300,
+        });
+
+        if (error && !isStaleClaimError(error)) {
+          console.error("Failed to extend media job lease", error);
+        }
+      } catch (error) {
         console.error("Failed to extend media job lease", error);
       }
-    }).catch((error: unknown) => {
-      console.error("Failed to extend media job lease", error);
-    });
+    })();
   }, 120_000);
 
   try {
