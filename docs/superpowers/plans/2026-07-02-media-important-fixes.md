@@ -494,7 +494,7 @@ FAL_WEBHOOK_JWKS_URL=
 CRON_SECRET=
 ```
 
-Keep `FAL_WEBHOOK_JWKS_URL` empty in the example because the plan does not hard-code an unverified Fal JWKS endpoint.
+Keep `FAL_WEBHOOK_JWKS_URL` documented in the example so production uses the official Fal JWKS URL by default, with an override available when needed.
 
 - [ ] **Step 4: Add the deploy runbook**
 
@@ -1901,7 +1901,7 @@ git commit -m "test: add media rpc integration coverage"
 **Files:**
 - Modify: `docs/superpowers/plans/2026-07-02-media-important-fixes.md`
 
-- [ ] **Step 1: Run focused media tests**
+- [x] **Step 1: Run focused media tests**
 
 Run:
 
@@ -1923,7 +1923,7 @@ Run:
 
 Expected: PASS. If eslint still reports the two pre-existing warnings from the critical-fix run, record them as pre-existing warnings rather than new failures.
 
-- [ ] **Step 3: Check git diff**
+- [x] **Step 3: Check git diff**
 
 Run:
 
@@ -1934,11 +1934,11 @@ git status --short --branch
 
 Expected: no whitespace errors; branch is ahead by the new task commits.
 
-- [ ] **Step 4: Update this plan's checklist**
+- [x] **Step 4: Update this plan's checklist**
 
 Mark each completed checkbox in `docs/superpowers/plans/2026-07-02-media-important-fixes.md`.
 
-- [ ] **Step 5: Commit checklist update**
+- [x] **Step 5: Commit checklist update**
 
 ```bash
 git add docs/superpowers/plans/2026-07-02-media-important-fixes.md
@@ -1957,4 +1957,4 @@ git commit -m "docs: mark media important fixes complete"
 - Important #7 is covered by Task 5.
 - Important #8 is covered by Task 6.
 - Important #9 is covered by Task 7.
-- The plan does not hard-code a Fal JWKS URL because the current docs digest confirms the JWKS verification mechanism but does not pin a stable URL. `FAL_WEBHOOK_JWKS_URL` is required for production verification.
+- The plan now uses the official Fal JWKS URL by default and keeps `FAL_WEBHOOK_JWKS_URL` as an override for deployments that need a different endpoint.
