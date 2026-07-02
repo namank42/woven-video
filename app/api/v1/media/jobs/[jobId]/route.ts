@@ -1,5 +1,6 @@
 import { requireApiAuth } from "@/lib/api/auth";
 import { apiError } from "@/lib/api/responses";
+import { presentJobOutputs } from "@/lib/media/output-urls";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +55,17 @@ export async function GET(request: Request, context: RouteContext) {
   const output = objectValue(job.output) ?? {};
   const outputModel = stringValue(output.media_model_id);
   const inputModel = stringValue(input.media_model_id);
-  const outputs = Array.isArray(output.outputs) ? output.outputs : [];
+  let outputs;
+  try {
+    outputs = await presentJobOutputs({
+      userId: authResult.auth.user.id,
+      jobId: job.id,
+      outputs: Array.isArray(output.outputs) ? output.outputs : [],
+    });
+  } catch (presentError) {
+    console.error("Failed to sign media job output urls", presentError);
+    return apiError("Unable to look up media job.", 500, "media_job_lookup_failed");
+  }
 
   return Response.json(
     {

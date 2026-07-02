@@ -6,6 +6,7 @@ describe("media job routes", () => {
     vi.doUnmock("@/lib/api/license");
     vi.doUnmock("@/lib/media/jobs");
     vi.doUnmock("@/lib/media/model-registry");
+    vi.doUnmock("@/lib/media/output-urls");
     vi.doUnmock("@/lib/media/schema");
     vi.doUnmock("@/lib/supabase/admin");
     vi.resetModules();
@@ -183,7 +184,7 @@ describe("media job routes", () => {
     });
   });
 
-  it("returns status outputs and a generic public provider error message", async () => {
+  it("re-signs stored outputs on read and returns a generic public provider error message", async () => {
     vi.doMock("@/lib/api/auth", () => ({
       requireApiAuth: vi.fn(async () => ({
         ok: true,
@@ -221,6 +222,14 @@ describe("media job routes", () => {
     vi.doMock("@/lib/supabase/admin", () => ({
       createSupabaseAdminClient: vi.fn(() => ({ from })),
     }));
+    const presentJobOutputs = vi.fn(async () => ([{
+      id: "out_1",
+      type: "video",
+      content_type: "video/mp4",
+      url: "https://media.example.test/objects/out_1?token=fresh",
+      expires_at: "2026-07-01T12:17:00.000Z",
+    }]));
+    vi.doMock("@/lib/media/output-urls", () => ({ presentJobOutputs }));
 
     const { GET } = await import("@/app/api/v1/media/jobs/[jobId]/route");
     const response = await GET(
@@ -230,12 +239,78 @@ describe("media job routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(presentJobOutputs).toHaveBeenCalledWith({
+      userId: "user_1",
+      jobId: "job_1",
+      outputs: [{ id: "out_1", type: "video" }],
+    });
     await expect(response.json()).resolves.toMatchObject({
       id: "job_1",
       status: "failed",
       model: "fal:output-model",
-      outputs: [{ id: "out_1", type: "video" }],
+      outputs: [{
+        id: "out_1",
+        url: "https://media.example.test/objects/out_1?token=fresh",
+        expires_at: "2026-07-01T12:17:00.000Z",
+      }],
       error: { code: "provider_failed", message: "Generation failed." },
+    });
+  });
+
+  it("returns a 500 when output url signing fails", async () => {
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+
+    const maybeSingle = vi.fn(async () => ({
+      data: {
+        id: "job_1",
+        status: "failed",
+        estimated_cost_usd_micros: 500_000,
+        reserved_amount_usd_micros: 500_000,
+        final_cost_usd_micros: 0,
+        progress: { stage: "failed", percent: null },
+        input: { media_model_id: "fal:input-model" },
+        output: {
+          media_model_id: "fal:output-model",
+          outputs: [{ id: "out_1", type: "video" }],
+        },
+        error: "provider stack trace with private details",
+        created_at: "2026-07-01T12:00:00.000Z",
+        started_at: "2026-07-01T12:01:00.000Z",
+        completed_at: "2026-07-01T12:02:00.000Z",
+      },
+      error: null,
+    }));
+    const chain = {
+      eq: vi.fn(() => chain),
+      maybeSingle,
+    };
+    const select = vi.fn(() => chain);
+    const from = vi.fn(() => ({ select }));
+
+    vi.doMock("@/lib/supabase/admin", () => ({
+      createSupabaseAdminClient: vi.fn(() => ({ from })),
+    }));
+    vi.doMock("@/lib/media/output-urls", () => ({
+      presentJobOutputs: vi.fn(async () => {
+        throw new Error("MEDIA_TOKEN_SECRET missing");
+      }),
+    }));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { GET } = await import("@/app/api/v1/media/jobs/[jobId]/route");
+    const response = await GET(
+      new Request("https://example.test/api/v1/media/jobs/job_1"),
+      { params: Promise.resolve({ jobId: "job_1" }) },
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "media_job_lookup_failed" },
     });
   });
 
