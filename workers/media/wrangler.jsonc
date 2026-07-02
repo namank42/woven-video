@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "woven-media",
+  "main": "index.ts",
+  "compatibility_date": "2026-07-02",
+  "routes": [
+    {
+      "pattern": "media.woven.video/*",
+      "custom_domain": true
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "woven-media"
+    }
+  ],
+  "vars": {
+    "WOVEN_API_BASE_URL": "https://www.woven.video",
+    "MEDIA_MAX_UPLOAD_BYTES": "104857600"
+  }
+}

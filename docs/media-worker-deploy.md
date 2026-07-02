@@ -1,0 +1,68 @@
+# Media Worker Deployment
+
+This runbook keeps the app, Supabase schema, media Worker, R2 bucket, and reel-captions client compatibility in the right order.
+
+## Required Infrastructure
+
+- Cloudflare R2 bucket: `woven-media`
+- Cloudflare Worker route: `https://media.woven.video`
+- Vercel app route: `https://www.woven.video`
+- Supabase migrations through `20260702160000_media_job_readiness_deadlines_cleanup.sql`
+
+## Worker Secrets
+
+Set these before deploying the Worker:
+
+```bash
+wrangler secret put MEDIA_TOKEN_SECRET --config workers/media/wrangler.jsonc
+wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangler.jsonc
+```
+
+The values must match the app's `MEDIA_TOKEN_SECRET` and `MEDIA_WORKER_SHARED_SECRET`.
+
+## App Environment
+
+Set these on the app before enabling hosted media creation:
+
+```dotenv
+MEDIA_BASE_URL=https://media.woven.video
+MEDIA_TOKEN_SECRET=<same value as Worker>
+MEDIA_WORKER_SHARED_SECRET=<same value as Worker>
+MEDIA_MAX_UPLOAD_BYTES=104857600
+MEDIA_UPLOAD_URL_TTL_SECONDS=900
+MEDIA_DOWNLOAD_URL_TTL_SECONDS=900
+MEDIA_OUTPUT_RETENTION_SECONDS=2592000
+MEDIA_JOB_TIMEOUT_SECONDS=3600
+MEDIA_WORKER_POLL_MS=5000
+MEDIA_FAL_WEBHOOK_BASE_URL=https://www.woven.video
+FAL_WEBHOOK_JWKS_URL=<Fal JWKS URL from Fal webhook docs/dashboard>
+CRON_SECRET=<random 16+ character secret for Vercel Cron>
+```
+
+## Deployment Order
+
+1. Create or verify the `woven-media` R2 bucket.
+2. Set Worker secrets with `wrangler secret put`.
+3. Deploy the Worker with `npm run media:worker:deploy`.
+4. Set app env vars in Vercel.
+5. Apply Supabase migrations.
+6. Deploy the app.
+7. Start or restart the media worker process.
+8. Confirm Vercel Cron is active for `/api/internal/media/cleanup`.
+9. Smoke-test upload, job creation, job status, output download, Fal webhook, and cleanup.
+
+## Smoke Tests
+
+1. Create a temp upload asset through `POST /api/v1/media/uploads`.
+2. PUT a small object to the returned `upload_url`.
+3. Create a hosted media job that references the uploaded input.
+4. Confirm the job starts as `queued`, then `running` or `waiting_provider`.
+5. Confirm output URLs are absent in stored `generation_jobs.output` and present in `GET /api/v1/media/jobs/:jobId`.
+6. Confirm `GET https://media.woven.video/objects/:assetId?token=...` returns the output before retention expiry.
+7. Invoke `GET /api/internal/media/cleanup` with `Authorization: Bearer $CRON_SECRET` in staging and confirm expired R2 keys are deleted.
+
+## Rollback Notes
+
+- Do not roll back the app to a build that writes Supabase Storage reel-captions jobs after applying hosted-media-only client changes.
+- If the Worker is unavailable, disable hosted media creation at the app/router layer before users create jobs.
+- The cleanup path is idempotent for already-deleted R2 keys because R2 `delete` succeeds even when the object is absent.

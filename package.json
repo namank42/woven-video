@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "media:worker": "tsx scripts/media-worker.ts"
+    "media:worker": "tsx scripts/media-worker.ts",
+    "media:worker:deploy": "wrangler deploy --config workers/media/wrangler.jsonc",
+    "test:media-db": "RUN_SUPABASE_DB_TESTS=1 vitest run tests/media/db-rpcs.integration.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
