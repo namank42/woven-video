@@ -32,3 +32,20 @@
   - `schedules.task({...})`
   - `wait.for({...})`
 - The reconciliation task redispatches each stale job returned by `findMediaJobsForTriggerReconciliation(25)` using the real job metadata.
+
+## Controller Integration Fix
+- Follow-up commit `26c94b0 fix(media): align trigger dispatch types` resolved the reported typecheck failures:
+  - `lib/media/trigger-dispatch.ts` now passes the installed Trigger SDK's supported queue option shape while preserving queue limit metadata in tags.
+  - `tests/media/db-rpcs.integration.test.ts` now types reconciliation RPC rows.
+- Verification:
+  - `./node_modules/.bin/vitest run tests/media/trigger-dispatch.test.ts tests/media/trigger-tasks.test.ts` passed (`2 files`, `4 tests`).
+  - `./node_modules/.bin/tsc --noEmit` passed.
+
+## Queue Enforcement Fix
+- Follow-up commit pending restored actual Trigger queue-limit registration:
+  - `trigger/media.ts` now registers `media-image`, `media-video`, and `media-audio` queues with `queue({ name, concurrencyLimit })`.
+  - `processMediaJobTask` has a default task queue, and dispatch-time queue names refer to registered queues.
+  - `tests/media/trigger-tasks.test.ts` now asserts the queue registrations and task default queue.
+- Verification:
+  - `./node_modules/.bin/vitest run tests/media/trigger-tasks.test.ts tests/media/trigger-dispatch.test.ts` passed (`2 files`, `4 tests`).
+  - `./node_modules/.bin/tsc --noEmit` passed.

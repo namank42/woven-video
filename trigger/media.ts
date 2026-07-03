@@ -1,13 +1,18 @@
-import { schedules, task, wait } from "@trigger.dev/sdk";
+import { queue, schedules, task, wait } from "@trigger.dev/sdk";
 
 import { processMediaJob } from "@/lib/media/executor";
 import { findMediaJobsForTriggerReconciliation } from "@/lib/media/job-claims";
-import { dispatchMediaJob } from "@/lib/media/trigger-dispatch";
+import { dispatchMediaJob, mediaQueueForKind } from "@/lib/media/trigger-dispatch";
 import { elevenLabsMediaAdapter } from "@/lib/media/providers/elevenlabs";
 import { falMediaAdapter } from "@/lib/media/providers/fal";
 
+export const mediaImageQueue = queue(mediaQueueForKind("image"));
+export const mediaVideoQueue = queue(mediaQueueForKind("video"));
+export const mediaAudioQueue = queue(mediaQueueForKind("audio"));
+
 export const processMediaJobTask = task({
   id: "process-media-job",
+  queue: mediaImageQueue,
   retry: {
     maxAttempts: 3,
     minTimeoutInMs: 1_000,
