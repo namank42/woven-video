@@ -1717,7 +1717,7 @@ set display_name = excluded.display_name,
 
 In `docs/media-worker-deploy.md`, replace the entire "Curated Media Model Enablement" section with:
 
-```md
+````md
 ## Curated Media Model Catalog
 
 Clean schema deployments seed enabled production media rows in `model_pricing_rules` through
@@ -1736,8 +1736,7 @@ curl -s "https://www.woven.video/api/v1/media/models?kind=image" \
 
 The catalog response must include image, video, and audio rows, `input_asset_schema`, and
 `parameter_schema`. Do not enable rows that rely on generic recursive Fal URL extraction.
-```
-```
+````
 
 - [ ] **Step 6: Run seed tests**
 
