@@ -1,8 +1,47 @@
-import { task } from "@trigger.dev/sdk";
+import { schedules, task, wait } from "@trigger.dev/sdk";
+
+import { processMediaJob } from "@/lib/media/executor";
+import { findMediaJobsForTriggerReconciliation } from "@/lib/media/job-claims";
+import { dispatchMediaJob } from "@/lib/media/trigger-dispatch";
+import { elevenLabsMediaAdapter } from "@/lib/media/providers/elevenlabs";
+import { falMediaAdapter } from "@/lib/media/providers/fal";
 
 export const processMediaJobTask = task({
   id: "process-media-job",
+  retry: {
+    maxAttempts: 3,
+    minTimeoutInMs: 1_000,
+    maxTimeoutInMs: 30_000,
+    factor: 2,
+    randomize: true,
+  },
   run: async ({ jobId }: { jobId: string }) => {
-    throw new Error(`process-media-job is not implemented yet for job ${jobId}.`);
+    return processMediaJob({
+      jobId,
+      adapters: {
+        fal: falMediaAdapter,
+        elevenlabs: elevenLabsMediaAdapter,
+      },
+      waitFor: async ({ seconds }) => wait.for({ seconds }),
+    });
+  },
+});
+
+export const reconcileMediaJobsTask = schedules.task({
+  id: "reconcile-media-jobs",
+  cron: "*/5 * * * *",
+  run: async () => {
+    const jobs = await findMediaJobsForTriggerReconciliation(25);
+
+    for (const job of jobs) {
+      await dispatchMediaJob({
+        jobId: job.jobId,
+        userId: job.userId,
+        modelId: job.modelId,
+        kind: job.kind,
+      });
+    }
+
+    return { dispatched: jobs.length };
   },
 });
