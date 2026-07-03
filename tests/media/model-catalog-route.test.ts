@@ -35,6 +35,14 @@ describe("media model catalog route", () => {
             max: 1,
             contentTypePrefixes: ["image/"],
           }],
+          constraints: [
+            {
+              type: "requires_any_role_when_role_present",
+              role: "reference_videos",
+              roles: ["reference_audio"],
+              message: "reference_videos requires reference_audio",
+            },
+          ],
         },
         pricingFormula: { type: "veo_seconds" },
         parameterSchema: {
@@ -91,6 +99,14 @@ describe("media model catalog route", () => {
               max: 1,
               content_type_prefixes: ["image/"],
             }],
+            constraints: [
+              {
+                type: "requires_any_role_when_role_present",
+                role: "reference_videos",
+                roles: ["reference_audio"],
+                message: "reference_videos requires reference_audio",
+              },
+            ],
           },
           estimated_price: {
             estimate_kind: "parameter_quote",

@@ -232,6 +232,199 @@ describe("createReservedMediaJob", () => {
     });
   });
 
+  it("applies default parameters before quoting and storing a per-second job when duration is omitted", async () => {
+    const insertStep = insertJobQuery({
+      data: {
+        id: "job_1",
+        status: "creating",
+        estimated_cost_usd_micros: 3_840_000,
+        reserved_amount_usd_micros: 0,
+        created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-01T13:00:00.000Z",
+      },
+      error: null,
+    });
+    const queueStep = updateJobQuery({
+      data: {
+        id: "job_1",
+        status: "queued",
+        estimated_cost_usd_micros: 3_840_000,
+        reserved_amount_usd_micros: 3_840_000,
+        created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-01T13:00:00.000Z",
+      },
+      error: null,
+    });
+    const admin = mockAdminWith(insertStep, queueStep);
+
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model: defaultedPerSecondModel(),
+      parameters: { prompt: "a mountain" },
+      inputAssets: [],
+      inputAssetIds: [],
+    })).resolves.toMatchObject({
+      id: "job_1",
+      estimatedCostUsdMicros: 3_840_000,
+      reservedCreditsUsdMicros: 3_840_000,
+    });
+
+    expect(admin.inserts[0]).toMatchObject({
+      estimated_cost_usd_micros: 3_840_000,
+      input: {
+        parameters: {
+          prompt: "a mountain",
+          duration: "8s",
+          resolution: "720p",
+          generate_audio: true,
+        },
+        pricing_quote: {
+          estimate_kind: "parameter_quote",
+          provider_cost_usd_micros: 3_200_000,
+          charged_amount_usd_micros: 3_840_000,
+          reserved_amount_usd_micros: 3_840_000,
+          markup_amount_usd_micros: 640_000,
+          formula: "veo_seconds",
+          inputs: {
+            duration_seconds: 8,
+            resolution: "720p",
+            generate_audio: true,
+          },
+        },
+      },
+    });
+    expect(admin.rpc).toHaveBeenCalledWith("reserve_balance", expect.objectContaining({
+      p_amount_usd_micros: 3_840_000,
+    }));
+  });
+
+  it("quotes omitted generate_audio with the model default instead of false", async () => {
+    const insertStep = insertJobQuery({
+      data: {
+        id: "job_1",
+        status: "creating",
+        estimated_cost_usd_micros: 3_840_000,
+        reserved_amount_usd_micros: 0,
+        created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-01T13:00:00.000Z",
+      },
+      error: null,
+    });
+    const queueStep = updateJobQuery({
+      data: {
+        id: "job_1",
+        status: "queued",
+        estimated_cost_usd_micros: 3_840_000,
+        reserved_amount_usd_micros: 3_840_000,
+        created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-01T13:00:00.000Z",
+      },
+      error: null,
+    });
+    const admin = mockAdminWith(insertStep, queueStep);
+
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model: defaultedPerSecondModel(),
+      parameters: { prompt: "a mountain", duration: "8s" },
+      inputAssets: [],
+      inputAssetIds: [],
+    })).resolves.toMatchObject({
+      id: "job_1",
+      estimatedCostUsdMicros: 3_840_000,
+      reservedCreditsUsdMicros: 3_840_000,
+    });
+
+    expect(admin.inserts[0]).toMatchObject({
+      input: {
+        parameters: {
+          prompt: "a mountain",
+          duration: "8s",
+          resolution: "720p",
+          generate_audio: true,
+        },
+        pricing_quote: {
+          inputs: {
+            duration_seconds: 8,
+            resolution: "720p",
+            generate_audio: true,
+          },
+        },
+      },
+    });
+    expect(admin.rpc).toHaveBeenCalledWith("reserve_balance", expect.objectContaining({
+      p_amount_usd_micros: 3_840_000,
+    }));
+  });
+
+  it("keeps explicit user parameters over defaults while still storing the full effective set", async () => {
+    const insertStep = insertJobQuery({
+      data: {
+        id: "job_1",
+        status: "creating",
+        estimated_cost_usd_micros: 960_000,
+        reserved_amount_usd_micros: 0,
+        created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-01T13:00:00.000Z",
+      },
+      error: null,
+    });
+    const queueStep = updateJobQuery({
+      data: {
+        id: "job_1",
+        status: "queued",
+        estimated_cost_usd_micros: 960_000,
+        reserved_amount_usd_micros: 960_000,
+        created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-01T13:00:00.000Z",
+      },
+      error: null,
+    });
+    const admin = mockAdminWith(insertStep, queueStep);
+
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model: defaultedPerSecondModel(),
+      parameters: {
+        prompt: "a mountain",
+        duration: "4s",
+        generate_audio: false,
+      },
+      inputAssets: [],
+      inputAssetIds: [],
+    })).resolves.toMatchObject({
+      id: "job_1",
+      estimatedCostUsdMicros: 960_000,
+      reservedCreditsUsdMicros: 960_000,
+    });
+
+    expect(admin.inserts[0]).toMatchObject({
+      estimated_cost_usd_micros: 960_000,
+      input: {
+        parameters: {
+          prompt: "a mountain",
+          duration: "4s",
+          resolution: "720p",
+          generate_audio: false,
+        },
+        pricing_quote: {
+          provider_cost_usd_micros: 800_000,
+          charged_amount_usd_micros: 960_000,
+          reserved_amount_usd_micros: 960_000,
+          markup_amount_usd_micros: 160_000,
+          inputs: {
+            duration_seconds: 4,
+            resolution: "720p",
+            generate_audio: false,
+          },
+        },
+      },
+    });
+    expect(admin.rpc).toHaveBeenCalledWith("reserve_balance", expect.objectContaining({
+      p_amount_usd_micros: 960_000,
+    }));
+  });
+
   it("releases the reservation and fails the job when asset attachment fails after reservation", async () => {
     const assetsStep = selectAssetsQuery({
       data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],
@@ -628,6 +821,31 @@ function mockAdminWith(...steps: QueryStep[]) {
       return steps
         .filter((step) => step.table === "generation_jobs" && step.updated !== undefined)
         .map((step) => step.updated);
+    },
+  };
+}
+
+function defaultedPerSecondModel(): MediaModel {
+  return {
+    ...model,
+    supportsUploadedInputs: false,
+    defaultParameters: {
+      duration: "8s",
+      resolution: "720p",
+      generate_audio: true,
+    },
+    pricing: {
+      ...model.pricing,
+      minimumUsdMicros: 0,
+    },
+    pricingFormula: {
+      type: "veo_seconds",
+      duration_parameter: "duration",
+      resolution_parameter: "resolution",
+      audio_parameter: "generate_audio",
+      rates: {
+        default: { no_audio: "0.20", audio: "0.40" },
+      },
     },
   };
 }

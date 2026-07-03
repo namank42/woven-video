@@ -217,7 +217,8 @@ describe("media job routes", () => {
   it("maps known media job creation failures to stable public errors", async () => {
     const createReservedMediaJob = vi.fn()
       .mockRejectedValueOnce(new Error("insufficient_balance"))
-      .mockRejectedValueOnce(new Error("upload_not_complete"));
+      .mockRejectedValueOnce(new Error("upload_not_complete"))
+      .mockRejectedValueOnce(new Error("media_quote_requires_explicit_duration"));
 
     vi.doMock("@/lib/api/auth", () => ({
       requireApiAuth: vi.fn(async () => ({
@@ -255,6 +256,11 @@ describe("media job routes", () => {
       parameters: { prompt: "a mountain" },
       input_asset_ids: ["asset_1"],
     }));
+    const invalidQuote = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "fal:frontier-video",
+      parameters: { prompt: "a mountain" },
+      input_asset_ids: ["asset_1"],
+    }));
 
     expect(insufficient.status).toBe(402);
     await expect(insufficient.json()).resolves.toMatchObject({
@@ -263,6 +269,10 @@ describe("media job routes", () => {
     expect(uploadIncomplete.status).toBe(409);
     await expect(uploadIncomplete.json()).resolves.toMatchObject({
       error: { code: "upload_not_complete" },
+    });
+    expect(invalidQuote.status).toBe(400);
+    await expect(invalidQuote.json()).resolves.toMatchObject({
+      error: { code: "invalid_media_input" },
     });
   });
 

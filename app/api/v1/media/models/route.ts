@@ -57,6 +57,9 @@ export async function GET(request: Request) {
               max: role.max,
               content_type_prefixes: role.contentTypePrefixes,
             })),
+            ...(model.inputAssetSchema.constraints
+              ? { constraints: model.inputAssetSchema.constraints }
+              : {}),
           },
           estimated_price: {
             estimate_kind:

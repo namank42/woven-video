@@ -54,7 +54,11 @@ export async function createReservedMediaJob({
   }
 
   const admin = createSupabaseAdminClient();
-  const pricingQuote = quoteMediaJob({ model, parameters });
+  const effectiveParameters = {
+    ...model.defaultParameters,
+    ...parameters,
+  };
+  const pricingQuote = quoteMediaJob({ model, parameters: effectiveParameters });
   const reserveAmount = reservationUsdMicros(model, pricingQuote);
 
   await validateInputAssets({
@@ -78,7 +82,7 @@ export async function createReservedMediaJob({
       input: {
         media_model_id: model.id,
         operation: model.operation,
-        parameters,
+        parameters: effectiveParameters,
         input_assets: inputAssets.map((asset) => ({ asset_id: asset.assetId, role: asset.role })),
         input_asset_ids: inputAssetIds,
         pricing_quote: serializeMediaPricingQuote(pricingQuote),
