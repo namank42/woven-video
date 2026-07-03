@@ -1,7 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getMediaJobTimeoutSeconds } from "@/lib/media/env";
+import {
+  inputAssetRoleFor,
+  matchesInputAssetRoleContentType,
+  type MediaJobInputAsset,
+  validateInputAssetRoles,
+} from "@/lib/media/input-assets";
 import { reservationUsdMicros } from "@/lib/media/pricing";
+import { quoteMediaJob, serializeMediaPricingQuote } from "@/lib/media/pricing-quotes";
 import type { MediaModel } from "@/lib/media/types";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -28,20 +35,29 @@ export async function createReservedMediaJob({
   userId,
   model,
   parameters,
+  inputAssets,
   inputAssetIds,
 }: {
   userId: string;
   model: MediaModel;
   parameters: Record<string, unknown>;
+  inputAssets: MediaJobInputAsset[];
   inputAssetIds: string[];
 }) {
+  const roleValidation = validateInputAssetRoles(inputAssets, model.inputAssetSchema);
+  if (!roleValidation.ok) {
+    throw new Error("invalid_media_input");
+  }
+
   const admin = createSupabaseAdminClient();
-  const reserveAmount = reservationUsdMicros(model);
+  const pricingQuote = quoteMediaJob({ model, parameters });
+  const reserveAmount = reservationUsdMicros(model, pricingQuote);
 
   await validateInputAssets({
     admin,
     userId,
     model,
+    inputAssets,
     inputAssetIds,
   });
 
@@ -59,7 +75,9 @@ export async function createReservedMediaJob({
         media_model_id: model.id,
         operation: model.operation,
         parameters,
+        input_assets: inputAssets.map((asset) => ({ asset_id: asset.assetId, role: asset.role })),
         input_asset_ids: inputAssetIds,
+        pricing_quote: serializeMediaPricingQuote(pricingQuote),
       },
       progress: { stage: "creating", percent: null },
     })
@@ -194,11 +212,13 @@ async function validateInputAssets({
   admin,
   userId,
   model,
+  inputAssets,
   inputAssetIds,
 }: {
   admin: SupabaseAdminClient;
   userId: string;
   model: MediaModel;
+  inputAssets: MediaJobInputAsset[];
   inputAssetIds: string[];
 }) {
   if (
@@ -223,17 +243,35 @@ async function validateInputAssets({
     throw new Error(assetError.message);
   }
 
-  const inputAssets = (assets ?? []) as MediaAssetInputRow[];
-  if (inputAssets.length !== inputAssetIds.length) {
+  const assetRows = (assets ?? []) as MediaAssetInputRow[];
+  if (assetRows.length !== inputAssetIds.length) {
     throw new Error("invalid_media_input");
   }
 
-  for (const asset of inputAssets) {
-    if (asset.status !== "uploaded") {
+  const inputAssetsById = new Map(assetRows.map((asset) => [asset.id, asset]));
+
+  for (const inputAsset of assetRows) {
+    if (inputAsset.status !== "uploaded") {
       throw new Error("upload_not_complete");
     }
+  }
 
-    const family = asset.content_type.split("/")[0];
+  for (const asset of inputAssets) {
+    const loadedAsset = inputAssetsById.get(asset.assetId);
+    const role = inputAssetRoleFor(model.inputAssetSchema, asset.role);
+
+    if (!loadedAsset) {
+      throw new Error("invalid_media_input");
+    }
+
+    if (role) {
+      if (!matchesInputAssetRoleContentType(loadedAsset.content_type, role)) {
+        throw new Error("invalid_media_input");
+      }
+      continue;
+    }
+
+    const family = loadedAsset.content_type.split("/")[0];
     if (!family || !model.supportedInputTypes.includes(family)) {
       throw new Error("invalid_media_input");
     }

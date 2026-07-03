@@ -130,7 +130,87 @@ describe("media job routes", () => {
         parameterSchema: { type: "object" },
       },
       parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "image" }],
       inputAssetIds: ["asset_1"],
+    });
+  });
+
+  it("passes role-aware input_assets to job creation", async () => {
+    const createReservedMediaJob = vi.fn(async () => ({
+      id: "job_1",
+      status: "queued",
+      model: "fal-ai/veo3.1/first-last-frame-to-video",
+      estimatedCostUsdMicros: 3_840_000,
+      reservedCreditsUsdMicros: 3_840_000,
+      createdAt: "2026-07-01T12:00:00.000Z",
+      expiresAt: "2026-07-01T13:00:00.000Z",
+    }));
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({ ok: true, auth: { user: { id: "user_1" } } })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({ licenseGateResponse: vi.fn(async () => null) }));
+    vi.doMock("@/lib/media/model-registry", () => ({
+      getMediaModel: vi.fn(async () => ({
+        id: "fal-ai/veo3.1/first-last-frame-to-video",
+        parameterSchema: { type: "object" },
+        inputAssetSchema: {
+          roles: [
+            { role: "first_frame", providerField: "first_frame_url", mediaKind: "image", required: true, min: 1, max: 1, contentTypePrefixes: ["image/"] },
+            { role: "last_frame", providerField: "last_frame_url", mediaKind: "image", required: true, min: 1, max: 1, contentTypePrefixes: ["image/"] },
+          ],
+        },
+      })),
+    }));
+    vi.doMock("@/lib/media/schema", () => ({
+      validateMediaParameters: vi.fn(() => ({ ok: true, value: { prompt: "reveal" } })),
+    }));
+    vi.doMock("@/lib/media/jobs", () => ({ createReservedMediaJob }));
+
+    const { POST } = await import("@/app/api/v1/media/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "fal-ai/veo3.1/first-last-frame-to-video",
+      parameters: { prompt: "reveal" },
+      input_assets: [
+        { asset_id: "asset_first", role: "first_frame" },
+        { asset_id: "asset_last", role: "last_frame" },
+      ],
+    }));
+
+    expect(response.status).toBe(200);
+    expect(createReservedMediaJob).toHaveBeenCalledWith(expect.objectContaining({
+      inputAssets: [
+        { assetId: "asset_first", role: "first_frame" },
+        { assetId: "asset_last", role: "last_frame" },
+      ],
+      inputAssetIds: ["asset_first", "asset_last"],
+    }));
+  });
+
+  it("rejects requests that send both input_assets and input_asset_ids", async () => {
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({ ok: true, auth: { user: { id: "user_1" } } })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({ licenseGateResponse: vi.fn(async () => null) }));
+    vi.doMock("@/lib/media/model-registry", () => ({
+      getMediaModel: vi.fn(async () => ({ id: "model_1", parameterSchema: { type: "object" }, inputAssetSchema: { roles: [] } })),
+    }));
+    vi.doMock("@/lib/media/schema", () => ({
+      validateMediaParameters: vi.fn(() => ({ ok: true, value: {} })),
+    }));
+    vi.doMock("@/lib/media/jobs", () => ({ createReservedMediaJob: vi.fn() }));
+
+    const { POST } = await import("@/app/api/v1/media/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "model_1",
+      input_asset_ids: ["asset_1"],
+      input_assets: [{ asset_id: "asset_1", role: "image" }],
+      parameters: {},
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "invalid_media_input" },
     });
   });
 

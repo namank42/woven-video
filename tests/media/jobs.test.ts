@@ -106,6 +106,7 @@ describe("createReservedMediaJob", () => {
       userId: "user_1",
       model,
       parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "image" }],
       inputAssetIds: ["asset_1"],
     })).resolves.toEqual({
       id: "job_1",
@@ -135,7 +136,17 @@ describe("createReservedMediaJob", () => {
         media_model_id: "fal:frontier-video",
         operation: "video_generation",
         parameters: { prompt: "a mountain" },
+        input_assets: [{ asset_id: "asset_1", role: "image" }],
         input_asset_ids: ["asset_1"],
+        pricing_quote: {
+          estimate_kind: "static",
+          provider_cost_usd_micros: 500_000,
+          charged_amount_usd_micros: 500_000,
+          reserved_amount_usd_micros: 500_000,
+          markup_amount_usd_micros: 0,
+          formula: "static",
+          inputs: {},
+        },
       },
       progress: { stage: "creating", percent: null },
     });
@@ -209,6 +220,7 @@ describe("createReservedMediaJob", () => {
       userId: "user_1",
       model,
       parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "image" }],
       inputAssetIds: ["asset_1"],
     })).resolves.toMatchObject({
       id: "job_1",
@@ -249,6 +261,7 @@ describe("createReservedMediaJob", () => {
       userId: "user_1",
       model,
       parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "image" }],
       inputAssetIds: ["asset_1"],
     })).rejects.toThrow("asset attach failed");
 
@@ -304,6 +317,7 @@ describe("createReservedMediaJob", () => {
       userId: "user_1",
       model,
       parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "image" }],
       inputAssetIds: ["asset_1"],
     })).rejects.toThrow("reservation release failed");
   });
@@ -340,6 +354,10 @@ describe("createReservedMediaJob", () => {
       userId: "user_1",
       model,
       parameters: { prompt: "a mountain" },
+      inputAssets: [
+        { assetId: "asset_1", role: "image" },
+        { assetId: "asset_2", role: "image" },
+      ],
       inputAssetIds: ["asset_1", "asset_2"],
     })).rejects.toThrow("media_asset_attach_failed");
 
@@ -396,6 +414,7 @@ describe("createReservedMediaJob", () => {
       userId: "user_1",
       model,
       parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "image" }],
       inputAssetIds: ["asset_1"],
     })).rejects.toThrow("asset detach failed");
 
@@ -412,6 +431,24 @@ describe("createReservedMediaJob", () => {
       ["user_id", "user_1"],
       ["id", ["asset_1"]],
     ]);
+  });
+
+  it("rejects uploaded inputs that do not satisfy required roles", async () => {
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model: {
+        ...model,
+        inputAssetSchema: {
+          roles: [
+            { role: "first_frame", providerField: "first_frame_url", mediaKind: "image", required: true, min: 1, max: 1, contentTypePrefixes: ["image/"] },
+            { role: "last_frame", providerField: "last_frame_url", mediaKind: "image", required: true, min: 1, max: 1, contentTypePrefixes: ["image/"] },
+          ],
+        },
+      },
+      parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "first_frame" }],
+      inputAssetIds: ["asset_1"],
+    })).rejects.toThrow("invalid_media_input");
   });
 });
 

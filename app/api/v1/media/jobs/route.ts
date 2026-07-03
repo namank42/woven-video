@@ -1,6 +1,7 @@
 import { requireApiAuth } from "@/lib/api/auth";
 import { licenseGateResponse } from "@/lib/api/license";
 import { apiError } from "@/lib/api/responses";
+import { parseMediaJobInputAssets } from "@/lib/media/input-assets";
 import { createReservedMediaJob } from "@/lib/media/jobs";
 import { getMediaModel } from "@/lib/media/model-registry";
 import { validateMediaParameters } from "@/lib/media/schema";
@@ -11,31 +12,12 @@ export const runtime = "nodejs";
 type CreateMediaJobBody = {
   model?: unknown;
   parameters?: unknown;
+  input_assets?: unknown;
   input_asset_ids?: unknown;
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function parseInputAssetIds(value: unknown): string[] | null {
-  if (value === undefined) {
-    return [];
-  }
-
-  if (!Array.isArray(value)) {
-    return null;
-  }
-
-  const ids: string[] = [];
-  for (const item of value) {
-    if (typeof item !== "string" || !item.trim()) {
-      return null;
-    }
-    ids.push(item.trim());
-  }
-
-  return ids;
 }
 
 export async function POST(request: Request) {
@@ -65,9 +47,13 @@ export async function POST(request: Request) {
     return apiError(parameters.error, 400, "invalid_media_input");
   }
 
-  const inputAssetIds = parseInputAssetIds(body.input_asset_ids);
-  if (!inputAssetIds) {
-    return apiError("input_asset_ids must be an array of nonempty strings.", 400, "invalid_media_input");
+  const inputAssets = parseMediaJobInputAssets({
+    model,
+    inputAssets: body.input_assets,
+    inputAssetIds: body.input_asset_ids,
+  });
+  if (!inputAssets.ok) {
+    return apiError(inputAssets.error, 400, "invalid_media_input");
   }
 
   try {
@@ -75,7 +61,8 @@ export async function POST(request: Request) {
       userId: authResult.auth.user.id,
       model,
       parameters: parameters.value,
-      inputAssetIds,
+      inputAssets: inputAssets.inputAssets,
+      inputAssetIds: inputAssets.inputAssetIds,
     });
 
     return Response.json(
