@@ -57,6 +57,7 @@ describe("pricing page rates", () => {
     expect(mediaModelRates.map((rate) => rate.name)).toEqual([
       "GPT Image 2",
       "Nano Banana Pro",
+      "Nano Banana Lite",
       "Gemini Omni Flash",
       "Veo 3.1",
       "Veo 3.1 Fast",
@@ -78,6 +79,13 @@ describe("pricing page rates", () => {
       capability: "Image generation and editing",
       rate: "$0.18/image",
       notes: "4K: $0.36/image · Web search: +$0.018/request",
+    });
+
+    expect(mediaByName.get("Nano Banana Lite")).toMatchObject({
+      capability: "Image generation and editing",
+      modelIds: ["fal-ai/nano-banana-lite", "fal-ai/nano-banana-lite/edit"],
+      rate: "$1.20/image",
+      notes: "Uses Fal's $1.00 generated-image unit with hosted markup.",
     });
 
     expect(mediaByName.get("Gemini Omni Flash")).toMatchObject({

@@ -20,42 +20,31 @@ function getAdminClient() {
 }
 
 describeDb("media SQL RPC integration", () => {
-  it("returns the disabled launch placeholder model after manual enablement", async () => {
-    const admin = getAdminClient();
+  it("lists the enabled production media catalog seeded from the pricing page", async () => {
+    const models = await listMediaModels();
+    const ids = new Set(models.map((model) => model.id));
 
-    try {
-      const { data: enabled, error: enableError } = await admin
-        .from("model_pricing_rules")
-        .update({ enabled: true })
-        .eq("provider", "fal")
-        .eq("model", "woven-launch-placeholder")
-        .eq("operation", "video_generation")
-        .select("id")
-        .maybeSingle();
+    expect(ids.has("fal:launch-placeholder-video")).toBe(false);
+    expect(ids.has("openai/gpt-image-2")).toBe(true);
+    expect(ids.has("openai/gpt-image-2/edit")).toBe(true);
+    expect(ids.has("fal-ai/nano-banana-pro")).toBe(true);
+    expect(ids.has("fal-ai/nano-banana-lite")).toBe(true);
+    expect(ids.has("fal-ai/nano-banana-lite/edit")).toBe(true);
+    expect(ids.has("fal-ai/veo3.1")).toBe(true);
+    expect(ids.has("bytedance/seedance-2.0/text-to-video")).toBe(true);
+    expect(ids.has("fal-ai/kling-video/v3/pro/text-to-video")).toBe(true);
+    expect(ids.has("music_v2")).toBe(true);
 
-      expect(enableError).toBeNull();
-      expect(enabled?.id).toBeTruthy();
-
-      const models = await listMediaModels();
-      expect(models).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          id: "fal:launch-placeholder-video",
-          provider: "fal",
-          providerModel: "woven-launch-placeholder",
-          providerEndpoint: "fal-ai/woven-launch-placeholder",
-          operation: "video_generation",
-          kind: "video",
-          outputTypes: ["video"],
-        }),
-      ]));
-    } finally {
-      await admin
-        .from("model_pricing_rules")
-        .update({ enabled: false })
-        .eq("provider", "fal")
-        .eq("model", "woven-launch-placeholder")
-        .eq("operation", "video_generation");
-    }
+    expect(models.find((model) => model.id === "fal-ai/veo3.1/first-last-frame-to-video")).toMatchObject({
+      provider: "fal",
+      kind: "video",
+      inputAssetSchema: {
+        roles: expect.arrayContaining([
+          expect.objectContaining({ role: "first_frame", providerField: "first_frame_url" }),
+          expect.objectContaining({ role: "last_frame", providerField: "last_frame_url" }),
+        ]),
+      },
+    });
   });
 
   it("does not claim creating or unreserved queued jobs", async () => {
