@@ -287,13 +287,23 @@ function inputAssetsMatchIds(inputAssets: MediaJobInputAsset[], inputAssetIds: s
     return false;
   }
 
-  const assetIds = new Set(inputAssets.map((asset) => asset.assetId));
-  if (assetIds.size !== inputAssets.length) {
+  const inputAssetSet = new Set(inputAssets.map((asset) => asset.assetId));
+  const inputAssetIdSet = new Set(inputAssetIds);
+
+  if (inputAssetSet.size !== inputAssets.length) {
     return false;
   }
 
-  for (const assetId of inputAssetIds) {
-    if (!assetIds.has(assetId)) {
+  if (inputAssetIdSet.size !== inputAssetIds.length) {
+    return false;
+  }
+
+  if (inputAssetSet.size !== inputAssetIdSet.size) {
+    return false;
+  }
+
+  for (const assetId of inputAssetSet) {
+    if (!inputAssetIdSet.has(assetId)) {
       return false;
     }
   }

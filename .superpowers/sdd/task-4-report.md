@@ -113,3 +113,21 @@ Passed with no diff formatting issues.
 
 - `lib/media/jobs.ts`
 - `tests/media/jobs.test.ts`
+
+## Review Fix: Task 4 second re-review finding
+
+### What you fixed
+
+- Tightened `createReservedMediaJob(...)`'s `inputAssets`/`inputAssetIds` invariant so both inputs must describe the exact same unique asset ID set.
+- Rejected duplicate `inputAssetIds` as invalid input instead of letting them bypass the pre-Supabase guard.
+- Added a focused regression test for the duplicate `inputAssetIds = ["a", "a"]` bypass case while keeping the existing content-type mismatch coverage intact.
+
+### Tests run and results
+
+- Command: `./node_modules/.bin/vitest run tests/media/jobs.test.ts`
+- Result: passed, `1` test file and `10` tests green.
+
+### Files changed
+
+- `lib/media/jobs.ts`
+- `tests/media/jobs.test.ts`

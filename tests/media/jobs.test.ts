@@ -463,6 +463,21 @@ describe("createReservedMediaJob", () => {
     expect(mocks.createSupabaseAdminClient).not.toHaveBeenCalled();
   });
 
+  it("rejects duplicate inputAssetIds when they do not match the unique inputAssets set", async () => {
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model,
+      parameters: { prompt: "a mountain" },
+      inputAssets: [
+        { assetId: "asset_1", role: "image" },
+        { assetId: "asset_2", role: "image" },
+      ],
+      inputAssetIds: ["asset_1", "asset_1"],
+    })).rejects.toThrow("invalid_media_input");
+
+    expect(mocks.createSupabaseAdminClient).not.toHaveBeenCalled();
+  });
+
   it("rejects uploaded inputs whose content type does not match the assigned role", async () => {
     const assetsStep = selectAssetsQuery({
       data: [{ id: "asset_1", status: "uploaded", content_type: "video/mp4" }],
