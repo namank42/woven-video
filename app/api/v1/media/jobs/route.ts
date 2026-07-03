@@ -20,6 +20,10 @@ type CreateMediaJobBody = {
   input_asset_ids?: unknown;
 };
 
+function isTriggerMediaKind(kind: string): kind is "image" | "video" | "audio" {
+  return kind === "image" || kind === "video" || kind === "audio";
+}
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -44,6 +48,13 @@ export async function POST(request: Request) {
   const model = await getMediaModel(body.model.trim());
   if (!model) {
     return apiError("Media model is not enabled.", 404, "model_not_enabled");
+  }
+  if (!isTriggerMediaKind(model.kind)) {
+    return apiError(
+      "Media model is not supported by the Trigger media executor.",
+      400,
+      "invalid_media_input",
+    );
   }
 
   const parameters = validateMediaParameters(body.parameters ?? {}, model.parameterSchema);

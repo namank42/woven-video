@@ -1,5 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+type ProcessMediaJobTaskShape = {
+  id: string;
+  queue: { name: string; concurrencyLimit: number };
+  run: (payload: { jobId: string }) => Promise<{ jobId: string; status: string }>;
+};
+
+type ReconcileMediaJobsTaskShape = {
+  id: string;
+  cron: string;
+  run: () => Promise<{ dispatched: number }>;
+};
+
 const mocks = vi.hoisted(() => ({
   queue: vi.fn((definition) => definition),
   task: vi.fn((definition) => definition),
@@ -48,7 +60,7 @@ describe("Trigger media tasks", () => {
   it("defines process-media-job with real executor and Trigger wait", async () => {
     mocks.processMediaJob.mockResolvedValue({ jobId: "job_1", status: "succeeded" });
     const { processMediaJobTask } = await import("@/trigger/media");
-    const processTask = processMediaJobTask as any;
+    const processTask = processMediaJobTask as unknown as ProcessMediaJobTaskShape;
 
     expect(processTask.id).toBe("process-media-job");
     expect(processTask.queue).toEqual({ name: "media-image", concurrencyLimit: 10 });
@@ -75,7 +87,7 @@ describe("Trigger media tasks", () => {
       { jobId: "job_2", userId: "user_2", modelId: "fal-ai/veo3.1", kind: "video" },
     ]);
     const { reconcileMediaJobsTask } = await import("@/trigger/media");
-    const reconcileTask = reconcileMediaJobsTask as any;
+    const reconcileTask = reconcileMediaJobsTask as unknown as ReconcileMediaJobsTaskShape;
 
     expect(reconcileTask.id).toBe("reconcile-media-jobs");
     expect(reconcileTask.cron).toBe("*/5 * * * *");

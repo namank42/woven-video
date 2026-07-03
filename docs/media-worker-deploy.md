@@ -87,6 +87,15 @@ That starts:
 
 Trigger.dev is the supported executor in local and production. Do not run a separate polling worker.
 
+Task 8 local verification notes from `2026-07-03`:
+
+- If `pnpm` is unavailable in the current shell, use the repo-local binaries for verification:
+  - `./node_modules/.bin/vitest run`
+  - `./node_modules/.bin/tsc --noEmit`
+  - `./node_modules/.bin/eslint .`
+- Local Trigger media smoke also needs `TRIGGER_PROJECT_REF` and `TRIGGER_SECRET_KEY` alongside the existing Supabase, media Worker, and `FAL_KEY` env vars.
+- The authenticated media job routes require a real bearer token for a signed-in user. A service-role key alone is not sufficient for `/api/v1/media/jobs`.
+
 ## Curated Media Model Catalog
 
 Clean schema deployments seed enabled production media rows in `model_pricing_rules` through
@@ -125,6 +134,10 @@ supabase start
 supabase db reset
 RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<local-service-role-key> npm run test:media-db
 ```
+
+In Codex/sandboxed shells, `supabase status -o env` may fail before the test runs because the CLI writes
+`~/.supabase/telemetry.json`. If that happens, rerun the env export + Vitest command outside the sandbox so
+the integration result reflects the database state instead of the sandbox filesystem restriction.
 
 ## Rollback Notes
 

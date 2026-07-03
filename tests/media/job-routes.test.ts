@@ -149,6 +149,53 @@ describe("media job routes", () => {
     });
   });
 
+  it("rejects media models that cannot run through the Trigger executor", async () => {
+    const createReservedMediaJob = vi.fn();
+    const dispatchMediaJob = vi.fn();
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({
+      licenseGateResponse: vi.fn(async () => null),
+    }));
+    vi.doMock("@/lib/media/model-registry", () => ({
+      getMediaModel: vi.fn(async () => ({
+        id: "captions:model",
+        kind: "captions",
+        parameterSchema: { type: "object" },
+        inputAssetSchema: { roles: [] },
+      })),
+    }));
+    vi.doMock("@/lib/media/schema", () => ({
+      validateMediaParameters: vi.fn(() => ({
+        ok: true,
+        value: { prompt: "caption this reel" },
+      })),
+    }));
+    vi.doMock("@/lib/media/jobs", () => ({
+      createReservedMediaJob,
+      failReservedMediaJobDispatch: vi.fn(),
+    }));
+    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+
+    const { POST } = await import("@/app/api/v1/media/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "captions:model",
+      parameters: { prompt: "caption this reel" },
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "invalid_media_input" },
+    });
+    expect(createReservedMediaJob).not.toHaveBeenCalled();
+    expect(dispatchMediaJob).not.toHaveBeenCalled();
+  });
+
   it("fails closed and releases reservation when Trigger dispatch fails", async () => {
     const createReservedMediaJob = vi.fn(async () => ({
       id: "job_1",

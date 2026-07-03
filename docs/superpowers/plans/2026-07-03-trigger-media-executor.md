@@ -1907,7 +1907,7 @@ git commit -m "chore(media): remove polling worker path"
 - Produces:
   - A checked-off implementation plan and reproducible verification record.
 
-- [ ] **Step 1: Run full unit test suite**
+- [x] **Step 1: Run full unit test suite**
 
 Run:
 
@@ -1917,7 +1917,7 @@ pnpm test
 
 Expected: PASS.
 
-- [ ] **Step 2: Run typecheck**
+- [x] **Step 2: Run typecheck**
 
 Run:
 
@@ -1927,7 +1927,7 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 3: Run lint**
+- [x] **Step 3: Run lint**
 
 Run:
 
@@ -1937,7 +1937,7 @@ pnpm run lint
 
 Expected: PASS or only the pre-existing `app/opengraph-image.tsx` warning if it still exists.
 
-- [ ] **Step 4: Run Supabase DB integration tests**
+- [x] **Step 4: Run Supabase DB integration tests**
 
 Run with local Supabase running:
 
@@ -1986,11 +1986,13 @@ Expected:
 - `GET /api/v1/media/jobs/:jobId` returns a signed `media.woven.video` or local media edge download URL.
 - The signed download returns `200` with image content.
 
-- [ ] **Step 6: Update plan checkboxes**
+Task 8 note: left unchecked on 2026-07-03. The exact startup command `pnpm run media:dev:local` failed in this shell because `pnpm` was unavailable, `.env.local` was missing `TRIGGER_PROJECT_REF` and `TRIGGER_SECRET_KEY`, and no authenticated bearer token was available for `/api/v1/media/jobs`.
+
+- [x] **Step 6: Update plan checkboxes**
 
 Mark completed checkboxes in this plan file as each task is completed. Do not mark a task complete until its commit and verification step are done.
 
-- [ ] **Step 7: Commit verification updates**
+- [x] **Step 7: Commit verification updates**
 
 ```bash
 git add docs/media-worker-deploy.md docs/superpowers/plans/2026-07-03-trigger-media-executor.md
