@@ -5,6 +5,7 @@
 - Tasks are defined with `task()` from `@trigger.dev/sdk`; scheduled tasks use `schedules.task()`.
 - `trigger.config.ts` uses `defineConfig({ project, dirs, retries, maxDuration })`.
 - The CLI flow is `npx trigger.dev@latest login`, `npx trigger.dev@latest init`, `npx trigger.dev@latest dev`, and `npx trigger.dev@latest deploy`.
+- Trigger.dev Cloud runtime/API calls use `TRIGGER_SECRET_KEY`. CI or non-interactive CLI deploy authentication uses `TRIGGER_ACCESS_TOKEN`.
 - A Next.js App Router server action or route handler can trigger a task with `tasks.trigger<typeof task>("task-id", payload)`.
 - A task object can also be triggered directly with `myTask.trigger(payload, options)`.
 - Trigger options support `idempotencyKey`, `concurrencyKey`, `queue`, `tags`, and machine presets. Queue options can include a `name` and `concurrencyLimit`; v4 docs also show dynamic queues with `queue: "paid-users"` plus `concurrencyKey`.
