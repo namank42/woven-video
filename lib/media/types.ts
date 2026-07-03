@@ -62,8 +62,13 @@ export type MediaInputAssetRole = {
   contentTypePrefixes: string[];
 };
 
+export type MediaInputAssetConstraint =
+  | { type: "at_least_one_role"; roles: string[]; message?: string }
+  | { type: "requires_any_role_when_role_present"; role: string; roles: string[]; message?: string };
+
 export type MediaInputAssetSchema = {
   roles: MediaInputAssetRole[];
+  constraints?: MediaInputAssetConstraint[];
 };
 
 export type MediaPricingFormula = {

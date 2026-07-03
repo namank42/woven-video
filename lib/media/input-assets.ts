@@ -140,6 +140,29 @@ export function validateInputAssetRoles(
     }
   }
 
+  for (const constraint of normalizedSchema.constraints ?? []) {
+    if (constraint.type === "at_least_one_role") {
+      const total = constraint.roles.reduce((sum, role) => sum + (counts.get(role) ?? 0), 0);
+      if (total < 1) {
+        return {
+          ok: false,
+          error: constraint.message ?? "input_assets requires at least one reference asset.",
+        };
+      }
+    }
+
+    if (constraint.type === "requires_any_role_when_role_present") {
+      const present = counts.get(constraint.role) ?? 0;
+      const requiredTotal = constraint.roles.reduce((sum, role) => sum + (counts.get(role) ?? 0), 0);
+      if (present > 0 && requiredTotal < 1) {
+        return {
+          ok: false,
+          error: constraint.message ?? `input_assets role ${constraint.role} requires at least one image or video reference.`,
+        };
+      }
+    }
+  }
+
   return { ok: true };
 }
 
@@ -192,6 +215,7 @@ function inferLegacyRole(schema: MediaInputAssetSchema, count: number) {
 function normalizeInputAssetSchema(schema: MediaInputAssetSchema | undefined): MediaInputAssetSchema {
   return {
     roles: Array.isArray(schema?.roles) ? schema.roles : [],
+    constraints: Array.isArray(schema?.constraints) ? schema.constraints : undefined,
   };
 }
 

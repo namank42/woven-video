@@ -475,6 +475,54 @@ describe("elevenLabsMediaAdapter", () => {
       abortSignal: undefined,
     });
   });
+
+  it("maps public Music v2 camelCase parameters through the ElevenLabs SDK client", async () => {
+    const { elevenLabsMediaAdapter } = await import("@/lib/media/providers/elevenlabs");
+    process.env.ELEVENLABS_API_KEY = "eleven_key";
+    const compose = vi.fn(async () => streamFrom([10, 11, 12]));
+    mocks.ElevenLabsClient.mockImplementation(function MockElevenLabsClient() {
+      return {
+        music: { compose },
+      };
+    });
+
+    await elevenLabsMediaAdapter.run({
+      model: mediaModel({
+        provider: "elevenlabs",
+        providerModel: "music_v2",
+        operation: "music_generation",
+        outputTypes: ["audio"],
+        defaultParameters: {
+          modelId: "music_v2",
+          outputFormat: "mp3_48000_192",
+          respectSectionsDurations: true,
+        },
+      }),
+      parameters: {
+        prompt: "ambient synth bed",
+        musicLengthMs: 30_000,
+        seed: 42,
+        forceInstrumental: true,
+        storeForInpainting: true,
+        signWithC2Pa: true,
+      },
+      inputUrls: [],
+    });
+
+    expect(compose).toHaveBeenCalledWith({
+      prompt: "ambient synth bed",
+      modelId: "music_v2",
+      outputFormat: "mp3_48000_192",
+      musicLengthMs: 30_000,
+      seed: 42,
+      forceInstrumental: true,
+      respectSectionsDurations: true,
+      storeForInpainting: true,
+      signWithC2Pa: true,
+    }, {
+      abortSignal: undefined,
+    });
+  });
 });
 
 function mediaModel(overrides: Partial<MediaModel> = {}): MediaModel {

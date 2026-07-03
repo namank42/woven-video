@@ -1,8 +1,8 @@
 # Media Runtime Catalog Design
 
-**Date:** 2026-07-03  
-**Status:** Approved design - pending written-spec review  
-**Repo scope:** `woven-video` backend/API, Supabase catalog rows, media worker provider mapping, billing estimates, and tests. `woven-harness` is a downstream consumer and is not implemented here.  
+**Date:** 2026-07-03
+**Status:** Approved design - pending written-spec review
+**Repo scope:** `woven-video` backend/API, Supabase catalog rows, media worker provider mapping, billing estimates, and tests. `woven-harness` is a downstream consumer and is not implemented here.
 **Docs digest:** `docs/superpowers/research/2026-07-03-media-runtime-catalog-docs.md`
 
 ---

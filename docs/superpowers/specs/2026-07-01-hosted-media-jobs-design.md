@@ -1,8 +1,8 @@
 # Hosted Media Jobs Design
 
-**Date:** 2026-07-01  
-**Status:** Approved design - pending written-spec review  
-**Repo scope:** `woven-video` backend/API, Supabase schema/RPCs, and Woven media Worker contract. `woven-harness` is a downstream consumer and is not implemented here.  
+**Date:** 2026-07-01
+**Status:** Approved design - pending written-spec review
+**Repo scope:** `woven-video` backend/API, Supabase schema/RPCs, and Woven media Worker contract. `woven-harness` is a downstream consumer and is not implemented here.
 **Docs digest:** `docs/superpowers/research/2026-07-01-hosted-generations-docs.md`
 
 ---

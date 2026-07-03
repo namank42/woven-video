@@ -112,10 +112,17 @@ async function runMusic({
   parameters: Record<string, unknown>;
   signal?: AbortSignal;
 }): Promise<ProviderRunResult> {
-  const prompt = stringValue(parameters.prompt);
+  const providerParameters = {
+    ...model.defaultParameters,
+    ...parameters,
+  };
+  const prompt = stringValue(providerParameters.prompt);
   const compositionPlan =
-    objectValue(parameters.composition_plan) ?? objectValue(parameters.compositionPlan);
-  const outputFormat = stringValue(parameters.output_format) ?? DEFAULT_OUTPUT_FORMAT;
+    objectValue(providerParameters.compositionPlan) ?? objectValue(providerParameters.composition_plan);
+  const outputFormat =
+    stringValue(providerParameters.outputFormat) ??
+    stringValue(providerParameters.output_format) ??
+    DEFAULT_OUTPUT_FORMAT;
   if (!prompt && !compositionPlan) {
     throw new Error("invalid_media_input");
   }
@@ -123,11 +130,14 @@ async function runMusic({
   const audio = await client.music.compose(definedValues({
     prompt: prompt ?? undefined,
     compositionPlan: compositionPlan as MusicRequest["compositionPlan"],
-    musicLengthMs: numberValue(parameters.music_length_ms),
-    modelId: (stringValue(parameters.model_id) ?? model.providerModel) as MusicRequest["modelId"],
+    musicLengthMs: numberValue(providerParameters.musicLengthMs) ?? numberValue(providerParameters.music_length_ms),
+    modelId: (stringValue(providerParameters.modelId) ?? stringValue(providerParameters.model_id) ?? model.providerModel) as MusicRequest["modelId"],
     outputFormat: outputFormat as MusicRequest["outputFormat"],
-    seed: numberValue(parameters.seed),
-    forceInstrumental: booleanValue(parameters.force_instrumental),
+    seed: numberValue(providerParameters.seed),
+    forceInstrumental: booleanValue(providerParameters.forceInstrumental) ?? booleanValue(providerParameters.force_instrumental),
+    respectSectionsDurations: booleanValue(providerParameters.respectSectionsDurations),
+    storeForInpainting: booleanValue(providerParameters.storeForInpainting),
+    signWithC2Pa: booleanValue(providerParameters.signWithC2Pa),
   } satisfies MusicRequest), requestOptions(signal));
   const bytes = await collectAudioBytes(audio);
 

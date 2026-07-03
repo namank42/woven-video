@@ -1,8 +1,8 @@
 # Media Pricing Page Design
 
-**Date:** 2026-07-01  
-**Status:** Approved design - pending written-spec review  
-**Repo scope:** `woven-video` public `/pricing` page and pricing display data. No `woven-harness` changes in this spec.  
+**Date:** 2026-07-01
+**Status:** Approved design - pending written-spec review
+**Repo scope:** `woven-video` public `/pricing` page and pricing display data. No `woven-harness` changes in this spec.
 **Docs digests:**
 - `docs/superpowers/research/2026-07-01-hosted-media-models-docs.md`
 - `docs/superpowers/research/2026-07-01-pricing-page-next-docs.md`

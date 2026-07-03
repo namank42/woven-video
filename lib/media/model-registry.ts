@@ -1,6 +1,7 @@
 import type { ModelPricingRule } from "@/lib/billing/model-pricing";
 import {
   MEDIA_OPERATIONS,
+  type MediaInputAssetConstraint,
   type MediaInputAssetSchema,
   type MediaKind,
   type MediaModel,
@@ -188,7 +189,60 @@ function inputAssetSchemaValue(value: unknown): MediaInputAssetSchema | null {
     };
   });
 
-  return roles.every((role) => role !== null) ? { roles } : null;
+  if (!roles.every((role) => role !== null)) {
+    return null;
+  }
+
+  const constraints = value.constraints === undefined ? undefined : inputAssetConstraintsValue(value.constraints);
+  if (value.constraints !== undefined && !constraints) {
+    return null;
+  }
+
+  return constraints ? { roles, constraints } : { roles };
+}
+
+function inputAssetConstraintsValue(value: unknown): MediaInputAssetConstraint[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const constraints: MediaInputAssetConstraint[] = [];
+  for (const constraint of value) {
+    if (!isRecord(constraint)) {
+      return null;
+    }
+
+    if (constraint.type === "at_least_one_role") {
+      if (!isStringArray(constraint.roles) || constraint.roles.length === 0) {
+        return null;
+      }
+      if (constraint.message !== undefined && typeof constraint.message !== "string") {
+        return null;
+      }
+      constraints.push(constraint.message === undefined
+        ? { type: constraint.type, roles: [...constraint.roles] }
+        : { type: constraint.type, roles: [...constraint.roles], message: constraint.message });
+      continue;
+    }
+
+    if (constraint.type === "requires_any_role_when_role_present") {
+      const role = stringValue(constraint.role);
+      if (!role || !isStringArray(constraint.roles) || constraint.roles.length === 0) {
+        return null;
+      }
+      if (constraint.message !== undefined && typeof constraint.message !== "string") {
+        return null;
+      }
+      constraints.push(constraint.message === undefined
+        ? { type: constraint.type, role, roles: [...constraint.roles] }
+        : { type: constraint.type, role, roles: [...constraint.roles], message: constraint.message });
+      continue;
+    }
+
+    return null;
+  }
+
+  return constraints;
 }
 
 function pricingFormulaValue(value: unknown): MediaPricingFormula | null {
