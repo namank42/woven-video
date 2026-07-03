@@ -200,6 +200,62 @@ describe("media job routes", () => {
     expect(consoleError).toHaveBeenCalledWith("Failed to dispatch media job", expect.any(Error));
   });
 
+  it("returns media_executor_unavailable when cleanup fails after Trigger dispatch failure", async () => {
+    const createReservedMediaJob = vi.fn(async () => ({
+      id: "job_1",
+      status: "queued",
+      model: "fal-ai/nano-banana-lite",
+      estimatedCostUsdMicros: 1_200_000,
+      reservedCreditsUsdMicros: 1_200_000,
+      createdAt: "2026-07-03T12:00:00.000Z",
+      expiresAt: "2026-07-03T13:00:00.000Z",
+    }));
+    const failReservedMediaJobDispatch = vi.fn(async () => {
+      throw new Error("cleanup failed");
+    });
+    const dispatchMediaJob = vi.fn(async () => {
+      throw new Error("trigger unavailable");
+    });
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({ ok: true, auth: { user: { id: "user_1" } } })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({ licenseGateResponse: vi.fn(async () => null) }));
+    vi.doMock("@/lib/media/model-registry", () => ({
+      getMediaModel: vi.fn(async () => ({
+        id: "fal-ai/nano-banana-lite",
+        kind: "image",
+        parameterSchema: { type: "object" },
+        inputAssetSchema: { roles: [] },
+      })),
+    }));
+    vi.doMock("@/lib/media/schema", () => ({
+      validateMediaParameters: vi.fn(() => ({ ok: true, value: { prompt: "a mountain" } })),
+    }));
+    vi.doMock("@/lib/media/jobs", () => ({
+      createReservedMediaJob,
+      failReservedMediaJobDispatch,
+    }));
+    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { POST } = await import("@/app/api/v1/media/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "fal-ai/nano-banana-lite",
+      parameters: { prompt: "a mountain" },
+    }));
+    const responseBody = await response.clone().json();
+
+    expect(response.status).toBe(503);
+    expect(responseBody).toMatchObject({
+      error: { code: "media_executor_unavailable" },
+    });
+    expect(failReservedMediaJobDispatch).toHaveBeenCalledWith("job_1");
+    expect(consoleError).toHaveBeenCalledWith("Failed to release media job reservation after Trigger dispatch failure", expect.any(Error));
+    expect(consoleError).toHaveBeenCalledWith("Failed to dispatch media job", expect.any(Error));
+    expect(JSON.stringify(responseBody)).not.toContain("run_");
+  });
+
   it("passes role-aware input_assets to job creation", async () => {
     const createReservedMediaJob = vi.fn(async () => ({
       id: "job_1",

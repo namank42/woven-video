@@ -77,7 +77,14 @@ export async function POST(request: Request) {
         kind: model.kind,
       });
     } catch (dispatchError) {
-      await failReservedMediaJobDispatch(job.id);
+      try {
+        await failReservedMediaJobDispatch(job.id);
+      } catch (cleanupError) {
+        console.error(
+          "Failed to release media job reservation after Trigger dispatch failure",
+          cleanupError,
+        );
+      }
       console.error("Failed to dispatch media job", dispatchError);
       return apiError(
         "Media executor is temporarily unavailable. Please try again.",

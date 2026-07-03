@@ -96,3 +96,55 @@ Results:
   - `Response.json(...)` success shape unchanged
   - `apiError(...)` continues to provide error responses
 - Dispatch cleanup is intentionally route-owned only for this task’s boundary. No Trigger task code was touched.
+
+## Follow-up Fix
+
+Reviewed the dispatch-failure branch after the code review comment and narrowed the fix to the route/test boundary only.
+
+### Behavior change
+
+- `app/api/v1/media/jobs/route.ts` now protects `failReservedMediaJobDispatch(job.id)` with its own `try/catch`.
+- If cleanup fails, the route logs:
+  - `Failed to release media job reservation after Trigger dispatch failure`
+- The original dispatch failure still returns:
+  - HTTP `503`
+  - error code `media_executor_unavailable`
+- Trigger run IDs are still not exposed in the public response.
+
+### Test coverage
+
+Added a regression test in `tests/media/job-routes.test.ts` that covers the combined failure case:
+
+- `dispatchMediaJob(...)` throws
+- `failReservedMediaJobDispatch(...)` also throws
+- response remains `503`
+- response body remains `media_executor_unavailable`
+- no Trigger run IDs appear in the response
+
+The existing dispatch-failure success-path test remains in place and still asserts that reservation cleanup is attempted when dispatch fails.
+
+### Verification
+
+Attempted the brief’s first command:
+
+```bash
+pnpm exec vitest run tests/media/job-routes.test.ts tests/media/trigger-dispatch.test.ts tests/media/executor.test.ts
+```
+
+Exact environment error:
+
+```text
+zsh:1: command not found: pnpm
+```
+
+Fallback verification:
+
+```bash
+./node_modules/.bin/vitest run tests/media/job-routes.test.ts
+./node_modules/.bin/vitest run tests/media/job-routes.test.ts tests/media/trigger-dispatch.test.ts tests/media/executor.test.ts
+```
+
+Results:
+
+- `tests/media/job-routes.test.ts`: 12 passed
+- focused media bundle: 49 passed
