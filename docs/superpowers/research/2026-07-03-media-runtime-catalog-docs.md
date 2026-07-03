@@ -145,6 +145,49 @@ Pricing basis:
 Note: this documented endpoint is text-to-image. The pricing page copy says generation/editing, but
 the candidate endpoint does not accept image input.
 
+### Nano Banana Lite on Fal
+
+Sources:
+
+- `https://fal.ai/models/fal-ai/nano-banana-lite/api`
+- `https://fal.ai/models/fal-ai/nano-banana-lite/llms.txt`
+- `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/nano-banana-lite`
+- `https://fal.ai/models/fal-ai/nano-banana-lite/edit/api`
+- `https://fal.ai/models/fal-ai/nano-banana-lite/edit/llms.txt`
+- `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/nano-banana-lite/edit`
+
+Endpoints:
+
+| Public model id | Fal endpoint | Kind | Required provider inputs | Output path |
+| --- | --- | --- | --- | --- |
+| `fal-ai/nano-banana-lite` | `fal-ai/nano-banana-lite` | image | `prompt` | `images` |
+| `fal-ai/nano-banana-lite/edit` | `fal-ai/nano-banana-lite/edit` | image | `prompt`, Woven `reference_images` mapped to `image_urls` | `images` |
+
+Parameters:
+
+- `prompt`: string, required, min length 3, max length 50000.
+- `num_images`: integer 1..4; default 1.
+- `seed`: integer, optional.
+- `aspect_ratio`: enum `auto`, `21:9`, `16:9`, `3:2`, `4:3`, `5:4`, `1:1`, `4:5`, `3:4`,
+  `2:3`, `9:16`, `4:1`, `1:4`, `8:1`, `1:8`; default `auto`.
+- `output_format`: enum `jpeg`, `png`, `webp`; default `png`.
+- `safety_tolerance`: enum string `1`..`6`; default `4`.
+- `sync_mode`: boolean; default false.
+- `system_prompt`: string; default empty string; max length 50000.
+- `limit_generations`: boolean; default true.
+- `thinking_level`: optional enum `minimal`, `high`.
+- `image_urls`: edit endpoint only; Fal marks it optional, but the Woven catalog should require at
+  least one `reference_images` asset for the edit row so the public edit model does not silently act
+  like text-to-image.
+
+Pricing basis:
+
+- Fal documents both Lite endpoints as `$1 per units`.
+- Woven should model the unit as per generated image for reservation safety: `num_images * $1.00`
+  provider cost, then apply the standard 20% hosted markup for a public `$1.20/image` estimate.
+- If Fal later clarifies the unit as per request instead of per image, update the seeded formula
+  rate without changing the public catalog contract.
+
 ### Gemini Omni Flash on Fal
 
 Sources:
@@ -327,4 +370,3 @@ Pricing basis:
 
 - The pricing table currently models this as a music generation row. Runtime estimates should use the
   app's configured music duration-based price policy.
-

@@ -58,6 +58,8 @@ represented by the first catalog contract:
 - `openai/gpt-image-2`
 - `openai/gpt-image-2/edit`
 - `fal-ai/nano-banana-pro`
+- `fal-ai/nano-banana-lite`
+- `fal-ai/nano-banana-lite/edit`
 - `fal-ai/gemini-omni-flash`
 - `fal-ai/gemini-omni-flash/image-to-video`
 - `fal-ai/gemini-omni-flash/reference-to-video`
@@ -83,6 +85,11 @@ represented by the first catalog contract:
 
 The Nano Banana Pro row should be marked as text-to-image only because the documented candidate
 endpoint does not accept uploaded image inputs.
+
+The Nano Banana Lite rows should expose both documented Fal endpoints. The base row is
+text-to-image only. The `/edit` row should require Woven uploaded `reference_images` mapped to
+Fal's `image_urls`; even though Fal marks `image_urls` optional, Woven should keep the edit catalog
+semantically distinct from text-to-image.
 
 ## Public API Shape
 
@@ -291,6 +298,8 @@ minimum.
 Estimator groups:
 
 - Nano Banana Pro: image count, 4K multiplier, and web search add-on.
+- Nano Banana Lite: image count, using Fal's documented `$1 per units` as a per-output-image
+  provider unit for safe reservation.
 - Gemini Omni Flash: generation unit.
 - Veo 3.1 and Veo 3.1 Fast: duration, audio flag, resolution, fast/standard variant.
 - Seedance 2.0 and Seedance 2.0 Fast: explicit duration, resolution, fast/standard variant, and
