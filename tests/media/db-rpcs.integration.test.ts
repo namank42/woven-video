@@ -78,11 +78,91 @@ describeDb("media SQL RPC integration", () => {
     expect(claimedIds).toEqual([jobId]);
   });
 
+  it("claims the requested reserved media job by id only once", async () => {
+    const admin = getAdminClient();
+    const { userId, accountId } = await createUserAndAccount();
+    const targetJobId = await insertMediaJob({ userId, accountId, status: "queued", reserved: 100000 });
+    const otherJobId = await insertMediaJob({ userId, accountId, status: "queued", reserved: 100000 });
+
+    const [first, second] = await Promise.all([
+      admin.rpc("claim_media_job_by_id", { p_job_id: targetJobId, p_lease_seconds: 300 }),
+      admin.rpc("claim_media_job_by_id", { p_job_id: targetJobId, p_lease_seconds: 300 }),
+    ]);
+
+    expect(first.error).toBeNull();
+    expect(second.error).toBeNull();
+    expect(first.data?.id ?? second.data?.id).toBe(targetJobId);
+    expect([first.data?.id, second.data?.id].filter((id): id is string => id === targetJobId)).toHaveLength(1);
+
+    const { data: otherClaim, error: otherError } = await admin.rpc("claim_media_job_by_id", {
+      p_job_id: otherJobId,
+      p_lease_seconds: 300,
+    });
+    expect(otherError).toBeNull();
+    expect(otherClaim.id).toBe(otherJobId);
+  });
+
+  it("does not exact-claim terminal jobs or unreserved queued jobs", async () => {
+    const admin = getAdminClient();
+    const { userId, accountId } = await createUserAndAccount();
+    const failedJobId = await insertMediaJob({ userId, accountId, status: "failed", reserved: 100000 });
+    const unreservedJobId = await insertMediaJob({ userId, accountId, status: "queued", reserved: 0 });
+
+    const failedClaim = await admin.rpc("claim_media_job_by_id", {
+      p_job_id: failedJobId,
+      p_lease_seconds: 300,
+    });
+    const unreservedClaim = await admin.rpc("claim_media_job_by_id", {
+      p_job_id: unreservedJobId,
+      p_lease_seconds: 300,
+    });
+
+    expect(failedClaim.error).toBeNull();
+    expect(failedClaim.data?.id).toBeNull();
+    expect(unreservedClaim.error).toBeNull();
+    expect(unreservedClaim.data?.id).toBeNull();
+  });
+
+  it("finds stale media jobs for Trigger reconciliation", async () => {
+    const admin = getAdminClient();
+    const { userId, accountId } = await createUserAndAccount();
+    const queuedJobId = await insertMediaJob({ userId, accountId, status: "queued", reserved: 100000 });
+    const runningJobId = await insertMediaJob({ userId, accountId, status: "running", reserved: 100000 });
+    const succeededJobId = await insertMediaJob({ userId, accountId, status: "succeeded", reserved: 100000 });
+
+    await admin
+      .from("generation_jobs")
+      .update({ claim_expires_at: "1970-01-01T00:00:00.000Z" })
+      .eq("id", runningJobId);
+
+    const { data, error } = await admin.rpc("find_media_jobs_for_trigger_reconciliation", {
+      p_limit: 25,
+      p_now: new Date().toISOString(),
+    });
+
+    expect(error).toBeNull();
+    const rows = new Map((data ?? []).map((row) => [row.id, row]));
+    expect(rows.get(queuedJobId)).toMatchObject({
+      user_id: userId,
+      media_model_id: "frontier-video",
+      media_kind: "video",
+    });
+    expect(rows.get(runningJobId)).toMatchObject({
+      user_id: userId,
+      media_model_id: "frontier-video",
+      media_kind: "video",
+    });
+    expect(rows.has(succeededJobId)).toBe(false);
+  });
+
   it("rejects settlement with a stale claim token", async () => {
     const admin = getAdminClient();
     const { userId, accountId } = await createUserAndAccount();
     const jobId = await insertMediaJob({ userId, accountId, status: "queued", reserved: 100000 });
-    const { data: claimed } = await admin.rpc("claim_media_jobs", { p_limit: 1, p_lease_seconds: 300 });
+    const { data: claimed } = await admin.rpc("claim_media_job_by_id", {
+      p_job_id: jobId,
+      p_lease_seconds: 300,
+    });
     const staleToken = randomUUID();
 
     const { error } = await admin.rpc("release_claimed_media_job", {
@@ -93,7 +173,7 @@ describeDb("media SQL RPC integration", () => {
       p_metadata: { reason: "provider_failed" },
     });
 
-    expect(claimed?.[0]?.id).toBe(jobId);
+    expect(claimed?.id).toBe(jobId);
     expect(error?.message).toBe("media_job_stale_claim");
   });
 
@@ -198,6 +278,7 @@ async function insertMediaJob({
       reserved_amount_usd_micros: reserved,
       input: {
         media_model_id: "frontier-video",
+        operation: "video_generation",
         parameters: { prompt: "test" },
         input_asset_ids: [],
       },
