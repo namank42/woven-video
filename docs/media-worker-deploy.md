@@ -1,4 +1,4 @@
-# Media Worker Deployment
+# Media Executor Deployment
 
 This runbook keeps the app, Supabase schema, media Worker, R2 bucket, and reel-captions client compatibility in the right order.
 
@@ -25,7 +25,7 @@ npx wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangl
 
 The values must match the app's `MEDIA_TOKEN_SECRET` and `MEDIA_WORKER_SHARED_SECRET`.
 
-`npm run media:worker:deploy` uses `npx wrangler` so a clean checkout does not require a globally installed Wrangler binary. The deploy machine still needs npm network access to fetch Wrangler when it is not already cached or globally available. Production deploy pipelines may pin or add Wrangler as a dev dependency for repeatable deploys.
+`pnpm run media:edge:deploy` uses `npx wrangler` so a clean checkout does not require a globally installed Wrangler binary. The deploy machine still needs npm network access to fetch Wrangler when it is not already cached or globally available. Production deploy pipelines may pin or add Wrangler as a dev dependency for repeatable deploys.
 
 ## App Environment
 
@@ -44,51 +44,48 @@ MEDIA_WORKER_POLL_MS=5000
 MEDIA_FAL_WEBHOOK_BASE_URL=https://www.woven.video
 # Optional override. Defaults to https://rest.fal.ai/.well-known/jwks.json.
 FAL_WEBHOOK_JWKS_URL=
+TRIGGER_PROJECT_REF=
+TRIGGER_SECRET_KEY=
+TRIGGER_ACCESS_TOKEN=
 CRON_SECRET=<random 16+ character secret for Vercel Cron>
 ```
 
-The timeout, worker polling, Fal webhook, and cron values are consumed by follow-up hosted-media tasks in this plan. Set them before enabling the completed hosted media flow, but do not expect the cleanup cron or Fal webhook smoke tests to work at the Task 2-only head.
+The timeout, Fal webhook, Trigger, and cron values are consumed by the hosted-media flow. Set them before enabling the completed media executor path.
+
+## Trigger.dev Configuration
+
+- `TRIGGER_PROJECT_REF` is read by `trigger.config.ts`.
+- `TRIGGER_SECRET_KEY` is required anywhere Woven API code dispatches Trigger tasks.
+- `TRIGGER_ACCESS_TOKEN` is required for non-interactive Trigger deploys.
+- Configure Supabase, Fal, ElevenLabs, and media storage secrets in Trigger.dev Cloud with the same names used by local `.env.local`.
 
 ## Deployment Order
 
 1. Create or verify the `woven-media` R2 bucket.
 2. Set Worker secrets with `npx wrangler secret put`.
-3. Deploy the Worker with `npm run media:worker:deploy`.
+3. Deploy the Cloudflare media edge Worker with `pnpm run media:edge:deploy`.
 4. Set app env vars in Vercel.
 5. Apply Supabase migrations.
 6. Deploy the app.
-7. Start or restart the media worker process.
+7. Deploy Trigger.dev tasks with `pnpm run trigger:deploy`.
 8. After the cleanup task lands, confirm Vercel Cron is active for `/api/internal/media/cleanup`.
 9. Smoke-test upload, job creation, job status, output download, and, after the follow-up tasks land, Fal webhook and cleanup.
 
 ## Local Development
 
-Run all local hosted-media processes with:
+Run local hosted media with:
 
 ```bash
-npm run media:dev:local
+pnpm run media:dev:local
 ```
 
 That starts:
 
-- `npm run dev` for the Next.js API routes
-- `npm run media:edge:local` for the Cloudflare media Worker on `127.0.0.1:8787`
-- `npm run media:worker:local` for the Supabase/Fal media job worker
+- `pnpm run dev` for the Next.js API routes
+- `pnpm run media:edge:local` for the Cloudflare media Worker on `127.0.0.1:8787`
+- `pnpm run trigger:dev` for Trigger.dev local task execution
 
-The media job worker is a long-running Node process and does not hot reload like Next.js. Restart
-`npm run media:worker:local` after changing any of:
-
-- media model registry parsing
-- media parameter schemas or pricing quotes
-- provider adapters
-- worker job-drain logic
-- Supabase runtime catalog rows or seed SQL
-- `.env.local` media/provider settings
-
-On startup the worker logs a diagnostics line with the current git SHA, Supabase URL, enabled model
-count, and sample resolution for `fal-ai/nano-banana-lite`. If the enabled catalog is empty or that
-sample model cannot resolve, the worker exits with `media_worker_catalog_unavailable`; restart it
-after applying migrations or refreshing local seed data.
+Trigger.dev is the supported executor in local and production. Do not run a separate polling worker.
 
 ## Curated Media Model Catalog
 
