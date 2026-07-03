@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validateMediaParameters } from "@/lib/media/schema";
+import type { MediaParameterSchema } from "@/lib/media/types";
 
 describe("validateMediaParameters", () => {
   it("accepts required typed parameters", () => {
@@ -123,7 +124,7 @@ describe("validateMediaParameters", () => {
   });
 
   it("supports oneOf for GPT image_size", () => {
-    const schema = {
+    const schema: MediaParameterSchema = {
       type: "object" as const,
       properties: {
         image_size: {

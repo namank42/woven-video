@@ -1,5 +1,6 @@
 import type {
   MediaParameterConstraint,
+  MediaParameterPrimitiveType,
   MediaParameterPropertySchema,
   MediaParameterSchema,
 } from "@/lib/media/types";
@@ -155,7 +156,7 @@ function validateConstraints(
   return ok();
 }
 
-function matchesType(value: unknown, type: MediaParameterPropertySchema["type"] extends Array<infer T> ? T : never): boolean {
+function matchesType(value: unknown, type: MediaParameterPrimitiveType): boolean {
   if (type === "array") return Array.isArray(value);
   if (type === "object") return isRecord(value);
   if (type === "integer") return typeof value === "number" && Number.isInteger(value);

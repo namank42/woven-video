@@ -230,7 +230,14 @@ function parameterSchemaValue(value: unknown): MediaParameterSchema | null {
     return null;
   }
 
-  return constraints ? { ...schema, constraints } : schema;
+  const rootSchema: MediaParameterSchema = {
+    ...schema,
+    type: "object",
+  };
+  if (constraints) {
+    rootSchema.constraints = constraints;
+  }
+  return rootSchema;
 }
 
 function parameterPropertySchemaValue(value: unknown): MediaParameterPropertySchema | null {
@@ -399,7 +406,8 @@ function parameterConstraintsValue(value: unknown): MediaParameterSchema["constr
     return null;
   }
 
-  const constraints = value.map((constraint) => {
+  const constraints: NonNullable<MediaParameterSchema["constraints"]> = [];
+  for (const constraint of value) {
     if (!isRecord(constraint)) {
       return null;
     }
@@ -416,10 +424,11 @@ function parameterConstraintsValue(value: unknown): MediaParameterSchema["constr
       return null;
     }
 
-    return constraint.message === undefined
-      ? { type: constraint.type, fields: [...constraint.fields] }
-      : { type: constraint.type, fields: [...constraint.fields], message: constraint.message };
-  });
+    const type = constraint.type;
+    constraints.push(constraint.message === undefined
+      ? { type, fields: [...constraint.fields] }
+      : { type, fields: [...constraint.fields], message: constraint.message });
+  }
 
-  return constraints.every((constraint) => constraint !== null) ? constraints : null;
+  return constraints;
 }

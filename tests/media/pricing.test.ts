@@ -12,7 +12,7 @@ const model = {
     reserveUsdMicros: 500_000,
     unit: "job",
   },
-} as MediaModel;
+} as unknown as MediaModel;
 
 describe("chargeMediaUsdMicros", () => {
   it("applies 20 percent markup over raw cost", () => {

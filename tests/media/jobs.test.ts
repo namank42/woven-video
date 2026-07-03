@@ -49,7 +49,7 @@ const model = {
     markupBps: 2_000,
   },
   metadata: {},
-  rule: {},
+  rule: {} as MediaModel["rule"],
 } as MediaModel;
 
 describe("createReservedMediaJob", () => {

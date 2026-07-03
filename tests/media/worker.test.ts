@@ -305,7 +305,7 @@ describe("drainOneMediaJob", () => {
         ],
       },
     });
-    const admin = mockAdminWith({
+    mockAdminWith({
       claimedJobs: [jobRow({
         input: {
           media_model_id: "fal:frontier-video",
@@ -355,7 +355,7 @@ describe("drainOneMediaJob", () => {
       supportsUploadedInputs: true,
       supportedInputTypes: ["image"],
     });
-    const admin = mockAdminWith({
+    mockAdminWith({
       claimedJobs: [jobRow({
         input: {
           media_model_id: "fal:frontier-video",
