@@ -118,17 +118,46 @@ describeDb("media SQL RPC integration", () => {
     });
 
     expect(failedClaim.error).toBeNull();
-    expect(failedClaim.data?.id).toBeNull();
+    expect(failedClaim.data).toBeNull();
     expect(unreservedClaim.error).toBeNull();
-    expect(unreservedClaim.data?.id).toBeNull();
+    expect(unreservedClaim.data).toBeNull();
+  });
+
+  it("does not exact-claim queued jobs whose required input assets are missing", async () => {
+    const admin = getAdminClient();
+    const { userId, accountId } = await createUserAndAccount();
+    const missingAssetId = randomUUID();
+    const jobId = await insertMediaJob({
+      userId,
+      accountId,
+      status: "queued",
+      reserved: 100000,
+      inputAssetIds: [missingAssetId],
+    });
+
+    const { data, error } = await admin.rpc("claim_media_job_by_id", {
+      p_job_id: jobId,
+      p_lease_seconds: 300,
+    });
+
+    expect(error).toBeNull();
+    expect(data).toBeNull();
   });
 
   it("finds stale media jobs for Trigger reconciliation", async () => {
     const admin = getAdminClient();
     const { userId, accountId } = await createUserAndAccount();
-    const queuedJobId = await insertMediaJob({ userId, accountId, status: "queued", reserved: 100000 });
+    const freshQueuedJobId = await insertMediaJob({ userId, accountId, status: "queued", reserved: 100000 });
+    const staleQueuedJobId = await insertMediaJob({ userId, accountId, status: "queued", reserved: 100000 });
     const runningJobId = await insertMediaJob({ userId, accountId, status: "running", reserved: 100000 });
     const succeededJobId = await insertMediaJob({ userId, accountId, status: "succeeded", reserved: 100000 });
+    const now = new Date();
+    const staleQueuedCreatedAt = new Date(now.getTime() - 3 * 60 * 1000).toISOString();
+
+    await admin
+      .from("generation_jobs")
+      .update({ created_at: staleQueuedCreatedAt })
+      .eq("id", staleQueuedJobId);
 
     await admin
       .from("generation_jobs")
@@ -137,12 +166,13 @@ describeDb("media SQL RPC integration", () => {
 
     const { data, error } = await admin.rpc("find_media_jobs_for_trigger_reconciliation", {
       p_limit: 25,
-      p_now: new Date().toISOString(),
+      p_now: now.toISOString(),
     });
 
     expect(error).toBeNull();
     const rows = new Map((data ?? []).map((row) => [row.id, row]));
-    expect(rows.get(queuedJobId)).toMatchObject({
+    expect(rows.has(freshQueuedJobId)).toBe(false);
+    expect(rows.get(staleQueuedJobId)).toMatchObject({
       user_id: userId,
       media_model_id: "frontier-video",
       media_kind: "video",
@@ -258,11 +288,13 @@ async function insertMediaJob({
   accountId,
   status,
   reserved,
+  inputAssetIds = [],
 }: {
   userId: string;
   accountId: string;
   status: string;
   reserved: number;
+  inputAssetIds?: string[];
 }) {
   const admin = getAdminClient();
   const { data, error } = await admin
@@ -280,7 +312,7 @@ async function insertMediaJob({
         media_model_id: "frontier-video",
         operation: "video_generation",
         parameters: { prompt: "test" },
-        input_asset_ids: [],
+        input_asset_ids: inputAssetIds,
       },
       progress: {},
       expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),

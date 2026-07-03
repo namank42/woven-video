@@ -2,7 +2,7 @@ create or replace function public.claim_media_job_by_id(
   p_job_id uuid,
   p_lease_seconds integer default 300
 )
-returns public.generation_jobs
+returns jsonb
 language plpgsql
 security definer
 set search_path = public, extensions
@@ -73,7 +73,7 @@ begin
   where id = v_job.id
   returning * into v_job;
 
-  return v_job;
+  return to_jsonb(v_job);
 end;
 $$;
 
@@ -106,12 +106,23 @@ begin
     and jobs.status in ('queued', 'running', 'waiting_provider')
     and coalesce(jobs.reserved_amount_usd_micros, 0) > 0
     and (
-      jobs.status = 'queued'
-      or jobs.expires_at <= p_now
-      or jobs.claim_expires_at is null
-      or jobs.claim_expires_at < p_now
-      or jobs.last_provider_poll_at is null
-      or jobs.last_provider_poll_at < p_now - interval '2 minutes'
+      (
+        jobs.status = 'queued'
+        and (
+          jobs.created_at < p_now - interval '2 minutes'
+          or jobs.expires_at <= p_now
+        )
+      )
+      or (
+        jobs.status in ('running', 'waiting_provider')
+        and (
+          jobs.expires_at <= p_now
+          or jobs.claim_expires_at is null
+          or jobs.claim_expires_at < p_now
+          or jobs.last_provider_poll_at is null
+          or jobs.last_provider_poll_at < p_now - interval '2 minutes'
+        )
+      )
     )
   order by jobs.created_at asc
   limit p_limit;
