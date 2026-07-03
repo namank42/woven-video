@@ -113,3 +113,21 @@ DONE
 - `./node_modules/.bin/vitest run tests/media/executor.test.ts` -> PASS (`35 passed`)
 - `rg -n "extend_claimed_media_job_lease|withLeaseHeartbeat" lib/media/executor.ts` -> no output
 - `./node_modules/.bin/vitest run tests/media/executor.test.ts tests/media/provider-adapters.test.ts tests/media/output-assets.test.ts` -> PASS (`62 passed`)
+
+---
+
+## Task 3 fix append 2
+
+### Status
+
+DONE
+
+### What changed
+
+- Restored `tests/media/worker.test.ts` directly from base commit `9c5980e3479ba7ba673462521e9491dc5e65973e` so `drainOneMediaJob` still has direct coverage while `lib/media/worker.ts` remains present.
+- Left `tests/media/executor.test.ts` intact.
+
+### Verification
+
+- `pnpm exec vitest run tests/media/worker.test.ts tests/media/executor.test.ts tests/media/provider-adapters.test.ts tests/media/output-assets.test.ts` -> `zsh:1: command not found: pnpm`
+- `./node_modules/.bin/vitest run tests/media/worker.test.ts tests/media/executor.test.ts tests/media/provider-adapters.test.ts tests/media/output-assets.test.ts` -> PASS (`4 files passed, 96 tests passed`)
