@@ -3,6 +3,8 @@ import { chargeMediaUsdMicros } from "@/lib/media/pricing";
 import type { MediaModel } from "@/lib/media/types";
 
 const model = {
+  inputAssetSchema: { roles: [] },
+  pricingFormula: { type: "static" },
   pricing: {
     markupBps: 2_000,
     minimumUsdMicros: 100_000,

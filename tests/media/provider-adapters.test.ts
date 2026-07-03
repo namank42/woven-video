@@ -455,6 +455,8 @@ function mediaModel(overrides: Partial<MediaModel> = {}): MediaModel {
     supportedInputTypes: [],
     outputTypes: ["video"],
     defaultParameters: {},
+    inputAssetSchema: { roles: [] },
+    pricingFormula: { type: "static" },
     parameterSchema: { type: "object" },
     pricing: {
       unit: "job",

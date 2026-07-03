@@ -54,6 +54,8 @@ const model = {
   supportedInputTypes: [],
   outputTypes: ["video"],
   defaultParameters: {},
+  inputAssetSchema: { roles: [] },
+  pricingFormula: { type: "static" },
   parameterSchema: { type: "object" },
   pricing: {
     unit: "job",
