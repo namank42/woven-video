@@ -543,6 +543,51 @@ describe("drainOneMediaJob", () => {
     });
   });
 
+  it("settles from stored pricing quote when provider returns no raw cost", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow({
+        input: {
+          media_model_id: "fal:frontier-video",
+          parameters: { prompt: "a mountain" },
+          input_asset_ids: [],
+          input_assets: [],
+          pricing_quote: {
+            estimate_kind: "parameter_quote",
+            provider_cost_usd_micros: 3_200_000,
+            charged_amount_usd_micros: 3_840_000,
+            reserved_amount_usd_micros: 3_840_000,
+            markup_amount_usd_micros: 640_000,
+            formula: "veo_seconds",
+            inputs: { duration_seconds: 8 },
+          },
+        },
+      })],
+    });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "succeeded" as const,
+        outputs: [{ url: "https://provider.example/output.mp4", type: "video" as const, contentType: "video/mp4" }],
+        rawCostUsd: 0,
+        metadata: { request_id: "provider_1" },
+      })),
+    } satisfies MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toMatchObject({
+      claimed: true,
+      status: "succeeded",
+    });
+
+    expect(admin.rpc).toHaveBeenCalledWith("record_and_settle_claimed_media_job", expect.objectContaining({
+      p_final_cost_usd_micros: 3_840_000,
+      p_usage_event: expect.objectContaining({
+        raw_provider_cost: 0,
+        charged_amount_usd_micros: 3_840_000,
+        markup_amount_usd_micros: 640_000,
+      }),
+    }));
+  });
+
   it("settles inline provider outputs after copying them to Woven media assets", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJobs: [jobRow()] });

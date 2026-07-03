@@ -142,7 +142,11 @@ export async function drainOneMediaJob({
     return { claimed: true, jobId: job.id, status: "stale_claim" };
   }
 
-  const charge = chargeMediaUsdMicros({ model, rawCostUsd: result.rawCostUsd });
+  const charge = chargeMediaUsdMicros({
+    model,
+    rawCostUsd: result.rawCostUsd,
+    pricingQuote: job.pricingQuote,
+  });
   const providerMetadata = safeMetadata(result.metadata);
   let materializedOutputs;
   try {
