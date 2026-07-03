@@ -33,7 +33,7 @@ export async function claimMediaJobById(jobId: string, leaseSeconds = 300): Prom
     throw new Error(error.message);
   }
 
-  return data as MediaJobClaimRow | null;
+  return normalizeClaimMediaJobByIdResponse(data);
 }
 
 export async function findMediaJobsForTriggerReconciliation(limit = 25): Promise<ReconciliationMediaJob[]> {
@@ -61,4 +61,26 @@ function stringValue(value: unknown) {
 
 function mediaKindValue(value: unknown): ReconciliationMediaJob["kind"] | null {
   return value === "image" || value === "video" || value === "audio" ? value : null;
+}
+
+function normalizeClaimMediaJobByIdResponse(data: unknown): MediaJobClaimRow | null {
+  if (data === null || isNullCompositeMediaJobClaim(data)) {
+    return null;
+  }
+
+  return data as MediaJobClaimRow;
+}
+
+function isNullCompositeMediaJobClaim(value: unknown): value is MediaJobClaimRow {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const row = value as MediaJobClaimRow;
+  return row.id === null &&
+    row.user_id === null &&
+    row.input === null &&
+    row.provider_job_id === null &&
+    row.claim_token === null &&
+    row.expires_at === null;
 }

@@ -131,6 +131,32 @@ describe("processMediaJob", () => {
     expect(adapter.run).not.toHaveBeenCalled();
   });
 
+  it("treats a Supabase null-composite exact claim as not claimed", async () => {
+    const admin = mockAdminWith({
+      claimedJob: {
+        id: null,
+        user_id: null,
+        input: null,
+        provider_job_id: null,
+        claim_token: null,
+        expires_at: null,
+      },
+    });
+    const adapter = { run: vi.fn() } satisfies MediaProviderAdapter;
+
+    await expect(processMediaJob({
+      jobId: "job_missing",
+      adapters: { fal: adapter },
+      waitFor: async () => undefined,
+    })).resolves.toEqual({ jobId: "job_missing", status: "not_claimed" });
+
+    expect(admin.rpc).toHaveBeenCalledWith("claim_media_job_by_id", {
+      p_job_id: "job_missing",
+      p_lease_seconds: 300,
+    });
+    expect(adapter.run).not.toHaveBeenCalled();
+  });
+
   it("waits durably after provider_wait and then reclaims the same job", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({
@@ -210,6 +236,42 @@ describe("processMediaJob", () => {
       p_job_id: "job_1",
       p_lease_seconds: 300,
     });
+  });
+
+  it("waits durably after provider_wait and treats a null-composite reclaim as not claimed", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    const admin = mockAdminWith({
+      claimedJobs: [
+        jobRow({ provider_job_id: null }),
+        {
+          id: null,
+          user_id: null,
+          input: null,
+          provider_job_id: null,
+          claim_token: null,
+          expires_at: null,
+        },
+      ],
+    });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "waiting_provider" as const,
+        providerJobId: "fal_req_1",
+      })),
+    } satisfies MediaProviderAdapter;
+    const waitFor = vi.fn(async () => undefined);
+
+    await expect(processMediaJob({ jobId: "job_1", adapters: { fal: adapter }, waitFor })).resolves.toEqual({
+      jobId: "job_1",
+      status: "not_claimed",
+    });
+
+    expect(waitFor).toHaveBeenCalledWith({ seconds: 5 });
+    expect(admin.rpc).toHaveBeenNthCalledWith(3, "claim_media_job_by_id", {
+      p_job_id: "job_1",
+      p_lease_seconds: 300,
+    });
+    expect(adapter.run).toHaveBeenCalledOnce();
   });
 
   it("releases expired media jobs before calling the provider", async () => {

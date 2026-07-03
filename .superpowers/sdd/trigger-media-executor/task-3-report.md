@@ -91,3 +91,25 @@ The clarification resolved the contract mismatch: `processMediaJob` remains the 
 - `lib/media/executor.ts`
 - `tests/media/executor.test.ts`
 - deleted: `tests/media/worker.test.ts`
+
+---
+
+## Task 3 fix append
+
+### Status
+
+DONE
+
+### What changed
+
+- Normalized `claim_media_job_by_id` RPC results in `lib/media/job-claims.ts` so literal `null` and the Supabase null-composite row shape both resolve to `null`.
+- Added regression coverage in `tests/media/executor.test.ts` for:
+  - exact claim returning the null-composite shape and resolving `not_claimed` without calling the adapter
+  - reclaim after provider wait returning the null-composite shape, still waiting `5` seconds, and resolving `not_claimed` without throwing
+
+### Verification
+
+- `pnpm exec vitest run tests/media/executor.test.ts` -> `zsh:1: command not found: pnpm`
+- `./node_modules/.bin/vitest run tests/media/executor.test.ts` -> PASS (`35 passed`)
+- `rg -n "extend_claimed_media_job_lease|withLeaseHeartbeat" lib/media/executor.ts` -> no output
+- `./node_modules/.bin/vitest run tests/media/executor.test.ts tests/media/provider-adapters.test.ts tests/media/output-assets.test.ts` -> PASS (`62 passed`)
