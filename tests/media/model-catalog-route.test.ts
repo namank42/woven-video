@@ -25,6 +25,18 @@ describe("media model catalog route", () => {
         supportedInputTypes: ["image"],
         outputTypes: ["video"],
         defaultParameters: { duration: 5 },
+        inputAssetSchema: {
+          roles: [{
+            role: "image",
+            providerField: "image_url",
+            mediaKind: "image",
+            required: true,
+            min: 1,
+            max: 1,
+            contentTypePrefixes: ["image/"],
+          }],
+        },
+        pricingFormula: { type: "veo_seconds" },
         parameterSchema: {
           type: "object",
           required: ["prompt"],
@@ -65,10 +77,23 @@ describe("media model catalog route", () => {
           kind: "video",
           display_name: "Frontier Video 1",
           enabled: true,
+          operation: "video_generation",
           supports_uploaded_inputs: true,
           supported_input_types: ["image"],
           output_types: ["video"],
+          input_asset_schema: {
+            roles: [{
+              role: "image",
+              provider_field: "image_url",
+              media_kind: "image",
+              required: true,
+              min: 1,
+              max: 1,
+              content_type_prefixes: ["image/"],
+            }],
+          },
           estimated_price: {
+            estimate_kind: "parameter_quote",
             unit: "job",
             minimum_usd_micros: 100_000,
             reserve_usd_micros: 500_000,
@@ -82,6 +107,44 @@ describe("media model catalog route", () => {
           },
         },
       ],
+    });
+  });
+
+  it("passes valid kind and operation filters to listMediaModels", async () => {
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({ ok: true, auth: { user: { id: "user_1" } } })),
+    }));
+    const listMediaModels = vi.fn(async () => []);
+    vi.doMock("@/lib/media/model-registry", () => ({ listMediaModels }));
+
+    const { GET } = await import("@/app/api/v1/media/models/route");
+    const response = await GET(
+      new Request(
+        "https://example.test/api/v1/media/models?kind=image&operation=image_generation",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(listMediaModels).toHaveBeenCalledWith({
+      kind: "image",
+      operation: "image_generation",
+    });
+  });
+
+  it("rejects invalid catalog filters", async () => {
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({ ok: true, auth: { user: { id: "user_1" } } })),
+    }));
+    vi.doMock("@/lib/media/model-registry", () => ({ listMediaModels: vi.fn(async () => []) }));
+
+    const { GET } = await import("@/app/api/v1/media/models/route");
+    const response = await GET(
+      new Request("https://example.test/api/v1/media/models?kind=document"),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "invalid_media_input" },
     });
   });
 
