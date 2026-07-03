@@ -34,16 +34,19 @@ export async function dispatchMediaJob({
   modelId,
   kind,
 }: DispatchMediaJobPayload): Promise<DispatchMediaJobResult> {
+  const queue = mediaQueueForKind(kind);
   const handle = await tasks.trigger<typeof processMediaJobTask>(
     "process-media-job",
     { jobId },
     {
       idempotencyKey: jobId,
       concurrencyKey: mediaConcurrencyKey(userId),
-      queue: mediaQueueForKind(kind),
+      queue: queue.name,
       tags: [
         "media",
         `media-kind:${kind}`,
+        `media-queue:${queue.name}`,
+        `media-queue-limit:${queue.concurrencyLimit}`,
         `media-model:${modelId}`,
         mediaConcurrencyKey(userId),
       ],

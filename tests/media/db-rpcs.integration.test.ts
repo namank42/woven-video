@@ -9,6 +9,13 @@ const describeDb = runDbTests ? describe : describe.skip;
 const supabaseUrl = process.env.SUPABASE_URL ?? "";
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
+type ReconciliationRpcRow = {
+  id: string;
+  user_id: string;
+  media_model_id: string;
+  media_kind: string;
+};
+
 function getAdminClient() {
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required when RUN_SUPABASE_DB_TESTS=1.");
@@ -177,7 +184,7 @@ describeDb("media SQL RPC integration", () => {
     });
 
     expect(error).toBeNull();
-    const rows = new Map((data ?? []).map((row) => [row.id, row]));
+    const rows = new Map((data ?? []).map((row: ReconciliationRpcRow) => [row.id, row]));
     expect(rows.has(freshQueuedJobId)).toBe(false);
     expect(rows.get(staleQueuedJobId)).toMatchObject({
       user_id: userId,

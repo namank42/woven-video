@@ -33,13 +33,12 @@ describe("dispatchMediaJob", () => {
       {
         idempotencyKey: "job_123",
         concurrencyKey: "media-user:user_123",
-        queue: {
-          name: "media-image",
-          concurrencyLimit: 10,
-        },
+        queue: "media-image",
         tags: [
           "media",
           "media-kind:image",
+          "media-queue:media-image",
+          "media-queue-limit:10",
           "media-model:fal-ai/nano-banana-lite",
           "media-user:user_123",
         ],
