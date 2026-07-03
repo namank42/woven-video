@@ -10,7 +10,7 @@ This runbook keeps the app, Supabase schema, media Worker, R2 bucket, and reel-c
   - `https://media.woven.video/objects/*`
   - `https://media.woven.video/internal/*`
 - Vercel app route: `https://www.woven.video`
-- Supabase migrations through `20260702160000_media_job_readiness_deadlines_cleanup.sql`
+- Supabase migrations through `20260703180000_seed_media_runtime_catalog.sql`
 
 Do not route all of `media.woven.video/*` to this Worker. The host also serves existing top-level landing and hero assets such as `woven-hero-v*.mp4` and `woven-hero-v*.png`; the Worker must only own `/uploads/*`, `/objects/*`, and `/internal/*`.
 
@@ -60,6 +60,35 @@ The timeout, worker polling, Fal webhook, and cron values are consumed by follow
 7. Start or restart the media worker process.
 8. After the cleanup task lands, confirm Vercel Cron is active for `/api/internal/media/cleanup`.
 9. Smoke-test upload, job creation, job status, output download, and, after the follow-up tasks land, Fal webhook and cleanup.
+
+## Local Development
+
+Run all local hosted-media processes with:
+
+```bash
+npm run media:dev:local
+```
+
+That starts:
+
+- `npm run dev` for the Next.js API routes
+- `npm run media:edge:local` for the Cloudflare media Worker on `127.0.0.1:8787`
+- `npm run media:worker:local` for the Supabase/Fal media job worker
+
+The media job worker is a long-running Node process and does not hot reload like Next.js. Restart
+`npm run media:worker:local` after changing any of:
+
+- media model registry parsing
+- media parameter schemas or pricing quotes
+- provider adapters
+- worker job-drain logic
+- Supabase runtime catalog rows or seed SQL
+- `.env.local` media/provider settings
+
+On startup the worker logs a diagnostics line with the current git SHA, Supabase URL, enabled model
+count, and sample resolution for `fal-ai/nano-banana-lite`. If the enabled catalog is empty or that
+sample model cannot resolve, the worker exits with `media_worker_catalog_unavailable`; restart it
+after applying migrations or refreshing local seed data.
 
 ## Curated Media Model Catalog
 

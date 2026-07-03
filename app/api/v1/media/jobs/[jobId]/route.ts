@@ -78,7 +78,7 @@ export async function GET(request: Request, context: RouteContext) {
       reserved_credits_usd_micros: job.reserved_amount_usd_micros,
       final_cost_usd_micros: job.final_cost_usd_micros,
       outputs,
-      error: job.error ? { code: "provider_failed", message: "Generation failed." } : null,
+      error: publicJobError(job.error),
       created_at: job.created_at,
       expires_at: job.expires_at,
       started_at: job.started_at,
@@ -96,4 +96,20 @@ function objectValue(value: unknown): Record<string, unknown> | null {
 
 function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function publicJobError(error: string | null) {
+  if (!error) return null;
+
+  if (error === "model_not_enabled") {
+    return {
+      code: "model_not_enabled",
+      message: "Media model is not enabled.",
+    };
+  }
+
+  return {
+    code: "provider_failed",
+    message: "Generation failed.",
+  };
 }

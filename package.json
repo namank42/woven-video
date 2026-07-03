@@ -9,6 +9,9 @@
     "lint": "eslint",
     "test": "vitest run",
     "media:worker": "tsx scripts/media-worker.ts",
+    "media:worker:local": "node --env-file=.env.local --import tsx scripts/media-worker.ts",
+    "media:edge:local": "npx wrangler dev --config workers/media/wrangler.jsonc --port 8787",
+    "media:dev:local": "sh -c 'cleanup(){ trap - INT TERM EXIT; kill $(jobs -p) 2>/dev/null; }; trap cleanup INT TERM EXIT; npm run dev & npm run media:edge:local & npm run media:worker:local & wait'",
     "media:worker:deploy": "npx wrangler deploy --config workers/media/wrangler.jsonc",
     "test:media-db": "RUN_SUPABASE_DB_TESTS=1 vitest run tests/media/db-rpcs.integration.test.ts"
   },

@@ -145,6 +145,15 @@ function validateConstraints(
   constraints: MediaParameterConstraint[],
 ): ValidationResult {
   for (const constraint of constraints) {
+    if (
+      !constraint ||
+      typeof constraint !== "object" ||
+      !Array.isArray(constraint.fields) ||
+      !constraint.fields.every((field) => typeof field === "string")
+    ) {
+      return invalid("Invalid media parameter schema.");
+    }
+
     const present = constraint.fields.filter((field) => value[field] !== undefined);
     if (constraint.type === "exactly_one" && present.length !== 1) {
       return invalid(constraint.message ?? `Exactly one of ${constraint.fields.join(", ")} is required.`);

@@ -20,7 +20,8 @@
   "r2_buckets": [
     {
       "binding": "MEDIA_BUCKET",
-      "bucket_name": "woven-media"
+      "bucket_name": "woven-media",
+      "remote": true
     }
   ],
   "vars": {

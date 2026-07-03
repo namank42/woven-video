@@ -276,6 +276,60 @@ describe("media job routes", () => {
     });
   });
 
+  it("rejects stringified Nano Banana Lite typed parameters with invalid_media_input", async () => {
+    const createReservedMediaJob = vi.fn();
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({
+      licenseGateResponse: vi.fn(async () => null),
+    }));
+    vi.doMock("@/lib/media/model-registry", () => ({
+      getMediaModel: vi.fn(async () => ({
+        id: "fal-ai/nano-banana-lite",
+        parameterSchema: {
+          type: "object",
+          required: ["prompt"],
+          additionalProperties: false,
+          properties: {
+            prompt: { type: "string", minLength: 3 },
+            num_images: { type: "integer", minimum: 1, maximum: 4 },
+            sync_mode: { type: "boolean" },
+            limit_generations: { type: "boolean" },
+            safety_tolerance: { type: "string", enum: ["1", "2", "3", "4", "5", "6"] },
+          },
+        },
+        inputAssetSchema: { roles: [] },
+      })),
+    }));
+    vi.doMock("@/lib/media/jobs", () => ({ createReservedMediaJob }));
+
+    const { POST } = await import("@/app/api/v1/media/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "fal-ai/nano-banana-lite",
+      parameters: {
+        prompt: "test image prompt",
+        num_images: "1",
+        sync_mode: "false",
+        limit_generations: "true",
+        safety_tolerance: "4",
+      },
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "invalid_media_input",
+        message: "Invalid parameter type for num_images: expected integer.",
+      },
+    });
+    expect(createReservedMediaJob).not.toHaveBeenCalled();
+  });
+
   it("re-signs stored outputs on read and returns a generic public provider error message", async () => {
     vi.doMock("@/lib/api/auth", () => ({
       requireApiAuth: vi.fn(async () => ({
@@ -348,6 +402,64 @@ describe("media job routes", () => {
       }],
       error: { code: "provider_failed", message: "Generation failed." },
       expires_at: "2026-07-01T13:00:00.000Z",
+    });
+  });
+
+  it("preserves model_not_enabled as the public failure code on status reads", async () => {
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+
+    const maybeSingle = vi.fn(async () => ({
+      data: {
+        id: "job_1",
+        status: "failed",
+        estimated_cost_usd_micros: 1_200_000,
+        reserved_amount_usd_micros: 1_200_000,
+        final_cost_usd_micros: 0,
+        progress: { stage: "failed", percent: null },
+        input: { media_model_id: "fal-ai/nano-banana-lite" },
+        output: null,
+        error: "model_not_enabled",
+        created_at: "2026-07-01T12:00:00.000Z",
+        expires_at: "2026-07-01T13:00:00.000Z",
+        started_at: "2026-07-01T12:01:00.000Z",
+        completed_at: "2026-07-01T12:02:00.000Z",
+      },
+      error: null,
+    }));
+    const chain = {
+      eq: vi.fn(() => chain),
+      maybeSingle,
+    };
+    const select = vi.fn(() => chain);
+    const from = vi.fn(() => ({ select }));
+
+    vi.doMock("@/lib/supabase/admin", () => ({
+      createSupabaseAdminClient: vi.fn(() => ({ from })),
+    }));
+    vi.doMock("@/lib/media/output-urls", () => ({
+      presentJobOutputs: vi.fn(async () => []),
+    }));
+
+    const { GET } = await import("@/app/api/v1/media/jobs/[jobId]/route");
+    const response = await GET(
+      new Request("https://example.test/api/v1/media/jobs/job_1"),
+      { params: Promise.resolve({ jobId: "job_1" }) },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      id: "job_1",
+      status: "failed",
+      model: "fal-ai/nano-banana-lite",
+      error: {
+        code: "model_not_enabled",
+        message: "Media model is not enabled.",
+      },
     });
   });
 

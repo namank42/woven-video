@@ -173,4 +173,18 @@ describe("validateMediaParameters", () => {
       error: "Exactly one of prompt, multi_prompt is required.",
     });
   });
+
+  it("rejects malformed constraint metadata without throwing raw TypeErrors", () => {
+    expect(validateMediaParameters(
+      { prompt: "open" },
+      {
+        type: "object",
+        properties: { prompt: { type: "string" } },
+        constraints: [{ type: "at_least_one" }] as MediaParameterSchema["constraints"],
+      },
+    )).toEqual({
+      ok: false,
+      error: "Invalid media parameter schema.",
+    });
+  });
 });

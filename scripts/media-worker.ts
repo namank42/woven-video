@@ -1,6 +1,10 @@
 import { elevenLabsMediaAdapter } from "@/lib/media/providers/elevenlabs";
 import { falMediaAdapter } from "@/lib/media/providers/fal";
 import { drainOneMediaJob } from "@/lib/media/worker";
+import {
+  collectMediaWorkerStartupDiagnostics,
+  formatMediaWorkerStartupDiagnostics,
+} from "@/lib/media/worker-startup";
 
 const DEFAULT_POLL_MS = 2_000;
 const pollMs = parsePollMs(process.env.MEDIA_WORKER_POLL_MS);
@@ -11,6 +15,12 @@ process.once("SIGINT", () => abortController.abort(new DOMException("SIGINT", "A
 process.once("SIGTERM", () => abortController.abort(new DOMException("SIGTERM", "AbortError")));
 
 async function main() {
+  const startup = await collectMediaWorkerStartupDiagnostics();
+  console.log(formatMediaWorkerStartupDiagnostics(startup));
+  if (startup.enabledModelCount === 0 || !startup.sampleModelOk) {
+    throw new Error("media_worker_catalog_unavailable");
+  }
+
   console.log(`Media worker started; polling every ${pollMs}ms.`);
 
   while (!abortController.signal.aborted) {
