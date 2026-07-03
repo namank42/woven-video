@@ -450,6 +450,51 @@ describe("createReservedMediaJob", () => {
       inputAssetIds: ["asset_1"],
     })).rejects.toThrow("invalid_media_input");
   });
+
+  it("rejects role-aware inputs when inputAssets and inputAssetIds describe different assets", async () => {
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model,
+      parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "image" }],
+      inputAssetIds: ["asset_2"],
+    })).rejects.toThrow("invalid_media_input");
+
+    expect(mocks.createSupabaseAdminClient).not.toHaveBeenCalled();
+  });
+
+  it("rejects uploaded inputs whose content type does not match the assigned role", async () => {
+    const assetsStep = selectAssetsQuery({
+      data: [{ id: "asset_1", status: "uploaded", content_type: "video/mp4" }],
+      error: null,
+    });
+    const admin = mockAdminWith(assetsStep);
+
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model: {
+        ...model,
+        inputAssetSchema: {
+          roles: [
+            {
+              role: "first_frame",
+              providerField: "first_frame_url",
+              mediaKind: "image",
+              required: true,
+              min: 1,
+              max: 1,
+              contentTypePrefixes: ["image/"],
+            },
+          ],
+        },
+      },
+      parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "first_frame" }],
+      inputAssetIds: ["asset_1"],
+    })).rejects.toThrow("invalid_media_input");
+
+    expect(admin.tables).toEqual(["media_assets"]);
+  });
 });
 
 function selectAssetsQuery<T>(result: SupabaseResult<T>): QueryStep {

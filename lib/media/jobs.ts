@@ -44,6 +44,10 @@ export async function createReservedMediaJob({
   inputAssets: MediaJobInputAsset[];
   inputAssetIds: string[];
 }) {
+  if (!inputAssetsMatchIds(inputAssets, inputAssetIds)) {
+    throw new Error("invalid_media_input");
+  }
+
   const roleValidation = validateInputAssetRoles(inputAssets, model.inputAssetSchema);
   if (!roleValidation.ok) {
     throw new Error("invalid_media_input");
@@ -276,6 +280,25 @@ async function validateInputAssets({
       throw new Error("invalid_media_input");
     }
   }
+}
+
+function inputAssetsMatchIds(inputAssets: MediaJobInputAsset[], inputAssetIds: string[]) {
+  if (inputAssets.length !== inputAssetIds.length) {
+    return false;
+  }
+
+  const assetIds = new Set(inputAssets.map((asset) => asset.assetId));
+  if (assetIds.size !== inputAssets.length) {
+    return false;
+  }
+
+  for (const assetId of inputAssetIds) {
+    if (!assetIds.has(assetId)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 async function attachInputAssets({

@@ -95,3 +95,21 @@ Passed with no diff formatting issues.
 ## Notes
 
 - The task brief asked for `pnpm exec vitest ...`, but `pnpm` is not available on this shell PATH. I ran the equivalent local Vitest binary from `node_modules/.bin` instead, against the exact same test targets.
+
+## Review Fix: Task 4 review findings
+
+### What you fixed
+
+- Added an invariant in `createReservedMediaJob(...)` so `inputAssets` and `inputAssetIds` must describe the same asset set before any Supabase work begins.
+- Added focused coverage for the mismatch case to keep persisted `input_assets` and attachment lookup IDs from drifting apart.
+- Added explicit coverage for the role/content-type mismatch path so `contentTypePrefixes` enforcement is exercised directly.
+
+### Tests run and results
+
+- Command: `./node_modules/.bin/vitest run tests/media/jobs.test.ts`
+- Result: passed, `1` test file and `9` tests green.
+
+### Files changed
+
+- `lib/media/jobs.ts`
+- `tests/media/jobs.test.ts`
