@@ -90,11 +90,11 @@ export async function drainOneMediaJob({
     return { claimed: true, jobId: job.id, status };
   }
 
-  let inputAssets: ProviderInputAsset[];
+  let signedInputs: { inputUrls: string[]; inputAssets: ProviderInputAsset[] };
   try {
-    inputAssets = job.providerJobId
-      ? []
-      : await signedInputAssetUrls({ admin, job });
+    signedInputs = job.providerJobId
+      ? { inputUrls: [], inputAssets: [] }
+      : await signedInputAssetUrls({ admin, job, model });
   } catch (error) {
     if (isStaleClaimError(error)) {
       return { claimed: true, jobId: job.id, status: "stale_claim" };
@@ -104,13 +104,12 @@ export async function drainOneMediaJob({
     return { claimed: true, jobId: job.id, status };
   }
 
-  const inputUrls = inputAssets.map((asset) => asset.url);
   const result = await withLeaseHeartbeat(admin, job, () => runProviderAdapter({
     adapter,
     model,
     parameters: objectValue(job.input.parameters),
-    inputUrls,
-    inputAssets,
+    inputUrls: signedInputs.inputUrls,
+    inputAssets: signedInputs.inputAssets,
     providerJobId: job.providerJobId,
     signal,
   }));
@@ -288,6 +287,7 @@ async function runProviderAdapter({
 async function signedInputAssetUrls({
   admin,
   job,
+  model,
 }: {
   admin: SupabaseAdminClient;
   job: {
@@ -296,13 +296,16 @@ async function signedInputAssetUrls({
     inputAssets: Array<{ assetId: string; role: string }>;
     inputAssetIds: string[];
   };
-}): Promise<ProviderInputAsset[]> {
-  const storedInputAssets = job.inputAssets.length > 0
-    ? job.inputAssets
-    : job.inputAssetIds.map((assetId) => ({ assetId, role: "image" }));
+  model: Parameters<MediaProviderAdapter["run"]>[0]["model"];
+}): Promise<{ inputUrls: string[]; inputAssets: ProviderInputAsset[] }> {
+  const usesStoredRoles = job.inputAssets.length > 0;
+  const inferredLegacyRole = usesStoredRoles ? null : inferLegacyRole(model.inputAssetSchema, job.inputAssetIds.length);
+  const requestedAssetIds = usesStoredRoles
+    ? job.inputAssets.map((asset) => asset.assetId)
+    : job.inputAssetIds;
 
-  if (storedInputAssets.length === 0) {
-    return [];
+  if (requestedAssetIds.length === 0) {
+    return { inputUrls: [], inputAssets: [] };
   }
 
   const { data, error } = await admin
@@ -312,14 +315,14 @@ async function signedInputAssetUrls({
     .eq("job_id", job.id)
     .eq("kind", "input")
     .eq("status", "attached")
-    .in("id", storedInputAssets.map((asset) => asset.assetId));
+    .in("id", requestedAssetIds);
 
   if (error) {
     throw new Error(error.message);
   }
 
   const rows = (data ?? []) as MediaInputAssetRow[];
-  if (rows.length !== storedInputAssets.length) {
+  if (rows.length !== requestedAssetIds.length) {
     throw new Error("media_input_unavailable");
   }
 
@@ -327,7 +330,7 @@ async function signedInputAssetUrls({
   const env = getMediaEnv();
   const exp = Math.floor(Date.now() / 1000) + env.downloadUrlTtlSeconds;
 
-  return Promise.all(storedInputAssets.map(async ({ assetId, role }) => {
+  const signedAssets = await Promise.all(requestedAssetIds.map(async (assetId) => {
     const asset = byId.get(assetId);
     if (!asset?.storage_key) {
       throw new Error("media_input_unavailable");
@@ -344,11 +347,58 @@ async function signedInputAssetUrls({
 
     return {
       assetId,
-      role,
       contentType: asset.content_type,
       url: `${env.baseUrl}/objects/${assetId}?token=${encodeURIComponent(token)}`,
     };
   }));
+
+  if (usesStoredRoles) {
+    return {
+      inputUrls: signedAssets.map((asset) => asset.url),
+      inputAssets: signedAssets.map((asset, index) => ({
+        ...asset,
+        role: job.inputAssets[index]!.role,
+      })),
+    };
+  }
+
+  if (!inferredLegacyRole) {
+    return {
+      inputUrls: signedAssets.map((asset) => asset.url),
+      inputAssets: [],
+    };
+  }
+
+  return {
+    inputUrls: signedAssets.map((asset) => asset.url),
+    inputAssets: signedAssets.map((asset) => ({
+      ...asset,
+      role: inferredLegacyRole,
+    })),
+  };
+}
+
+function inferLegacyRole(
+  schema: Parameters<MediaProviderAdapter["run"]>[0]["model"]["inputAssetSchema"],
+  count: number,
+) {
+  if (count !== 1) {
+    return null;
+  }
+
+  const roles = Array.isArray(schema?.roles) ? schema.roles : [];
+  if (roles.length === 0) {
+    return null;
+  }
+
+  if (roles.length === 1) {
+    const [role] = roles;
+    if (role && role.min <= 1 && role.max === 1) {
+      return role.role;
+    }
+  }
+
+  return null;
 }
 
 async function updateWaitingProviderJob({

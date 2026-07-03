@@ -286,6 +286,112 @@ describe("drainOneMediaJob", () => {
     });
   });
 
+  it("infers the sole schema role for legacy single-input jobs", async () => {
+    mocks.getMediaModel.mockResolvedValue({
+      ...model,
+      supportsUploadedInputs: true,
+      supportedInputTypes: ["image"],
+      inputAssetSchema: {
+        roles: [
+          {
+            role: "first_frame",
+            providerField: "first_frame_url",
+            mediaKind: "image",
+            required: true,
+            min: 1,
+            max: 1,
+            contentTypePrefixes: ["image/"],
+          },
+        ],
+      },
+    });
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow({
+        input: {
+          media_model_id: "fal:frontier-video",
+          parameters: { prompt: "animate this" },
+          input_asset_ids: ["asset_1"],
+        },
+      })],
+      inputAssetRows: [
+        { id: "asset_1", storage_key: "users/user_1/media/tmp/asset_1/input.png", content_type: "image/png" },
+      ],
+    });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "waiting_provider" as const,
+        providerJobId: "provider_new",
+      })),
+    } satisfies MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toEqual({
+      claimed: true,
+      jobId: "job_1",
+      status: "waiting_provider",
+    });
+
+    expect(adapter.run).toHaveBeenCalledWith({
+      model: expect.objectContaining({ id: "fal:frontier-video" }),
+      parameters: { prompt: "animate this" },
+      inputUrls: [
+        "https://media.example.test/objects/asset_1?token=token-for-asset_1",
+      ],
+      inputAssets: [
+        {
+          assetId: "asset_1",
+          role: "first_frame",
+          contentType: "image/png",
+          url: "https://media.example.test/objects/asset_1?token=token-for-asset_1",
+        },
+      ],
+      providerJobId: null,
+      signal: undefined,
+    });
+  });
+
+  it("preserves generic inputUrls for legacy jobs without role schema", async () => {
+    mocks.getMediaModel.mockResolvedValue({
+      ...model,
+      supportsUploadedInputs: true,
+      supportedInputTypes: ["image"],
+    });
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow({
+        input: {
+          media_model_id: "fal:frontier-video",
+          parameters: { prompt: "animate this" },
+          input_asset_ids: ["asset_1"],
+        },
+      })],
+      inputAssetRows: [
+        { id: "asset_1", storage_key: "users/user_1/media/tmp/asset_1/input.png", content_type: "image/png" },
+      ],
+    });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "waiting_provider" as const,
+        providerJobId: "provider_new",
+      })),
+    } satisfies MediaProviderAdapter;
+
+    await expect(drainOneMediaJob({ adapters: { fal: adapter } })).resolves.toEqual({
+      claimed: true,
+      jobId: "job_1",
+      status: "waiting_provider",
+    });
+
+    expect(adapter.run).toHaveBeenCalledWith({
+      model: expect.objectContaining({ id: "fal:frontier-video" }),
+      parameters: { prompt: "animate this" },
+      inputUrls: [
+        "https://media.example.test/objects/asset_1?token=token-for-asset_1",
+      ],
+      inputAssets: [],
+      providerJobId: null,
+      signal: undefined,
+    });
+  });
+
   it("releases the job when attached input assets are unavailable", async () => {
     mocks.getMediaModel.mockResolvedValue({
       ...model,

@@ -32,3 +32,26 @@ DONE
 ## Concerns
 
 - None.
+
+## Review Fix: Legacy input_asset_ids role inference
+
+### What you fixed
+
+- Updated `lib/media/worker.ts` so stored jobs that already have `input.input_assets` keep using their stored roles unchanged.
+- For older stored jobs with only `input.input_asset_ids`, the worker now infers the model's sole role when the schema has exactly one role with `max: 1`, instead of hardcoding `"image"`.
+- Preserved legacy generic `inputUrls` delivery when older jobs do not have a role schema, by avoiding synthetic role-aware `inputAssets` in that path.
+- Added focused worker regressions covering both the single-role inference path and the no-role-schema compatibility path.
+
+### Tests run and results
+
+- `npm exec -- vitest run tests/media/worker.test.ts -t "infers the sole schema role for legacy single-input jobs"`
+  - PASS
+- `npm exec -- vitest run tests/media/worker.test.ts -t "legacy"`
+  - PASS
+- `npm exec -- vitest run tests/media/worker.test.ts`
+  - PASS: 33 tests
+
+### Files changed
+
+- `lib/media/worker.ts`
+- `tests/media/worker.test.ts`
