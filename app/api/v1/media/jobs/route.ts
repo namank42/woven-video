@@ -2,9 +2,13 @@ import { requireApiAuth } from "@/lib/api/auth";
 import { licenseGateResponse } from "@/lib/api/license";
 import { apiError } from "@/lib/api/responses";
 import { parseMediaJobInputAssets } from "@/lib/media/input-assets";
-import { createReservedMediaJob } from "@/lib/media/jobs";
+import {
+  createReservedMediaJob,
+  failReservedMediaJobDispatch,
+} from "@/lib/media/jobs";
 import { getMediaModel } from "@/lib/media/model-registry";
 import { validateMediaParameters } from "@/lib/media/schema";
+import { dispatchMediaJob } from "@/lib/media/trigger-dispatch";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -64,6 +68,23 @@ export async function POST(request: Request) {
       inputAssets: inputAssets.inputAssets,
       inputAssetIds: inputAssets.inputAssetIds,
     });
+
+    try {
+      await dispatchMediaJob({
+        jobId: job.id,
+        userId: authResult.auth.user.id,
+        modelId: job.model,
+        kind: model.kind,
+      });
+    } catch (dispatchError) {
+      await failReservedMediaJobDispatch(job.id);
+      console.error("Failed to dispatch media job", dispatchError);
+      return apiError(
+        "Media executor is temporarily unavailable. Please try again.",
+        503,
+        "media_executor_unavailable",
+      );
+    }
 
     return Response.json(
       {

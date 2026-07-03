@@ -200,6 +200,16 @@ export async function createReservedMediaJob({
   return normalizeMediaJobRow(queuedJob as CreatedMediaJobRow, model.id, reserveAmount);
 }
 
+export async function failReservedMediaJobDispatch(jobId: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  await releaseReservation(
+    admin,
+    jobId,
+    "media_executor_unavailable",
+    "media_executor_unavailable",
+  );
+}
+
 function normalizeMediaJobRow(
   job: CreatedMediaJobRow,
   mediaModelId: string,

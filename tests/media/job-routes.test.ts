@@ -8,6 +8,7 @@ describe("media job routes", () => {
     vi.doUnmock("@/lib/media/model-registry");
     vi.doUnmock("@/lib/media/output-urls");
     vi.doUnmock("@/lib/media/schema");
+    vi.doUnmock("@/lib/media/trigger-dispatch");
     vi.doUnmock("@/lib/supabase/admin");
     vi.resetModules();
     vi.restoreAllMocks();
@@ -36,6 +37,7 @@ describe("media job routes", () => {
     vi.doMock("@/lib/media/model-registry", () => ({
       getMediaModel: vi.fn(async () => ({
         id: "fal:frontier-video",
+        kind: "video",
         parameterSchema: { type: "object" },
       })),
     }));
@@ -47,6 +49,7 @@ describe("media job routes", () => {
     }));
     vi.doMock("@/lib/media/jobs", () => ({
       createReservedMediaJob,
+      failReservedMediaJobDispatch: vi.fn(),
     }));
 
     const { POST } = await import("@/app/api/v1/media/jobs/route");
@@ -77,6 +80,7 @@ describe("media job routes", () => {
       createdAt: "2026-07-01T12:00:00.000Z",
       expiresAt: "2026-07-01T13:00:00.000Z",
     }));
+    const dispatchMediaJob = vi.fn(async () => ({ runId: "run_123" }));
 
     vi.doMock("@/lib/api/auth", () => ({
       requireApiAuth: vi.fn(async () => ({
@@ -90,6 +94,7 @@ describe("media job routes", () => {
     vi.doMock("@/lib/media/model-registry", () => ({
       getMediaModel: vi.fn(async () => ({
         id: "fal:frontier-video",
+        kind: "video",
         parameterSchema: { type: "object" },
       })),
     }));
@@ -101,7 +106,9 @@ describe("media job routes", () => {
     }));
     vi.doMock("@/lib/media/jobs", () => ({
       createReservedMediaJob,
+      failReservedMediaJobDispatch: vi.fn(),
     }));
+    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
 
     const { POST, dynamic, runtime } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {
@@ -127,12 +134,70 @@ describe("media job routes", () => {
       userId: "user_1",
       model: {
         id: "fal:frontier-video",
+        kind: "video",
         parameterSchema: { type: "object" },
       },
       parameters: { prompt: "a mountain" },
       inputAssets: [{ assetId: "asset_1", role: "image" }],
       inputAssetIds: ["asset_1"],
     });
+    expect(dispatchMediaJob).toHaveBeenCalledWith({
+      jobId: "job_1",
+      userId: "user_1",
+      modelId: "fal:frontier-video",
+      kind: "video",
+    });
+  });
+
+  it("fails closed and releases reservation when Trigger dispatch fails", async () => {
+    const createReservedMediaJob = vi.fn(async () => ({
+      id: "job_1",
+      status: "queued",
+      model: "fal-ai/nano-banana-lite",
+      estimatedCostUsdMicros: 1_200_000,
+      reservedCreditsUsdMicros: 1_200_000,
+      createdAt: "2026-07-03T12:00:00.000Z",
+      expiresAt: "2026-07-03T13:00:00.000Z",
+    }));
+    const failReservedMediaJobDispatch = vi.fn(async () => undefined);
+    const dispatchMediaJob = vi.fn(async () => {
+      throw new Error("trigger unavailable");
+    });
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({ ok: true, auth: { user: { id: "user_1" } } })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({ licenseGateResponse: vi.fn(async () => null) }));
+    vi.doMock("@/lib/media/model-registry", () => ({
+      getMediaModel: vi.fn(async () => ({
+        id: "fal-ai/nano-banana-lite",
+        kind: "image",
+        parameterSchema: { type: "object" },
+        inputAssetSchema: { roles: [] },
+      })),
+    }));
+    vi.doMock("@/lib/media/schema", () => ({
+      validateMediaParameters: vi.fn(() => ({ ok: true, value: { prompt: "a mountain" } })),
+    }));
+    vi.doMock("@/lib/media/jobs", () => ({
+      createReservedMediaJob,
+      failReservedMediaJobDispatch,
+    }));
+    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { POST } = await import("@/app/api/v1/media/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "fal-ai/nano-banana-lite",
+      parameters: { prompt: "a mountain" },
+    }));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "media_executor_unavailable" },
+    });
+    expect(failReservedMediaJobDispatch).toHaveBeenCalledWith("job_1");
+    expect(consoleError).toHaveBeenCalledWith("Failed to dispatch media job", expect.any(Error));
   });
 
   it("passes role-aware input_assets to job creation", async () => {
@@ -145,6 +210,7 @@ describe("media job routes", () => {
       createdAt: "2026-07-01T12:00:00.000Z",
       expiresAt: "2026-07-01T13:00:00.000Z",
     }));
+    const dispatchMediaJob = vi.fn(async () => ({ runId: "run_123" }));
 
     vi.doMock("@/lib/api/auth", () => ({
       requireApiAuth: vi.fn(async () => ({ ok: true, auth: { user: { id: "user_1" } } })),
@@ -153,6 +219,7 @@ describe("media job routes", () => {
     vi.doMock("@/lib/media/model-registry", () => ({
       getMediaModel: vi.fn(async () => ({
         id: "fal-ai/veo3.1/first-last-frame-to-video",
+        kind: "video",
         parameterSchema: { type: "object" },
         inputAssetSchema: {
           roles: [
@@ -165,7 +232,11 @@ describe("media job routes", () => {
     vi.doMock("@/lib/media/schema", () => ({
       validateMediaParameters: vi.fn(() => ({ ok: true, value: { prompt: "reveal" } })),
     }));
-    vi.doMock("@/lib/media/jobs", () => ({ createReservedMediaJob }));
+    vi.doMock("@/lib/media/jobs", () => ({
+      createReservedMediaJob,
+      failReservedMediaJobDispatch: vi.fn(),
+    }));
+    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
 
     const { POST } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {
@@ -193,12 +264,15 @@ describe("media job routes", () => {
     }));
     vi.doMock("@/lib/api/license", () => ({ licenseGateResponse: vi.fn(async () => null) }));
     vi.doMock("@/lib/media/model-registry", () => ({
-      getMediaModel: vi.fn(async () => ({ id: "model_1", parameterSchema: { type: "object" }, inputAssetSchema: { roles: [] } })),
+      getMediaModel: vi.fn(async () => ({ id: "model_1", kind: "image", parameterSchema: { type: "object" }, inputAssetSchema: { roles: [] } })),
     }));
     vi.doMock("@/lib/media/schema", () => ({
       validateMediaParameters: vi.fn(() => ({ ok: true, value: {} })),
     }));
-    vi.doMock("@/lib/media/jobs", () => ({ createReservedMediaJob: vi.fn() }));
+    vi.doMock("@/lib/media/jobs", () => ({
+      createReservedMediaJob: vi.fn(),
+      failReservedMediaJobDispatch: vi.fn(),
+    }));
 
     const { POST } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {
@@ -232,6 +306,7 @@ describe("media job routes", () => {
     vi.doMock("@/lib/media/model-registry", () => ({
       getMediaModel: vi.fn(async () => ({
         id: "fal:frontier-video",
+        kind: "video",
         parameterSchema: { type: "object" },
       })),
     }));
@@ -243,6 +318,7 @@ describe("media job routes", () => {
     }));
     vi.doMock("@/lib/media/jobs", () => ({
       createReservedMediaJob,
+      failReservedMediaJobDispatch: vi.fn(),
     }));
 
     const { POST } = await import("@/app/api/v1/media/jobs/route");
@@ -291,6 +367,7 @@ describe("media job routes", () => {
     vi.doMock("@/lib/media/model-registry", () => ({
       getMediaModel: vi.fn(async () => ({
         id: "fal-ai/nano-banana-lite",
+        kind: "image",
         parameterSchema: {
           type: "object",
           required: ["prompt"],
@@ -306,7 +383,10 @@ describe("media job routes", () => {
         inputAssetSchema: { roles: [] },
       })),
     }));
-    vi.doMock("@/lib/media/jobs", () => ({ createReservedMediaJob }));
+    vi.doMock("@/lib/media/jobs", () => ({
+      createReservedMediaJob,
+      failReservedMediaJobDispatch: vi.fn(),
+    }));
 
     const { POST } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {
