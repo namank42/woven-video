@@ -189,6 +189,7 @@ describe("drainOneMediaJob", () => {
       model,
       parameters: { prompt: "a mountain" },
       inputUrls: [],
+      inputAssets: [],
       providerJobId: "provider_old",
       signal: undefined,
     });
@@ -212,14 +213,18 @@ describe("drainOneMediaJob", () => {
       supportedInputTypes: ["image"],
     });
     const inputAssetRows = [
-      { id: "asset_1", storage_key: "users/user_1/media/tmp/asset_1/input.png" },
-      { id: "asset_2", storage_key: "users/user_1/media/tmp/asset_2/input.png" },
+      { id: "asset_1", storage_key: "users/user_1/media/tmp/asset_1/input.png", content_type: "image/png" },
+      { id: "asset_2", storage_key: "users/user_1/media/tmp/asset_2/input.png", content_type: "image/png" },
     ];
     const admin = mockAdminWith({
       claimedJobs: [jobRow({
         input: {
           media_model_id: "fal:frontier-video",
           parameters: { prompt: "animate this" },
+          input_assets: [
+            { asset_id: "asset_2", role: "image" },
+            { asset_id: "asset_1", role: "image" },
+          ],
           input_asset_ids: ["asset_2", "asset_1"],
         },
       })],
@@ -261,6 +266,20 @@ describe("drainOneMediaJob", () => {
       inputUrls: [
         "https://media.example.test/objects/asset_2?token=token-for-asset_2",
         "https://media.example.test/objects/asset_1?token=token-for-asset_1",
+      ],
+      inputAssets: [
+        {
+          assetId: "asset_2",
+          role: "image",
+          contentType: "image/png",
+          url: "https://media.example.test/objects/asset_2?token=token-for-asset_2",
+        },
+        {
+          assetId: "asset_1",
+          role: "image",
+          contentType: "image/png",
+          url: "https://media.example.test/objects/asset_1?token=token-for-asset_1",
+        },
       ],
       providerJobId: null,
       signal: undefined,
@@ -992,7 +1011,7 @@ function mockAdminWith({
   rpcRejects = {},
 }: {
   claimedJobs: unknown[];
-  inputAssetRows?: Array<{ id: string; storage_key: string }>;
+  inputAssetRows?: Array<{ id: string; storage_key: string; content_type?: string }>;
   rpcResults?: Record<string, SupabaseResult<unknown>>;
   rpcRejects?: Record<string, Error>;
 }) {

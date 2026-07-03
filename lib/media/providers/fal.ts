@@ -1,8 +1,8 @@
 import { fal } from "@fal-ai/client";
 
 import { getMediaEnv } from "@/lib/media/env";
-import type { MediaProviderAdapter, ProviderOutput } from "@/lib/media/provider";
-import type { MediaParameterSchema } from "@/lib/media/types";
+import type { MediaProviderAdapter, ProviderInputAsset, ProviderOutput } from "@/lib/media/provider";
+import type { MediaModel, MediaParameterSchema } from "@/lib/media/types";
 
 type FalResultPayload = {
   data?: unknown;
@@ -21,14 +21,16 @@ type FalOutputExtractionOptions = {
 const URL_PATTERN = /^https?:\/\//i;
 
 export const falMediaAdapter: MediaProviderAdapter = {
-  async run({ model, parameters, inputUrls, providerJobId, signal }) {
+  async run({ model, parameters, inputUrls, inputAssets, providerJobId, signal }) {
     const endpoint = model.providerEndpoint;
     const input: Record<string, unknown> = {
       ...model.defaultParameters,
       ...declaredParameters(parameters, model.parameterSchema),
     };
 
-    if (inputUrls.length > 0) {
+    applyInputAssets(input, model, inputAssets ?? []);
+
+    if ((inputAssets?.length ?? 0) === 0 && inputUrls.length > 0) {
       input.input_urls = inputUrls;
     }
 
@@ -102,6 +104,26 @@ export const falMediaAdapter: MediaProviderAdapter = {
     };
   },
 };
+
+function applyInputAssets(
+  input: Record<string, unknown>,
+  model: MediaModel,
+  inputAssets: ProviderInputAsset[],
+) {
+  const rolesByName = new Map(model.inputAssetSchema.roles.map((role) => [role.role, role]));
+  const byRole = new Map<string, ProviderInputAsset[]>();
+  for (const asset of inputAssets) {
+    const items = byRole.get(asset.role) ?? [];
+    items.push(asset);
+    byRole.set(asset.role, items);
+  }
+
+  for (const [roleName, assets] of byRole) {
+    const role = rolesByName.get(roleName);
+    if (!role) continue;
+    input[role.providerField] = role.max === 1 ? assets[0]!.url : assets.map((asset) => asset.url);
+  }
+}
 
 export function extractFalOutputs(
   payload: unknown,

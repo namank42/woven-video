@@ -3,8 +3,9 @@ import {
   createOutputAssetRows,
   failOutputAssetRowsForAttempt,
 } from "@/lib/media/output-assets";
-import type { MediaProviderAdapter, ProviderOutput } from "@/lib/media/provider";
+import type { MediaProviderAdapter, ProviderInputAsset, ProviderOutput } from "@/lib/media/provider";
 import { chargeMediaUsdMicros } from "@/lib/media/pricing";
+import { deserializeMediaPricingQuote } from "@/lib/media/pricing-quotes";
 import { getMediaEnv } from "@/lib/media/env";
 import { signMediaToken } from "@/lib/media/tokens";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -21,6 +22,7 @@ type ClaimedMediaJobRow = {
 type MediaInputAssetRow = {
   id: string;
   storage_key: string;
+  content_type: string;
 };
 type DrainOneMediaJobResult =
   | { claimed: false }
@@ -88,9 +90,9 @@ export async function drainOneMediaJob({
     return { claimed: true, jobId: job.id, status };
   }
 
-  let inputUrls: string[];
+  let inputAssets: ProviderInputAsset[];
   try {
-    inputUrls = job.providerJobId
+    inputAssets = job.providerJobId
       ? []
       : await signedInputAssetUrls({ admin, job });
   } catch (error) {
@@ -102,11 +104,13 @@ export async function drainOneMediaJob({
     return { claimed: true, jobId: job.id, status };
   }
 
+  const inputUrls = inputAssets.map((asset) => asset.url);
   const result = await withLeaseHeartbeat(admin, job, () => runProviderAdapter({
     adapter,
     model,
     parameters: objectValue(job.input.parameters),
     inputUrls,
+    inputAssets,
     providerJobId: job.providerJobId,
     signal,
   }));
@@ -226,7 +230,9 @@ function normalizeClaimedJob(job: ClaimedMediaJobRow) {
     userId,
     input,
     mediaModelId: stringValue(input.media_model_id),
+    inputAssets: inputAssetEntriesValue(input.input_assets),
     inputAssetIds: stringArrayValue(input.input_asset_ids),
+    pricingQuote: mediaPricingQuoteValue(input.pricing_quote),
     providerJobId: stringValue(job.provider_job_id),
     claimToken: stringValue(job.claim_token),
     expiresAt: stringValue(job.expires_at),
@@ -238,6 +244,7 @@ async function runProviderAdapter({
   model,
   parameters,
   inputUrls,
+  inputAssets,
   providerJobId,
   signal,
 }: {
@@ -245,6 +252,7 @@ async function runProviderAdapter({
   model: Parameters<MediaProviderAdapter["run"]>[0]["model"];
   parameters: Record<string, unknown>;
   inputUrls: string[];
+  inputAssets: ProviderInputAsset[];
   providerJobId: string | null;
   signal?: AbortSignal;
 }) {
@@ -257,6 +265,7 @@ async function runProviderAdapter({
       model,
       parameters,
       inputUrls,
+      inputAssets,
       providerJobId,
       signal,
     });
@@ -284,28 +293,33 @@ async function signedInputAssetUrls({
   job: {
     id: string;
     userId: string;
+    inputAssets: Array<{ assetId: string; role: string }>;
     inputAssetIds: string[];
   };
-}): Promise<string[]> {
-  if (job.inputAssetIds.length === 0) {
+}): Promise<ProviderInputAsset[]> {
+  const storedInputAssets = job.inputAssets.length > 0
+    ? job.inputAssets
+    : job.inputAssetIds.map((assetId) => ({ assetId, role: "image" }));
+
+  if (storedInputAssets.length === 0) {
     return [];
   }
 
   const { data, error } = await admin
     .from("media_assets")
-    .select("id, storage_key")
+    .select("id, storage_key, content_type")
     .eq("user_id", job.userId)
     .eq("job_id", job.id)
     .eq("kind", "input")
     .eq("status", "attached")
-    .in("id", job.inputAssetIds);
+    .in("id", storedInputAssets.map((asset) => asset.assetId));
 
   if (error) {
     throw new Error(error.message);
   }
 
   const rows = (data ?? []) as MediaInputAssetRow[];
-  if (rows.length !== job.inputAssetIds.length) {
+  if (rows.length !== storedInputAssets.length) {
     throw new Error("media_input_unavailable");
   }
 
@@ -313,7 +327,7 @@ async function signedInputAssetUrls({
   const env = getMediaEnv();
   const exp = Math.floor(Date.now() / 1000) + env.downloadUrlTtlSeconds;
 
-  return Promise.all(job.inputAssetIds.map(async (assetId) => {
+  return Promise.all(storedInputAssets.map(async ({ assetId, role }) => {
     const asset = byId.get(assetId);
     if (!asset?.storage_key) {
       throw new Error("media_input_unavailable");
@@ -328,7 +342,12 @@ async function signedInputAssetUrls({
       exp,
     }, env.tokenSecret);
 
-    return `${env.baseUrl}/objects/${assetId}?token=${encodeURIComponent(token)}`;
+    return {
+      assetId,
+      role,
+      contentType: asset.content_type,
+      url: `${env.baseUrl}/objects/${assetId}?token=${encodeURIComponent(token)}`,
+    };
   }));
 }
 
@@ -517,6 +536,33 @@ function stringArrayValue(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
     : [];
+}
+
+function inputAssetEntriesValue(value: unknown): Array<{ assetId: string; role: string }> {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const inputAssets: Array<{ assetId: string; role: string }> = [];
+  for (const item of value) {
+    if (!isRecord(item)) {
+      continue;
+    }
+
+    const assetId = stringValue(item.asset_id);
+    const role = stringValue(item.role);
+    if (!assetId || !role) {
+      continue;
+    }
+
+    inputAssets.push({ assetId, role });
+  }
+
+  return inputAssets;
+}
+
+function mediaPricingQuoteValue(value: unknown) {
+  return deserializeMediaPricingQuote(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

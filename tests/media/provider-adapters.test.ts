@@ -162,6 +162,41 @@ describe("falMediaAdapter", () => {
     });
   });
 
+  it("maps role-aware input assets to Fal provider fields", async () => {
+    const { falMediaAdapter } = await import("@/lib/media/providers/fal");
+    mocks.falSubmit.mockResolvedValue({ request_id: "fal_req_roles" });
+
+    await falMediaAdapter.run({
+      model: mediaModel({
+        inputAssetSchema: {
+          roles: [
+            { role: "first_frame", providerField: "first_frame_url", mediaKind: "image", required: true, min: 1, max: 1, contentTypePrefixes: ["image/"] },
+            { role: "last_frame", providerField: "last_frame_url", mediaKind: "image", required: true, min: 1, max: 1, contentTypePrefixes: ["image/"] },
+          ],
+        },
+        parameterSchema: {
+          type: "object",
+          properties: { prompt: { type: "string" } },
+        },
+      }),
+      parameters: { prompt: "product reveal" },
+      inputUrls: [],
+      inputAssets: [
+        { assetId: "asset_first", role: "first_frame", url: "https://media.example/first.png", contentType: "image/png" },
+        { assetId: "asset_last", role: "last_frame", url: "https://media.example/last.png", contentType: "image/png" },
+      ],
+    });
+
+    expect(mocks.falSubmit).toHaveBeenCalledWith("fal-ai/frontier-video", {
+      input: {
+        prompt: "product reveal",
+        first_frame_url: "https://media.example/first.png",
+        last_frame_url: "https://media.example/last.png",
+      },
+      abortSignal: undefined,
+    });
+  });
+
   it("drops parameters not declared in the model schema", async () => {
     const { falMediaAdapter } = await import("@/lib/media/providers/fal");
     mocks.falSubmit.mockResolvedValue({ request_id: "fal_req_2" });

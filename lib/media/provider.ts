@@ -1,5 +1,12 @@
 import type { MediaModel } from "@/lib/media/types";
 
+export type ProviderInputAsset = {
+  assetId: string;
+  role: string;
+  url: string;
+  contentType: string;
+};
+
 export type ProviderOutput = {
   url?: string;
   data?: Uint8Array;
@@ -30,6 +37,7 @@ export type MediaProviderAdapter = {
     model: MediaModel;
     parameters: Record<string, unknown>;
     inputUrls: string[];
+    inputAssets?: ProviderInputAsset[];
     providerJobId?: string | null;
     signal?: AbortSignal;
   }): Promise<ProviderRunResult>;
