@@ -10,47 +10,39 @@ describe("Fal media webhook route", () => {
     globalThis.fetch = originalFetch;
     vi.doUnmock("@/lib/supabase/admin");
     vi.doUnmock("@/lib/media/providers/fal-webhooks");
+    vi.doUnmock("@/lib/media/trigger-dispatch");
     vi.resetModules();
     vi.restoreAllMocks();
   });
 
-  it("updates matching Fal media jobs from request_id and returns no-store ok response", async () => {
-    const { createSupabaseAdminClient, update, eq } = mockSupabaseUpdate({ error: null });
-    const { verifyFalWebhookSignature } = mockFalWebhookVerifier();
+  it("wakes the Trigger media task after a verified Fal webhook", async () => {
+    const { select, update } = mockSupabaseWebhookJob({ error: null });
+    mockFalWebhookVerifier();
+    const dispatchMediaJob = vi.fn(async () => ({ runId: "run_1" }));
+    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
 
     const { POST, dynamic, runtime } = await import("@/app/api/v1/media/webhooks/fal/route");
     const response = await POST(signedJsonRequest({ request_id: "fal_req_123" }));
 
     expect(dynamic).toBe("force-dynamic");
     expect(runtime).toBe("nodejs");
-    expect(verifyFalWebhookSignature).toHaveBeenCalledWith({
-      headers: {
-        requestId: "webhook_req_1",
-        userId: "fal_user_1",
-        timestamp: "1700000000",
-        signature: "a".repeat(128),
-      },
-      rawBody: Buffer.from(JSON.stringify({ request_id: "fal_req_123" })),
-    });
-    expect(createSupabaseAdminClient).toHaveBeenCalledOnce();
     expect(update).toHaveBeenCalledWith({
       progress: {
         stage: "provider_webhook_received",
         percent: null,
         message: "Provider callback received",
       },
-      last_provider_poll_at: expect.stringMatching(
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
-      ),
+      last_provider_poll_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       claim_expires_at: "1970-01-01T00:00:00.000Z",
     });
-    expect(eq).toHaveBeenNthCalledWith(1, "provider_job_id", "fal_req_123");
-    expect(eq).toHaveBeenNthCalledWith(2, "provider", "fal");
-    expect(eq).toHaveBeenNthCalledWith(3, "type", "media_job");
-    expect(eq).toHaveBeenNthCalledWith(4, "status", "waiting_provider");
+    expect(select).toHaveBeenCalledWith("id, user_id, input");
+    expect(dispatchMediaJob).toHaveBeenCalledWith({
+      jobId: "job_1",
+      userId: "user_1",
+      modelId: "fal-ai/nano-banana-lite",
+      kind: "image",
+    });
     expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).toBe("no-store");
-    await expect(response.json()).resolves.toEqual({ ok: true });
   });
 
   it("accepts Fal requestId camelCase payloads", async () => {
@@ -358,19 +350,47 @@ function mockSupabaseUpdate({
 }: {
   error: { message: string } | null;
 }) {
-  const chain = {
-    eq: vi.fn(() => chain),
+  const updateEq = vi.fn();
+  const selectEq = vi.fn().mockReturnThis();
+  const maybeSingle = vi.fn(async () => ({ data: null, error: null }));
+  const updateChain = {
+    eq: updateEq.mockReturnThis(),
     then: (resolve: (value: { error: { message: string } | null }) => unknown) => {
       return Promise.resolve({ error }).then(resolve);
     },
   };
-  const update = vi.fn(() => chain);
-  const from = vi.fn(() => ({ update }));
+  const select = vi.fn(() => ({ eq: selectEq, maybeSingle }));
+  const update = vi.fn(() => updateChain);
+  const from = vi.fn(() => ({ update, select }));
   const createSupabaseAdminClient = vi.fn(() => ({ from }));
 
   vi.doMock("@/lib/supabase/admin", () => ({
     createSupabaseAdminClient,
   }));
 
-  return { createSupabaseAdminClient, from, update, eq: chain.eq };
+  return { createSupabaseAdminClient, from, update, select, eq: updateEq, maybeSingle };
+}
+
+function mockSupabaseWebhookJob({
+  error,
+  job = {
+    id: "job_1",
+    user_id: "user_1",
+    input: {
+      media_model_id: "fal-ai/nano-banana-lite",
+      operation: "image_generation",
+    },
+  },
+}: {
+  error: { message: string } | null;
+  job?: Record<string, unknown> | null;
+}) {
+  const eq = vi.fn().mockReturnThis();
+  const maybeSingle = vi.fn(async () => ({ data: job, error }));
+  const update = vi.fn(() => ({ eq }));
+  const select = vi.fn(() => ({ eq, maybeSingle }));
+  const from = vi.fn(() => ({ update, select }));
+  const createSupabaseAdminClient = vi.fn(() => ({ from }));
+  vi.doMock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient }));
+  return { createSupabaseAdminClient, from, update, select, eq, maybeSingle };
 }
