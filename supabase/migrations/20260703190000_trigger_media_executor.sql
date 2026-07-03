@@ -2,7 +2,7 @@ create or replace function public.claim_media_job_by_id(
   p_job_id uuid,
   p_lease_seconds integer default 300
 )
-returns jsonb
+returns public.generation_jobs
 language plpgsql
 security definer
 set search_path = public, extensions
@@ -73,7 +73,7 @@ begin
   where id = v_job.id
   returning * into v_job;
 
-  return to_jsonb(v_job);
+  return v_job;
 end;
 $$;
 

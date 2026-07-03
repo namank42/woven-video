@@ -52,3 +52,21 @@ Completed.
 3. Ran the same DB suite with the project-local Vitest binary after exporting the same Supabase env vars.
    - Command: `eval "$(supabase status -o env | sed 's/^/export /')"` then `RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" ./node_modules/.bin/vitest run tests/media/db-rpcs.integration.test.ts`
    - Result: `10 passed`
+
+## Re-Review Fix
+
+- Restored `public.claim_media_job_by_id(...)` to return `public.generation_jobs` and to `return v_job` directly after the update, while preserving the fixed reconciliation eligibility logic and the input-readiness guard.
+- Kept the exact-claim negative coverage strict by normalizing the composite-null RPC response in the test file before asserting `toBeNull()`, so the ineligible exact-claim cases still fail if the RPC starts returning any non-null payload.
+
+## Re-Review Fix Verification
+
+1. Ran `supabase db reset`.
+   - Result: passed.
+
+2. Tried the required command shape with `pnpm`.
+   - Command: `eval "$(supabase status -o env | sed 's/^/export /')"` then `RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" pnpm exec vitest run tests/media/db-rpcs.integration.test.ts`
+   - Result: failed because `pnpm` is not available in this shell (`zsh:1: command not found: pnpm`).
+
+3. Ran the same DB suite with the project-local Vitest binary.
+   - Command: `eval "$(supabase status -o env | sed 's/^/export /')"` then `RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" ./node_modules/.bin/vitest run tests/media/db-rpcs.integration.test.ts`
+   - Result: `10 passed`

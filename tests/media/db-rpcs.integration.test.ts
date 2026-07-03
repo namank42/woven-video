@@ -19,6 +19,13 @@ function getAdminClient() {
   });
 }
 
+function normalizeNullComposite<T extends Record<string, unknown> | null | undefined>(value: T): T | null {
+  if (!value) return null;
+
+  const entries = Object.values(value);
+  return entries.length > 0 && entries.every((entry) => entry === null) ? null : value;
+}
+
 describeDb("media SQL RPC integration", () => {
   it("lists the enabled production media catalog seeded from the pricing page", async () => {
     const models = await listMediaModels();
@@ -118,9 +125,9 @@ describeDb("media SQL RPC integration", () => {
     });
 
     expect(failedClaim.error).toBeNull();
-    expect(failedClaim.data).toBeNull();
+    expect(normalizeNullComposite(failedClaim.data)).toBeNull();
     expect(unreservedClaim.error).toBeNull();
-    expect(unreservedClaim.data).toBeNull();
+    expect(normalizeNullComposite(unreservedClaim.data)).toBeNull();
   });
 
   it("does not exact-claim queued jobs whose required input assets are missing", async () => {
@@ -141,7 +148,7 @@ describeDb("media SQL RPC integration", () => {
     });
 
     expect(error).toBeNull();
-    expect(data).toBeNull();
+    expect(normalizeNullComposite(data)).toBeNull();
   });
 
   it("finds stale media jobs for Trigger reconciliation", async () => {
