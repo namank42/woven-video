@@ -110,7 +110,7 @@ describe("media Worker", () => {
       text: "uploaded bytes",
       options: {
         httpMetadata: { contentType: "image/png" },
-        customMetadata: { user_id: "user_1", asset_id: "asset_1" },
+        customMetadata: { "user-id": "user_1", "asset-id": "asset_1" },
       },
     }]);
     expect(completionFetch).toHaveBeenCalledWith(
@@ -162,7 +162,7 @@ describe("media Worker", () => {
       text: "video bytes!",
       options: {
         httpMetadata: { contentType: "video/mp4" },
-        customMetadata: { user_id: "user_1", asset_id: "output_1", job_id: "job_1" },
+        customMetadata: { "user-id": "user_1", "asset-id": "output_1", "job-id": "job_1" },
       },
     }]);
     expect(completionFetch).not.toHaveBeenCalled();

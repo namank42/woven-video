@@ -1948,7 +1948,7 @@ RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERV
 
 Expected: PASS.
 
-- [ ] **Step 5: Run local real-Fal smoke**
+- [x] **Step 5: Run local real-Fal smoke**
 
 Start local services:
 
@@ -1972,7 +1972,8 @@ From the harness or an authenticated API script, create a Nano Banana Lite job:
     "num_images": 1,
     "sync_mode": false,
     "limit_generations": true,
-    "safety_tolerance": 4
+    "safety_tolerance": "4",
+    "output_format": "png"
   }
 }
 ```
@@ -1986,7 +1987,7 @@ Expected:
 - `GET /api/v1/media/jobs/:jobId` returns a signed `media.woven.video` or local media edge download URL.
 - The signed download returns `200` with image content.
 
-Task 8 note: left unchecked on 2026-07-03. The exact startup command `pnpm run media:dev:local` failed in this shell because `pnpm` was unavailable, `.env.local` was missing `TRIGGER_PROJECT_REF` and `TRIGGER_SECRET_KEY`, and no authenticated bearer token was available for `/api/v1/media/jobs`.
+Task 8 note: completed on 2026-07-04 using local Next (`npm run dev` fallback because `pnpm` was unavailable), local media edge Worker (`npx wrangler dev --config workers/media/wrangler.jsonc --port 8787`) with remote R2, and Trigger.dev dev runner for the Woven Labs project. Nano Banana Lite job `53679b3a-1cb0-4661-8b1b-dec69a04a4f1` returned queued, Trigger ran `process-media-job`, local Supabase stored a Fal provider job id, public status reached `succeeded` with one output, and the signed download returned `200 image/png` with `839597` bytes.
 
 - [x] **Step 6: Update plan checkboxes**
 

@@ -114,7 +114,6 @@ describe("media env", () => {
       MEDIA_DOWNLOAD_URL_TTL_SECONDS: "789",
       MEDIA_OUTPUT_RETENTION_SECONDS: "3600",
       MEDIA_JOB_TIMEOUT_SECONDS: "7200",
-      MEDIA_WORKER_POLL_MS: "2500",
     });
 
     expect(getMediaEnv()).toMatchObject({
@@ -123,17 +122,15 @@ describe("media env", () => {
       downloadUrlTtlSeconds: 789,
       outputRetentionSeconds: 3600,
       jobTimeoutSeconds: 7200,
-      workerPollMs: 2500,
     });
   });
 
-  it("defaults worker and retention settings", () => {
+  it("defaults retention and timeout settings", () => {
     setMediaEnv();
 
     expect(getMediaEnv()).toMatchObject({
       outputRetentionSeconds: 2_592_000,
       jobTimeoutSeconds: 3600,
-      workerPollMs: 5000,
     });
   });
 

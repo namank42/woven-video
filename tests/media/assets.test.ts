@@ -30,7 +30,6 @@ const mediaEnv: MediaEnv = {
   downloadUrlTtlSeconds: 60,
   outputRetentionSeconds: 2_592_000,
   jobTimeoutSeconds: 3600,
-  workerPollMs: 5000,
   falWebhookBaseUrl: null,
   falWebhookJwksUrl: null,
 };

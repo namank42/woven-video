@@ -100,9 +100,9 @@ async function handleUpload(
   await env.MEDIA_BUCKET.put(payload.key, request.body, {
     httpMetadata: { contentType },
     customMetadata: {
-      user_id: payload.sub,
-      asset_id: payload.assetId,
-      ...(payload.jobId ? { job_id: payload.jobId } : {}),
+      "user-id": payload.sub,
+      "asset-id": payload.assetId,
+      ...(payload.jobId ? { "job-id": payload.jobId } : {}),
     },
   });
 

@@ -7,7 +7,6 @@ export type MediaEnv = {
   downloadUrlTtlSeconds: number;
   outputRetentionSeconds: number;
   jobTimeoutSeconds: number;
-  workerPollMs: number;
   falWebhookBaseUrl: string | null;
   falWebhookJwksUrl: string | null;
 };
@@ -65,7 +64,6 @@ export function getMediaEnv(): MediaEnv {
     downloadUrlTtlSeconds: integerEnv("MEDIA_DOWNLOAD_URL_TTL_SECONDS", 15 * 60),
     outputRetentionSeconds: integerEnv("MEDIA_OUTPUT_RETENTION_SECONDS", 30 * 24 * 60 * 60),
     jobTimeoutSeconds: integerEnv("MEDIA_JOB_TIMEOUT_SECONDS", 3600),
-    workerPollMs: integerEnv("MEDIA_WORKER_POLL_MS", 5000),
     falWebhookBaseUrl: optionalUrlEnv("MEDIA_FAL_WEBHOOK_BASE_URL"),
     falWebhookJwksUrl: optionalUrlEnv("FAL_WEBHOOK_JWKS_URL", DEFAULT_FAL_WEBHOOK_JWKS_URL),
   };

@@ -40,7 +40,6 @@ MEDIA_UPLOAD_URL_TTL_SECONDS=900
 MEDIA_DOWNLOAD_URL_TTL_SECONDS=900
 MEDIA_OUTPUT_RETENTION_SECONDS=2592000
 MEDIA_JOB_TIMEOUT_SECONDS=3600
-MEDIA_WORKER_POLL_MS=5000
 MEDIA_FAL_WEBHOOK_BASE_URL=https://www.woven.video
 # Optional override. Defaults to https://rest.fal.ai/.well-known/jwks.json.
 FAL_WEBHOOK_JWKS_URL=
@@ -87,7 +86,7 @@ That starts:
 
 Trigger.dev is the supported executor in local and production. Do not run a separate polling worker.
 
-Task 8 local verification notes from `2026-07-03`:
+Task 8 local verification notes:
 
 - If `pnpm` is unavailable in the current shell, use the repo-local binaries for verification:
   - `./node_modules/.bin/vitest run`
@@ -95,6 +94,11 @@ Task 8 local verification notes from `2026-07-03`:
   - `./node_modules/.bin/eslint .`
 - Local Trigger media smoke also needs `TRIGGER_PROJECT_REF` and `TRIGGER_SECRET_KEY` alongside the existing Supabase, media Worker, and `FAL_KEY` env vars.
 - The authenticated media job routes require a real bearer token for a signed-in user. A service-role key alone is not sufficient for `/api/v1/media/jobs`.
+- The 2026-07-04 local smoke used the manual equivalents of `pnpm run media:dev:local` because `pnpm` was unavailable in the shell:
+  - `npm run dev`
+  - `npx wrangler dev --config workers/media/wrangler.jsonc --port 8787`
+  - `env TRIGGER_PROJECT_REF=<project-ref> npx trigger.dev@latest dev start --project-ref <project-ref> --env-file .env.local --skip-update-check`
+- That smoke created a `fal-ai/nano-banana-lite` image job, reached Fal, stored a provider job id, completed with one ready R2 output, and downloaded the signed image URL as `200 image/png`.
 
 ## Curated Media Model Catalog
 
