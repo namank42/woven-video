@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+function mockTriggerDispatch(dispatchMediaJob: ReturnType<typeof vi.fn>) {
+  vi.doMock("@/lib/media/trigger-dispatch", () => ({
+    dispatchMediaJob,
+    isTriggerMediaKind: (kind: string) =>
+      kind === "image" || kind === "video" || kind === "audio",
+  }));
+}
+
 describe("media job routes", () => {
   afterEach(() => {
     vi.doUnmock("@/lib/api/auth");
@@ -108,7 +116,7 @@ describe("media job routes", () => {
       createReservedMediaJob,
       failReservedMediaJobDispatch: vi.fn(),
     }));
-    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+    mockTriggerDispatch(dispatchMediaJob);
 
     const { POST, dynamic, runtime } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {
@@ -180,7 +188,7 @@ describe("media job routes", () => {
       createReservedMediaJob,
       failReservedMediaJobDispatch: vi.fn(),
     }));
-    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+    mockTriggerDispatch(dispatchMediaJob);
 
     const { POST } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {
@@ -230,7 +238,7 @@ describe("media job routes", () => {
       createReservedMediaJob,
       failReservedMediaJobDispatch,
     }));
-    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+    mockTriggerDispatch(dispatchMediaJob);
 
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { POST } = await import("@/app/api/v1/media/jobs/route");
@@ -283,7 +291,7 @@ describe("media job routes", () => {
       createReservedMediaJob,
       failReservedMediaJobDispatch,
     }));
-    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+    mockTriggerDispatch(dispatchMediaJob);
 
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { POST } = await import("@/app/api/v1/media/jobs/route");
@@ -339,7 +347,7 @@ describe("media job routes", () => {
       createReservedMediaJob,
       failReservedMediaJobDispatch: vi.fn(),
     }));
-    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+    mockTriggerDispatch(dispatchMediaJob);
 
     const { POST } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {

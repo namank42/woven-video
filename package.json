@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "trigger:dev": "npx trigger.dev@latest dev",
+    "trigger:dev": "node scripts/trigger-dev.mjs",
     "trigger:deploy": "npx trigger.dev@latest deploy",
     "media:edge:local": "npx wrangler dev --config workers/media/wrangler.jsonc --port 8787",
     "media:edge:deploy": "npx wrangler deploy --config workers/media/wrangler.jsonc",

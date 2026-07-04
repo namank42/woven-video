@@ -58,4 +58,13 @@ describe("dispatchMediaJob", () => {
       concurrencyLimit: 3,
     });
   });
+
+  it("exposes the Trigger-supported media kind predicate", async () => {
+    const { isTriggerMediaKind } = await import("@/lib/media/trigger-dispatch");
+
+    expect(isTriggerMediaKind("image")).toBe(true);
+    expect(isTriggerMediaKind("video")).toBe(true);
+    expect(isTriggerMediaKind("audio")).toBe(true);
+    expect(isTriggerMediaKind("captions")).toBe(false);
+  });
 });

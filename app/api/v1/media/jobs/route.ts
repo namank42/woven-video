@@ -8,7 +8,7 @@ import {
 } from "@/lib/media/jobs";
 import { getMediaModel } from "@/lib/media/model-registry";
 import { validateMediaParameters } from "@/lib/media/schema";
-import { dispatchMediaJob } from "@/lib/media/trigger-dispatch";
+import { dispatchMediaJob, isTriggerMediaKind } from "@/lib/media/trigger-dispatch";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,10 +19,6 @@ type CreateMediaJobBody = {
   input_assets?: unknown;
   input_asset_ids?: unknown;
 };
-
-function isTriggerMediaKind(kind: string): kind is "image" | "video" | "audio" {
-  return kind === "image" || kind === "video" || kind === "audio";
-}
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

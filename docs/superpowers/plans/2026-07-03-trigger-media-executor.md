@@ -102,7 +102,7 @@ In `package.json`, replace the media scripts block with this exact script set, p
   "start": "next start",
   "lint": "eslint",
   "test": "vitest run",
-  "trigger:dev": "npx trigger.dev@latest dev",
+  "trigger:dev": "node scripts/trigger-dev.mjs",
   "trigger:deploy": "npx trigger.dev@latest deploy",
   "media:edge:local": "npx wrangler dev --config workers/media/wrangler.jsonc --port 8787",
   "media:edge:deploy": "npx wrangler deploy --config workers/media/wrangler.jsonc",
@@ -1900,6 +1900,10 @@ git commit -m "chore(media): remove polling worker path"
 **Files:**
 - Modify: `docs/media-worker-deploy.md`
 - Modify: `docs/superpowers/plans/2026-07-03-trigger-media-executor.md`
+- If final verification exposes a blocker that prevents the required local
+  real-Fal smoke from passing, make the narrow source/test/runbook fix required
+  to make that smoke pass and record the blocker, fix, and verification result
+  in the report.
 
 **Interfaces:**
 - Consumes:
@@ -1987,7 +1991,7 @@ Expected:
 - `GET /api/v1/media/jobs/:jobId` returns a signed `media.woven.video` or local media edge download URL.
 - The signed download returns `200` with image content.
 
-Task 8 note: completed on 2026-07-04 using local Next (`npm run dev` fallback because `pnpm` was unavailable), local media edge Worker (`npx wrangler dev --config workers/media/wrangler.jsonc --port 8787`) with remote R2, and Trigger.dev dev runner for the Woven Labs project. Nano Banana Lite job `53679b3a-1cb0-4661-8b1b-dec69a04a4f1` returned queued, Trigger ran `process-media-job`, local Supabase stored a Fal provider job id, public status reached `succeeded` with one output, and the signed download returned `200 image/png` with `839597` bytes.
+Task 8 note: completed on 2026-07-04 with `pnpm run media:dev:local` through `npx pnpm@latest --config.verify-deps-before-run=false` because bare `pnpm` is not installed in this shell. Nano Banana Lite job `c0771932-0198-4325-b181-5a60c97a4868` returned queued, Trigger ran `process-media-job`, local Supabase stored a Fal provider job id, public status reached `succeeded` with one output, and the signed download returned `200 image/png` with `978248` bytes.
 
 - [x] **Step 6: Update plan checkboxes**
 

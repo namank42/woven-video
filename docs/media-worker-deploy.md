@@ -88,17 +88,11 @@ Trigger.dev is the supported executor in local and production. Do not run a sepa
 
 Task 8 local verification notes:
 
-- If `pnpm` is unavailable in the current shell, use the repo-local binaries for verification:
-  - `./node_modules/.bin/vitest run`
-  - `./node_modules/.bin/tsc --noEmit`
-  - `./node_modules/.bin/eslint .`
+- If `pnpm` is unavailable in the current shell, use `npx pnpm@latest --config.verify-deps-before-run=false <command>` so the repo still runs through pnpm without purging a non-pnpm `node_modules`.
 - Local Trigger media smoke also needs `TRIGGER_PROJECT_REF` and `TRIGGER_SECRET_KEY` alongside the existing Supabase, media Worker, and `FAL_KEY` env vars.
 - The authenticated media job routes require a real bearer token for a signed-in user. A service-role key alone is not sufficient for `/api/v1/media/jobs`.
-- The 2026-07-04 local smoke used the manual equivalents of `pnpm run media:dev:local` because `pnpm` was unavailable in the shell:
-  - `npm run dev`
-  - `npx wrangler dev --config workers/media/wrangler.jsonc --port 8787`
-  - `env TRIGGER_PROJECT_REF=<project-ref> npx trigger.dev@latest dev start --project-ref <project-ref> --env-file .env.local --skip-update-check`
-- That smoke created a `fal-ai/nano-banana-lite` image job, reached Fal, stored a provider job id, completed with one ready R2 output, and downloaded the signed image URL as `200 image/png`.
+- `pnpm run media:dev:local` starts `pnpm run trigger:dev`; that wrapper exports `TRIGGER_PROJECT_REF` before Trigger reads `trigger.config.ts`, then passes `.env.local` to Trigger for task runtime secrets.
+- The 2026-07-04 local smoke used `pnpm run media:dev:local` through `npx pnpm@latest --config.verify-deps-before-run=false`, created a `fal-ai/nano-banana-lite` image job, reached Fal, stored a provider job id, completed with one ready R2 output, and downloaded the signed image URL as `200 image/png`.
 
 ## Curated Media Model Catalog
 

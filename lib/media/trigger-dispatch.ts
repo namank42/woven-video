@@ -9,11 +9,17 @@ export type DispatchMediaJobPayload = {
   kind: "image" | "video" | "audio";
 };
 
+export type TriggerMediaKind = DispatchMediaJobPayload["kind"];
+
 export type DispatchMediaJobResult = {
   runId: string;
 };
 
-export function mediaQueueForKind(kind: DispatchMediaJobPayload["kind"]) {
+export function isTriggerMediaKind(kind: string): kind is TriggerMediaKind {
+  return kind === "image" || kind === "video" || kind === "audio";
+}
+
+export function mediaQueueForKind(kind: TriggerMediaKind) {
   switch (kind) {
     case "image":
       return { name: "media-image", concurrencyLimit: 10 };

@@ -4,70 +4,53 @@ Status: DONE
 
 ## Summary
 
-Completed the Task 8 verification pass for the Trigger media executor migration, fixed the verification blockers, updated the deploy runbook, and checked off the completed plan steps. The required local real-Fal smoke now passes against local Next, local Trigger.dev dev runner, local Cloudflare Worker, real Fal, local Supabase, and remote R2.
+Completed the final Trigger media executor verification pass. The local real-Fal smoke exposed two blockers that had to be fixed before the task could honestly pass:
+
+- Remote R2 rejected output uploads from the media Worker.
+- The supported `media:dev:local` script did not export `TRIGGER_PROJECT_REF` before Trigger loaded `trigger.config.ts`.
+
+Both blockers are fixed, the plan/runbook now match the working local flow, and the supported local stack successfully generated and downloaded a Nano Banana Lite image through local Next, local Trigger.dev, local Cloudflare Worker, real Fal, local Supabase, and remote R2.
 
 ## Files Changed
 
 - `app/api/v1/media/jobs/route.ts`
 - `tests/media/job-routes.test.ts`
 - `tests/media/trigger-tasks.test.ts`
-- `docs/media-worker-deploy.md`
-- `docs/superpowers/plans/2026-07-03-trigger-media-executor.md`
-- `.gitignore`
+- `lib/media/trigger-dispatch.ts`
+- `tests/media/trigger-dispatch.test.ts`
+- `workers/media/index.ts`
+- `tests/media/media-worker.test.ts`
+- `scripts/trigger-dev.mjs`
+- `package.json`
 - `.env.example`
+- `.gitignore`
 - `eslint.config.mjs`
 - `lib/media/env.ts`
-- `workers/media/index.ts`
 - `tests/media/env.test.ts`
 - `tests/media/assets.test.ts`
-- `tests/media/media-worker.test.ts`
 - `tests/media/output-assets.test.ts`
 - `tests/media/output-urls.test.ts`
+- `docs/media-worker-deploy.md`
+- `docs/superpowers/plans/2026-07-03-trigger-media-executor.md`
+- `.superpowers/sdd/trigger-media-executor/task-8-brief.md`
 
 ## Verification Commands And Results
 
-### 1. Full unit test suite
+### Full unit test suite
 
-Command required by brief:
-
-```bash
-pnpm test
-```
-
-Result:
-
-- Failed immediately: `zsh:1: command not found: pnpm`
-
-Fallback used:
+Bare `pnpm` is not installed in this shell and `corepack` is unavailable, so the pnpm entrypoints were run with `npx pnpm@latest --config.verify-deps-before-run=false` to avoid purging the existing non-pnpm `node_modules`.
 
 ```bash
-./node_modules/.bin/vitest run
+npx pnpm@latest --config.verify-deps-before-run=false test
 ```
 
 Result:
 
 - PASS
 - `Test Files  29 passed | 1 skipped (30)`
-- `Tests  257 passed | 10 skipped (267)`
+- `Tests  258 passed | 10 skipped (268)`
 
-### 2. Typecheck
-
-Command:
-
-```bash
-./node_modules/.bin/tsc --noEmit
-```
-
-Initial result:
-
-- FAIL
-- `app/api/v1/media/jobs/route.ts(77,9): error TS2322: Type 'MediaKind' is not assignable to type '"image" | "video" | "audio"'`
-
-Fix:
-
-- Added a route-level guard rejecting non-Trigger media kinds before reservation/dispatch.
-
-Verification rerun:
+### Typecheck
 
 ```bash
 ./node_modules/.bin/tsc --noEmit
@@ -77,52 +60,21 @@ Result:
 
 - PASS
 
-### 3. Lint
-
-Command required by brief:
+### Lint
 
 ```bash
-pnpm run lint
+npx pnpm@latest --config.verify-deps-before-run=false run lint
 ```
 
 Result:
 
-- Failed immediately: `zsh:1: command not found: pnpm`
+- PASS with the allowed pre-existing `app/opengraph-image.tsx` warning only.
+- Added `.trigger/**` to `eslint.config.mjs` because Trigger.dev generates local build output under `.trigger/tmp`.
 
-Fallback used:
-
-```bash
-./node_modules/.bin/eslint .
-```
-
-Result:
-
-- PASS with the allowed pre-existing warning only:
-- `/Users/naman/projects/woven-video/app/opengraph-image.tsx`
-- `32:12  warning  Unused eslint-disable directive (no problems were reported from '@next/next/no-img-element')`
-
-Fix included during lint cleanup:
-
-- Replaced `any` casts in `tests/media/trigger-tasks.test.ts` with `unknown as` plus explicit test-local task shapes.
-
-### 4. Supabase DB integration tests
-
-Command required by brief:
+### Supabase DB integration
 
 ```bash
-eval "$(supabase status -o env | sed 's/^/export /')"
-RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" pnpm exec vitest run tests/media/db-rpcs.integration.test.ts
-```
-
-Observed issues:
-
-- `pnpm exec ...` failed immediately because `pnpm` is unavailable in this shell.
-- First fallback attempt using `./node_modules/.bin/vitest` still failed because `supabase status -o env` tried to write `~/.supabase/telemetry.json` and hit sandbox `EPERM`, so the test process did not receive `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`.
-
-Escalated fallback used:
-
-```bash
-zsh -lc 'eval "$(supabase status -o env | sed "s/^/export /")"; RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" ./node_modules/.bin/vitest run tests/media/db-rpcs.integration.test.ts'
+zsh -lc 'eval "$(supabase status -o env | sed "s/^/export /")"; RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" npx pnpm@latest --config.verify-deps-before-run=false exec vitest run tests/media/db-rpcs.integration.test.ts'
 ```
 
 Result:
@@ -131,154 +83,82 @@ Result:
 - `Test Files  1 passed (1)`
 - `Tests  10 passed (10)`
 
-### 5. Local real-Fal smoke
+Supabase CLI also printed its version-update notice and noted stopped ancillary services, while reporting that the local development setup was running.
 
-Command required by brief:
+### Local real-Fal smoke
+
+Required startup:
 
 ```bash
-pnpm run media:dev:local
+npx pnpm@latest --config.verify-deps-before-run=false run media:dev:local
 ```
 
-Result:
+Initial supported-script result:
 
-- Failed immediately: `zsh:1: command not found: pnpm`
+- Next and Wrangler started.
+- Trigger failed before loading tasks because `trigger.config.ts` requires `TRIGGER_PROJECT_REF`, and Trigger resolves config before applying `--env-file`.
 
-Additional prerequisite checks:
+Fix:
 
-- `.env.local` has `FAL_KEY`, `MEDIA_BASE_URL`, `MEDIA_TOKEN_SECRET`, `MEDIA_WORKER_SHARED_SECRET`, local Supabase URL, and local service-role key.
-- `.env.local` is missing `TRIGGER_PROJECT_REF`.
-- `.env.local` is missing `TRIGGER_SECRET_KEY`.
-- Shell env is missing `TRIGGER_PROJECT_REF`, `TRIGGER_SECRET_KEY`, `TRIGGER_ACCESS_TOKEN`, and `LOCAL_OR_PROD_TOKEN`.
-- `lib/api/auth.ts` requires a real bearer token for `/api/v1/media/jobs`; the service-role key is not enough.
+- Added `scripts/trigger-dev.mjs`.
+- Updated `package.json` so `pnpm run trigger:dev` exports `TRIGGER_PROJECT_REF` from `.env.local` before Trigger reads `trigger.config.ts`, then starts Trigger with `--env-file .env.local`.
 
-Follow-up blocker resolution:
+Supported-script rerun:
 
-- Added `TRIGGER_PROJECT_REF` and `TRIGGER_SECRET_KEY` to ignored local env.
-- Created an authenticated local Supabase test user and bearer token.
-- Started local Next with `npm run dev`.
-- Started local Trigger.dev runner with the Woven Labs project ref and `.env.local`.
-- Restarted local media edge Worker with `npx wrangler dev --config workers/media/wrangler.jsonc --port 8787`.
+- Next listened on `http://localhost:3000`.
+- Cloudflare media edge Worker listened on `http://localhost:8787` with remote `woven-media` R2.
+- Trigger.dev reported `Local worker ready on branch: default [node] -> 20260703.2`.
 
-Initial real smoke result:
+Initial real provider smoke:
 
-- The job reached Fal and stored a provider job id.
+- Nano Banana Lite reached Fal and stored a provider job id.
 - Output materialization failed with `media_output_materialization_failed`.
 - The output media asset failure metadata showed `media_output_upload_failed:500`.
-- The local Wrangler log showed remote R2 rejected `MEDIA_BUCKET.put(...)` with HTTP 400.
+- Wrangler logged remote R2 rejecting `MEDIA_BUCKET.put(...)` with HTTP 400.
 
 Fix:
 
 - Changed Worker R2 `customMetadata` keys from underscore names to hyphenated names.
 - Updated Worker tests to assert the hyphenated object metadata contract.
 
-Verification rerun:
+Final real smoke rerun through `media:dev:local`:
 
-```bash
-./node_modules/.bin/vitest run tests/media/media-worker.test.ts
-```
-
-Result:
-
-- PASS
-- `Test Files  1 passed (1)`
-- `Tests  23 passed (23)`
-
-Real smoke rerun:
-
-- Created Nano Banana Lite job `53679b3a-1cb0-4661-8b1b-dec69a04a4f1`.
+- Created Nano Banana Lite job `c0771932-0198-4325-b181-5a60c97a4868`.
 - `POST /api/v1/media/jobs` returned `200` and `queued`.
 - Public status progressed through `queued` -> `waiting_provider` -> `succeeded`.
 - Local Supabase row has `provider = fal`, `media_model_id = fal-ai/nano-banana-lite`, a stored provider job id, `error = null`, and `final_cost_usd_micros = 1200000`.
-- Output asset `1982044f-8b05-59d8-ac8c-937290a87333` is `ready`, `image/png`, `839597` bytes, with an R2 storage key.
+- Output asset `46449818-64d5-51b8-8775-4b887bdf8305` is `ready`, `image/png`, `978248` bytes, with an R2 storage key.
 - Public job read returned one output with a signed download URL.
-- The signed download returned `200 image/png` and `839597` bytes.
+- The signed download returned `200 image/png` and `978248` bytes.
 
 Smoke status:
 
 - PASS
 
-Additional verification after the R2 metadata fix and stale polling-env cleanup:
-
-```bash
-./node_modules/.bin/vitest run
-```
-
-- PASS
-- `Test Files  29 passed | 1 skipped (30)`
-- `Tests  257 passed | 10 skipped (267)`
-
-```bash
-./node_modules/.bin/vitest run tests/media/env.test.ts tests/media/assets.test.ts tests/media/output-assets.test.ts tests/media/output-urls.test.ts tests/media/media-worker.test.ts
-```
-
-- PASS
-- `Test Files  5 passed (5)`
-- `Tests  61 passed (61)`
-
-```bash
-./node_modules/.bin/tsc --noEmit
-```
-
-- PASS
-
-```bash
-./node_modules/.bin/eslint .
-```
-
-- PASS with the allowed pre-existing `app/opengraph-image.tsx` warning only.
-- Added `.trigger/**` to `eslint.config.mjs` because Trigger.dev generates local build output under `.trigger/tmp`.
-
 ## Narrow Fixes Made
 
 ### Unsupported media kind guard
 
-- File: `app/api/v1/media/jobs/route.ts`
-- Added `isTriggerMediaKind()` and reject `kind: "captions"` before job reservation and Trigger dispatch.
-- Prevents unsupported models from falling into the generic executor-unavailable `503` path.
+- Added a guard rejecting non-Trigger media kinds before reservation/dispatch.
+- Moved the supported-kind predicate into `lib/media/trigger-dispatch.ts` so the route and dispatcher share the same contract.
+- Added route and dispatch-helper tests.
 
-### Regression test for the guard
+### Remote R2 output upload metadata
 
-- File: `tests/media/job-routes.test.ts`
-- Added a failing-then-passing test covering `kind: "captions"` and asserting `400 invalid_media_input` with no reservation or dispatch.
+- Changed Worker R2 custom metadata keys to hyphenated names.
+- Covered the metadata contract in `tests/media/media-worker.test.ts`.
 
-### Lint-safe Trigger task assertions
+### Trigger local startup
 
-- File: `tests/media/trigger-tasks.test.ts`
-- Removed `any` casts called out by the Task 7 reviewer and kept the test assertions explicit.
+- Added `scripts/trigger-dev.mjs`.
+- Updated `trigger:dev` to export `TRIGGER_PROJECT_REF` before Trigger loads config and to pass `.env.local` for task runtime secrets.
 
-## Runbook / Plan Updates
+### Stale local artifacts and env
 
-### `docs/media-worker-deploy.md`
+- Ignored `.trigger/` in Git and ESLint.
+- Removed the dead `MEDIA_WORKER_POLL_MS` setting now that the polling worker path is gone.
 
-Added Task 8 verification notes covering:
+## Concerns / Follow-Up
 
-- repo-local verification fallbacks when `pnpm` is unavailable
-- local smoke prerequisites for `TRIGGER_PROJECT_REF` and `TRIGGER_SECRET_KEY`
-- bearer-token requirement for authenticated media job routes
-- Supabase CLI sandbox caveat for `supabase status -o env`
-
-### `docs/superpowers/plans/2026-07-03-trigger-media-executor.md`
-
-- Checked off Steps 1-4
-- Left Step 5 unchecked with a concrete note describing the blockers
-- Checked off Steps 6-7 after creating the final verification commit
-
-## Self-Review
-
-Reviewed the diff for scope and verified the changes stay within Task 8 ownership:
-
-- one route guard
-- one new route test
-- one lint/type cleanup in an existing Trigger task test
-- runbook and plan updates only in the Task 8-owned docs
-
-## Concerns / Unverified Items
-
-1. The local real-Fal smoke was not completed.
-2. The runbook still carries the pre-existing `app/opengraph-image.tsx` lint warning.
-3. I did not spend Task 8 scope on the unrelated reviewer note about `docs/reel-caption-generation.md`.
-4. I did not add coverage for `package.json` script presence to `tests/media/legacy-worker-removal.test.ts`; the reviewer had already marked that as a minor note, not a Task 8 requirement.
-
-## Commit
-
-- Created a final verification commit with message `fix: finalize trigger media executor verification`.
+- Production Trigger.dev env currently lists only default telemetry/heartbeat variables; the Woven/Fal/Supabase/media task secrets still need to be configured in Trigger Cloud before production deployment.
+- The repo still has the pre-existing `app/opengraph-image.tsx` unused eslint-disable warning.
