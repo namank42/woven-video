@@ -130,7 +130,13 @@ Run these before shipping schema changes:
 ```bash
 supabase start
 supabase db reset
-RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<local-service-role-key> npm run test:media-db
+RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<local-service-role-key> pnpm run test:media-db
+```
+
+If `pnpm` is unavailable in the current shell, use:
+
+```bash
+RUN_SUPABASE_DB_TESTS=1 SUPABASE_URL=http://127.0.0.1:54321 SUPABASE_SERVICE_ROLE_KEY=<local-service-role-key> npx pnpm@latest --config.verify-deps-before-run=false run test:media-db
 ```
 
 In Codex/sandboxed shells, `supabase status -o env` may fail before the test runs because the CLI writes

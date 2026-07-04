@@ -83,7 +83,7 @@ Result:
 - `Test Files  1 passed (1)`
 - `Tests  10 passed (10)`
 
-Supabase CLI also printed its version-update notice and noted stopped ancillary services, while reporting that the local development setup was running.
+Supabase DB integration tests passed successfully.
 
 ### Local real-Fal smoke
 
