@@ -10,7 +10,7 @@ This runbook keeps the app, Supabase schema, media Worker, R2 bucket, and reel-c
   - `https://media.woven.video/objects/*`
   - `https://media.woven.video/internal/*`
 - Vercel app route: `https://www.woven.video`
-- Supabase migrations through `20260703180000_seed_media_runtime_catalog.sql`
+- Supabase migrations through `20260703180000_seed_media_runtime_catalog.sql` and `20260703190000_trigger_media_executor.sql`
 
 Do not route all of `media.woven.video/*` to this Worker. The host also serves existing top-level landing and hero assets such as `woven-hero-v*.mp4` and `woven-hero-v*.png`; the Worker must only own `/uploads/*`, `/objects/*`, and `/internal/*`.
 
