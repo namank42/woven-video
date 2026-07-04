@@ -4,12 +4,13 @@ Status: DONE
 
 ## Summary
 
-Completed the final Trigger media executor verification pass. The local real-Fal smoke exposed two blockers that had to be fixed before the task could honestly pass:
+Completed the final Trigger media executor verification pass. Final verification exposed blockers in multiple required steps before Task 8 could honestly pass:
 
+- Typecheck failed on `dispatchMediaJob` payload typing because `app/api/v1/media/jobs/route.ts` passed `MediaKind` to a dispatcher contract that only supports `image|video|audio`.
 - Remote R2 rejected output uploads from the media Worker.
 - The supported `media:dev:local` script did not export `TRIGGER_PROJECT_REF` before Trigger loaded `trigger.config.ts`.
 
-Both blockers are fixed, the plan/runbook now match the working local flow, and the supported local stack successfully generated and downloaded a Nano Banana Lite image through local Next, local Trigger.dev, local Cloudflare Worker, real Fal, local Supabase, and remote R2.
+These blockers are fixed, the plan/runbook now match the working local flow, and the supported local stack successfully generated and downloaded a Nano Banana Lite image through local Next, local Trigger.dev, local Cloudflare Worker, real Fal, local Supabase, and remote R2.
 
 ## Files Changed
 
@@ -32,7 +33,6 @@ Both blockers are fixed, the plan/runbook now match the working local flow, and 
 - `tests/media/output-urls.test.ts`
 - `docs/media-worker-deploy.md`
 - `docs/superpowers/plans/2026-07-03-trigger-media-executor.md`
-- `.superpowers/sdd/trigger-media-executor/task-8-brief.md`
 
 ## Verification Commands And Results
 
@@ -139,6 +139,9 @@ Smoke status:
 
 ### Unsupported media kind guard
 
+- Typecheck blocker from Step 2: the `MediaKind` model kind was too broad for
+  `dispatchMediaJob` (`image|video|audio`), so the route could pass unsupported
+  kinds.
 - Added a guard rejecting non-Trigger media kinds before reservation/dispatch.
 - Moved the supported-kind predicate into `lib/media/trigger-dispatch.ts` so the route and dispatcher share the same contract.
 - Added route and dispatch-helper tests.
@@ -157,6 +160,9 @@ Smoke status:
 
 - Ignored `.trigger/` in Git and ESLint.
 - Removed the dead `MEDIA_WORKER_POLL_MS` setting now that the polling worker path is gone.
+- Recorded this as a final verification requirement cleanup to enforce the global
+  constraint that no supported local/production path relies on the old polling
+  worker mode.
 
 ## Concerns / Follow-Up
 

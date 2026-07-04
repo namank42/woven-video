@@ -1900,10 +1900,11 @@ git commit -m "chore(media): remove polling worker path"
 **Files:**
 - Modify: `docs/media-worker-deploy.md`
 - Modify: `docs/superpowers/plans/2026-07-03-trigger-media-executor.md`
-- If final verification exposes a blocker that prevents the required local
-  real-Fal smoke from passing, make the narrow source/test/runbook fix required
-  to make that smoke pass and record the blocker, fix, and verification result
-  in the report.
+- If final verification exposes a blocker that prevents Task 8 completion in the
+  required end-to-end pass (including typecheck, lint, integration tests, or the
+  required local real-Fal smoke), make the narrow source/test/runbook fix required
+  to clear that blocker and record the blocker, fix, and verification result in
+  the report.
 
 **Interfaces:**
 - Consumes:
