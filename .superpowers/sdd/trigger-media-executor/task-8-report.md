@@ -166,5 +166,5 @@ Smoke status:
 
 ## Concerns / Follow-Up
 
-- Production Trigger.dev env currently lists only default telemetry/heartbeat variables; the Woven/Fal/Supabase/media task secrets still need to be configured in Trigger Cloud before production deployment.
+- Controller follow-up configured production Vercel env for the media runtime variables, Trigger dispatch variables, and cron secret, then uploaded the Trigger.dev `prod` task runtime variables for Supabase, Fal, ElevenLabs, and media storage. Verification confirmed the required Trigger task env names are present, `SUPABASE_URL` is not local, `MEDIA_BASE_URL` is `https://media.woven.video`, and the Fal webhook base starts with `https://`.
 - The repo still has the pre-existing `app/opengraph-image.tsx` unused eslint-disable warning.
