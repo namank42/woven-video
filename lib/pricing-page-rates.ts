@@ -91,11 +91,11 @@ export const mediaModelRates: MediaModelRate[] = [
     notes: "4K: $0.36/image · Web search: +$0.018/request",
   },
   {
-    name: "Nano Banana Lite",
+    name: "Nano Banana 2 Lite",
     capability: "Image generation and editing",
-    modelIds: ["fal-ai/nano-banana-lite", "fal-ai/nano-banana-lite/edit"],
-    rate: "$1.20/image",
-    notes: "Uses Fal's $1.00 generated-image unit with hosted markup.",
+    modelIds: ["google/nano-banana-2-lite", "google/nano-banana-2-lite/edit"],
+    rate: "$0.0478/image",
+    notes: "Uses Fal's $0.0398/image Nanobanana rate with hosted markup.",
   },
   {
     name: "Gemini Omni Flash",
