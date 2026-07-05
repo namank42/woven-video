@@ -82,6 +82,7 @@ export async function POST(request: Request) {
         userId: authResult.auth.user.id,
         modelId: job.model,
         kind: model.kind,
+        source: "create",
       });
     } catch (dispatchError) {
       try {

@@ -1,4 +1,5 @@
 import { apiError } from "@/lib/api/responses";
+import { triggerMediaKindForOperation } from "@/lib/media/kind";
 import { dispatchMediaJob } from "@/lib/media/trigger-dispatch";
 import {
   falWebhookHeaders,
@@ -17,18 +18,6 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function getFalRequestId(payload: Record<string, unknown>): string {
   const requestId = payload.request_id ?? payload.requestId;
   return typeof requestId === "string" ? requestId.trim() : "";
-}
-
-function mediaKindForOperation(operation: string): "image" | "video" | "audio" {
-  if (operation === "image_generation") return "image";
-  if (
-    operation === "text_to_speech" ||
-    operation === "sound_effects" ||
-    operation === "music_generation"
-  ) {
-    return "audio";
-  }
-  return "video";
 }
 
 export async function POST(request: Request) {
@@ -111,12 +100,21 @@ export async function POST(request: Request) {
   if (job?.id && job.user_id) {
     const input = isObject(job.input) ? job.input : {};
     const operation = typeof input.operation === "string" ? input.operation : "";
-    await dispatchMediaJob({
-      jobId: String(job.id),
-      userId: String(job.user_id),
-      modelId: typeof input.media_model_id === "string" ? input.media_model_id : "unknown",
-      kind: mediaKindForOperation(operation),
-    });
+    const kind = triggerMediaKindForOperation(operation);
+    if (!kind) {
+      console.warn("Skipping Fal webhook Trigger dispatch for unsupported media operation", {
+        jobId: String(job.id),
+        operation,
+      });
+    } else {
+      await dispatchMediaJob({
+        jobId: String(job.id),
+        userId: String(job.user_id),
+        modelId: typeof input.media_model_id === "string" ? input.media_model_id : "unknown",
+        kind,
+        source: "webhook",
+      });
+    }
   }
 
   return Response.json(

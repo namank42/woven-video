@@ -108,6 +108,13 @@ function publicJobError(error: string | null) {
     };
   }
 
+  if (error === "media_job_timed_out") {
+    return {
+      code: "media_job_timed_out",
+      message: "Media job timed out.",
+    };
+  }
+
   return {
     code: "provider_failed",
     message: "Generation failed.",

@@ -41,8 +41,33 @@ describe("Fal media webhook route", () => {
       userId: "user_1",
       modelId: "fal-ai/nano-banana-lite",
       kind: "image",
+      source: "webhook",
     });
     expect(response.status).toBe(200);
+  });
+
+  it("does not dispatch a Trigger run when webhook job operation is unknown", async () => {
+    mockSupabaseWebhookJob({
+      error: null,
+      input: {
+        media_model_id: "legacy-model",
+        operation: "unknown_generation",
+      },
+    });
+    mockFalWebhookVerifier();
+    const dispatchMediaJob = vi.fn(async () => ({ runId: "run_1" }));
+    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
+    const response = await POST(signedJsonRequest({ request_id: "fal_req_123" }));
+
+    expect(response.status).toBe(200);
+    expect(dispatchMediaJob).not.toHaveBeenCalled();
+    expect(consoleWarn).toHaveBeenCalledWith("Skipping Fal webhook Trigger dispatch for unsupported media operation", {
+      jobId: "job_1",
+      operation: "unknown_generation",
+    });
   });
 
   it("accepts Fal requestId camelCase payloads", async () => {
@@ -376,17 +401,24 @@ function mockSupabaseWebhookJob({
   job = {
     id: "job_1",
     user_id: "user_1",
-    input: {
-      media_model_id: "fal-ai/nano-banana-lite",
-      operation: "image_generation",
-    },
+  },
+  input = {
+    media_model_id: "fal-ai/nano-banana-lite",
+    operation: "image_generation",
   },
 }: {
   error: { message: string } | null;
   job?: Record<string, unknown> | null;
+  input?: Record<string, unknown>;
 }) {
+  const resolvedJob = job
+    ? {
+        ...job,
+        input: job.input ?? input,
+      }
+    : job;
   const eq = vi.fn().mockReturnThis();
-  const maybeSingle = vi.fn(async () => ({ data: job, error }));
+  const maybeSingle = vi.fn(async () => ({ data: resolvedJob, error }));
   const update = vi.fn(() => ({ eq }));
   const select = vi.fn(() => ({ eq, maybeSingle }));
   const from = vi.fn(() => ({ update, select }));
