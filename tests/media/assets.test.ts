@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MediaEnv } from "@/lib/media/env";
 import {
+  completeInputAssetUploadForUser,
   createInputAssetUpload,
   isSupportedInputContentType,
   markInputAssetUploaded,
@@ -40,6 +41,7 @@ type SupabaseResult<T> = { data: T | null; error: SupabaseError | null };
 type QueryRoot = {
   insert?: ReturnType<typeof vi.fn>;
   update?: ReturnType<typeof vi.fn>;
+  select?: ReturnType<typeof vi.fn>;
 };
 type QueryStep = {
   root: QueryRoot;
@@ -219,6 +221,68 @@ describe("media assets", () => {
       sizeBytes: 321,
     })).rejects.toThrow("no matching pending asset");
   });
+
+  it("manual-completes only the authenticated user's pending input asset using stored metadata", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-05T12:00:00.000Z"));
+
+    const selectStep = selectMaybeQuery({
+      data: {
+        id: "asset_1",
+        user_id: "user_1",
+        job_id: null,
+        kind: "input",
+        status: "pending",
+        content_type: "image/png",
+        size_bytes: 123,
+        original_filename: "input.png",
+        storage_key: "users/user_1/media/tmp/asset_1/input.png",
+        upload_expires_at: "2026-07-05T12:15:00.000Z",
+        metadata: {},
+      },
+      error: null,
+    });
+    const updateStep = updateQuery({ data: { id: "asset_1" }, error: null });
+    mockAdminWith(selectStep, updateStep);
+
+    await expect(completeInputAssetUploadForUser({
+      userId: "user_1",
+      assetId: "asset_1",
+    })).resolves.toBeUndefined();
+
+    expect(selectStep.selected).toBe(
+      "id, user_id, job_id, kind, status, content_type, size_bytes, original_filename, storage_key, upload_expires_at, metadata",
+    );
+    expect(selectStep.filters).toEqual([
+      ["id", "asset_1"],
+      ["user_id", "user_1"],
+      ["kind", "input"],
+      ["status", "pending"],
+    ]);
+    expect(updateStep.updated).toEqual({
+      status: "uploaded",
+      size_bytes: 123,
+      metadata: { uploaded_at: "2026-07-05T12:00:00.000Z" },
+    });
+    expect(updateStep.filters).toEqual([
+      ["id", "asset_1"],
+      ["storage_key", "users/user_1/media/tmp/asset_1/input.png"],
+      ["status", "pending"],
+    ]);
+  });
+
+  it("rejects manual completion when no matching pending user asset exists", async () => {
+    const selectStep = selectMaybeQuery({
+      data: null,
+      error: null,
+    });
+    mockAdminWith(selectStep);
+
+    await expect(completeInputAssetUploadForUser({
+      userId: "user_1",
+      assetId: "asset_2",
+    })).rejects.toThrow("media_asset_not_found");
+  });
 });
 
 describe("media upload routes", () => {
@@ -226,6 +290,7 @@ describe("media upload routes", () => {
     vi.doUnmock("@/lib/api/auth");
     vi.doUnmock("@/lib/api/license");
     vi.doUnmock("@/lib/media/assets");
+    vi.doUnmock("@/lib/media/env");
     vi.resetModules();
   });
 
@@ -312,10 +377,171 @@ describe("media upload routes", () => {
     );
   });
 
+  it("returns local completion instructions when manual upload completion mode is active", async () => {
+    const createInputAssetUpload = vi.fn(async () => ({
+      asset: { id: "asset_1" },
+      uploadUrl: "https://media-dev.woven.video/uploads/asset_1?token=token",
+      expiresAt: "2026-07-05T12:15:00.000Z",
+    }));
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({
+      licenseGateResponse: vi.fn(async () => null),
+    }));
+    vi.doMock("@/lib/media/assets", () => ({
+      createInputAssetUpload,
+    }));
+    vi.doMock("@/lib/media/env", () => ({
+      getMediaEnv: vi.fn(() => ({
+        ...mediaEnv,
+        uploadCompletionMode: "manual",
+      })),
+    }));
+
+    const { POST } = await import("@/app/api/v1/media/uploads/route");
+    const response = await POST(jsonRequest("/api/v1/media/uploads", {
+      purpose: "media_input",
+      filename: "input.png",
+      content_type: "image/png",
+      size_bytes: 12,
+    }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      upload_id: "asset_1",
+      asset_id: "asset_1",
+      method: "PUT",
+      upload_url: "https://media-dev.woven.video/uploads/asset_1?token=token",
+      completion: {
+        method: "POST",
+        url: "/api/v1/media/uploads/asset_1/complete",
+      },
+    });
+  });
+
+  it("omits local completion instructions in callback mode", async () => {
+    const createInputAssetUpload = vi.fn(async () => ({
+      asset: { id: "asset_1" },
+      uploadUrl: "https://media.woven.video/uploads/asset_1?token=token",
+      expiresAt: "2026-07-05T12:15:00.000Z",
+    }));
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({
+      licenseGateResponse: vi.fn(async () => null),
+    }));
+    vi.doMock("@/lib/media/assets", () => ({
+      createInputAssetUpload,
+    }));
+    vi.doMock("@/lib/media/env", () => ({
+      getMediaEnv: vi.fn(() => ({
+        ...mediaEnv,
+        uploadCompletionMode: "callback",
+      })),
+    }));
+
+    const { POST } = await import("@/app/api/v1/media/uploads/route");
+    const response = await POST(jsonRequest("/api/v1/media/uploads", {
+      purpose: "media_input",
+      filename: "input.png",
+      content_type: "image/png",
+      size_bytes: 12,
+    }));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.completion).toBeUndefined();
+  });
+
+  it("manual-completes an upload through the authenticated local completion route", async () => {
+    const completeInputAssetUploadForUser = vi.fn(async () => undefined);
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+    vi.doMock("@/lib/media/env", () => ({
+      getMediaEnv: vi.fn(() => ({
+        ...mediaEnv,
+        uploadCompletionMode: "manual",
+      })),
+    }));
+    vi.doMock("@/lib/media/assets", () => ({
+      completeInputAssetUploadForUser,
+    }));
+
+    const { POST, dynamic, runtime } = await import(
+      "@/app/api/v1/media/uploads/[assetId]/complete/route"
+    );
+    const response = await POST(
+      jsonRequest("/api/v1/media/uploads/asset_1/complete", {}),
+      { params: Promise.resolve({ assetId: "asset_1" }) },
+    );
+
+    expect(dynamic).toBe("force-dynamic");
+    expect(runtime).toBe("nodejs");
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      asset_id: "asset_1",
+    });
+    expect(completeInputAssetUploadForUser).toHaveBeenCalledWith({
+      userId: "user_1",
+      assetId: "asset_1",
+    });
+  });
+
+  it("disables the local completion route outside manual mode", async () => {
+    const completeInputAssetUploadForUser = vi.fn(async () => undefined);
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+    vi.doMock("@/lib/media/env", () => ({
+      getMediaEnv: vi.fn(() => ({
+        ...mediaEnv,
+        uploadCompletionMode: "callback",
+      })),
+    }));
+    vi.doMock("@/lib/media/assets", () => ({
+      completeInputAssetUploadForUser,
+    }));
+
+    const { POST } = await import("@/app/api/v1/media/uploads/[assetId]/complete/route");
+    const response = await POST(
+      jsonRequest("/api/v1/media/uploads/asset_1/complete", {}),
+      { params: Promise.resolve({ assetId: "asset_1" }) },
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "not_found" },
+    });
+    expect(completeInputAssetUploadForUser).not.toHaveBeenCalled();
+  });
+
   it("rejects non-number size_bytes values in internal completion requests", async () => {
     const markInputAssetUploaded = vi.fn(async () => undefined);
     mocks.getMediaEnv.mockReturnValue(mediaEnv);
 
+    vi.doMock("@/lib/media/env", () => ({
+      getMediaEnv: vi.fn(() => mediaEnv),
+    }));
     vi.doMock("@/lib/media/assets", () => ({
       markInputAssetUploaded,
     }));
@@ -349,6 +575,9 @@ describe("media upload routes", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     mocks.getMediaEnv.mockReturnValue(mediaEnv);
 
+    vi.doMock("@/lib/media/env", () => ({
+      getMediaEnv: vi.fn(() => mediaEnv),
+    }));
     vi.doMock("@/lib/media/assets", () => ({
       markInputAssetUploaded,
     }));
@@ -412,6 +641,25 @@ function updateQuery<T>(result: SupabaseResult<T>): QueryStep {
 
   step.root.update = vi.fn((values: unknown) => {
     step.updated = values;
+    return chain;
+  });
+
+  return step;
+}
+
+function selectMaybeQuery<T>(result: SupabaseResult<T>): QueryStep {
+  const step: QueryStep = { root: {}, filters: [] };
+  const maybeSingle = vi.fn(async () => result);
+  const chain = {
+    eq: vi.fn((column: string, value: unknown) => {
+      step.filters.push([column, value]);
+      return chain;
+    }),
+    maybeSingle,
+  };
+
+  step.root.select = vi.fn((columns: string) => {
+    step.selected = columns;
     return chain;
   });
 

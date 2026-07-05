@@ -118,6 +118,58 @@ export async function markInputAssetUploaded({
   sizeBytes: number;
 }): Promise<void> {
   const admin = createSupabaseAdminClient();
+  await markInputAssetUploadedWithAdmin(admin, { assetId, storageKey, sizeBytes });
+}
+
+export async function completeInputAssetUploadForUser({
+  userId,
+  assetId,
+}: {
+  userId: string;
+  assetId: string;
+}): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("media_assets")
+    .select(MEDIA_ASSET_SELECT)
+    .eq("id", assetId)
+    .eq("user_id", userId)
+    .eq("kind", "input")
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+  if (!data) {
+    throw new Error("media_asset_not_found");
+  }
+
+  const asset = data as MediaAssetRow;
+  const sizeBytes = Number(asset.size_bytes);
+  if (!Number.isInteger(sizeBytes) || sizeBytes < 0) {
+    throw new Error("media_asset_invalid_size");
+  }
+
+  await markInputAssetUploadedWithAdmin(admin, {
+    assetId: asset.id,
+    storageKey: asset.storage_key,
+    sizeBytes,
+  });
+}
+
+async function markInputAssetUploadedWithAdmin(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  {
+    assetId,
+    storageKey,
+    sizeBytes,
+  }: {
+    assetId: string;
+    storageKey: string;
+    sizeBytes: number;
+  },
+): Promise<void> {
   const { data, error } = await admin
     .from("media_assets")
     .update({

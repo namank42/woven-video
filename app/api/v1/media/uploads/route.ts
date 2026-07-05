@@ -2,6 +2,7 @@ import { requireApiAuth } from "@/lib/api/auth";
 import { licenseGateResponse } from "@/lib/api/license";
 import { apiError } from "@/lib/api/responses";
 import { createInputAssetUpload } from "@/lib/media/assets";
+import { getMediaEnv } from "@/lib/media/env";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -55,6 +56,12 @@ export async function POST(request: Request) {
       contentType: body.content_type,
       sizeBytes: body.size_bytes,
     });
+    const completion = getMediaEnv().uploadCompletionMode === "manual"
+      ? {
+          method: "POST",
+          url: `/api/v1/media/uploads/${upload.asset.id}/complete`,
+        }
+      : undefined;
 
     return Response.json(
       {
@@ -63,6 +70,7 @@ export async function POST(request: Request) {
         method: "PUT",
         upload_url: upload.uploadUrl,
         expires_at: upload.expiresAt,
+        ...(completion ? { completion } : {}),
       },
       {
         headers: {
