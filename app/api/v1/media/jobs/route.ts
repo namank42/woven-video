@@ -6,6 +6,7 @@ import {
   createReservedMediaJob,
   failReservedMediaJobDispatch,
 } from "@/lib/media/jobs";
+import { validateProviderFetchableMediaBaseUrl } from "@/lib/media/provider-input-urls";
 import { getMediaModel } from "@/lib/media/model-registry";
 import { validateMediaParameters } from "@/lib/media/schema";
 import { dispatchMediaJob, isTriggerMediaKind } from "@/lib/media/trigger-dispatch";
@@ -65,6 +66,17 @@ export async function POST(request: Request) {
   });
   if (!inputAssets.ok) {
     return apiError(inputAssets.error, 400, "invalid_media_input");
+  }
+
+  const providerInputUrlCheck = validateProviderFetchableMediaBaseUrl({
+    inputAssetIds: inputAssets.inputAssetIds,
+  });
+  if (!providerInputUrlCheck.ok) {
+    return apiError(
+      "Uploaded-input media jobs require MEDIA_BASE_URL to be publicly reachable.",
+      500,
+      providerInputUrlCheck.error,
+    );
   }
 
   try {

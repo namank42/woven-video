@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const originalEnv = process.env;
+
 function mockTriggerDispatch(dispatchMediaJob: ReturnType<typeof vi.fn>) {
   vi.doMock("@/lib/media/trigger-dispatch", () => ({
     dispatchMediaJob,
@@ -10,6 +12,7 @@ function mockTriggerDispatch(dispatchMediaJob: ReturnType<typeof vi.fn>) {
 
 describe("media job routes", () => {
   afterEach(() => {
+    process.env = originalEnv;
     vi.doUnmock("@/lib/api/auth");
     vi.doUnmock("@/lib/api/license");
     vi.doUnmock("@/lib/media/jobs");
@@ -76,6 +79,121 @@ describe("media job routes", () => {
     }
 
     expect(createReservedMediaJob).not.toHaveBeenCalled();
+  });
+
+  it("rejects uploaded-input provider jobs when MEDIA_BASE_URL points at localhost", async () => {
+    process.env = {
+      ...originalEnv,
+      MEDIA_BASE_URL: "http://127.0.0.1:8787",
+    } as NodeJS.ProcessEnv;
+    const createReservedMediaJob = vi.fn();
+    const dispatchMediaJob = vi.fn();
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({
+      licenseGateResponse: vi.fn(async () => null),
+    }));
+    vi.doMock("@/lib/media/model-registry", () => ({
+      getMediaModel: vi.fn(async () => ({
+        id: "fal-ai/gemini-omni-flash/image-to-video",
+        kind: "video",
+        parameterSchema: { type: "object" },
+        inputAssetSchema: { roles: [] },
+      })),
+    }));
+    vi.doMock("@/lib/media/schema", () => ({
+      validateMediaParameters: vi.fn(() => ({
+        ok: true,
+        value: { prompt: "animate this" },
+      })),
+    }));
+    vi.doMock("@/lib/media/jobs", () => ({
+      createReservedMediaJob,
+      failReservedMediaJobDispatch: vi.fn(),
+    }));
+    mockTriggerDispatch(dispatchMediaJob);
+
+    const { POST } = await import("@/app/api/v1/media/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "fal-ai/gemini-omni-flash/image-to-video",
+      parameters: { prompt: "animate this" },
+      input_asset_ids: ["asset_1"],
+    }));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "media_storage_misconfigured",
+        message: "Uploaded-input media jobs require MEDIA_BASE_URL to be publicly reachable.",
+      },
+    });
+    expect(createReservedMediaJob).not.toHaveBeenCalled();
+    expect(dispatchMediaJob).not.toHaveBeenCalled();
+  });
+
+  it("allows text-only provider jobs when MEDIA_BASE_URL points at localhost", async () => {
+    process.env = {
+      ...originalEnv,
+      MEDIA_BASE_URL: "http://127.0.0.1:8787",
+    } as NodeJS.ProcessEnv;
+    const createReservedMediaJob = vi.fn(async () => ({
+      id: "job_1",
+      status: "queued",
+      model: "fal-ai/nano-banana-lite",
+      estimatedCostUsdMicros: 100_000,
+      reservedCreditsUsdMicros: 100_000,
+      createdAt: "2026-07-05T12:00:00.000Z",
+      expiresAt: "2026-07-05T13:00:00.000Z",
+    }));
+    const dispatchMediaJob = vi.fn(async () => ({ runId: "run_123" }));
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({
+      licenseGateResponse: vi.fn(async () => null),
+    }));
+    vi.doMock("@/lib/media/model-registry", () => ({
+      getMediaModel: vi.fn(async () => ({
+        id: "fal-ai/nano-banana-lite",
+        kind: "image",
+        parameterSchema: { type: "object" },
+        inputAssetSchema: { roles: [] },
+      })),
+    }));
+    vi.doMock("@/lib/media/schema", () => ({
+      validateMediaParameters: vi.fn(() => ({
+        ok: true,
+        value: { prompt: "a banana" },
+      })),
+    }));
+    vi.doMock("@/lib/media/jobs", () => ({
+      createReservedMediaJob,
+      failReservedMediaJobDispatch: vi.fn(),
+    }));
+    mockTriggerDispatch(dispatchMediaJob);
+
+    const { POST } = await import("@/app/api/v1/media/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "fal-ai/nano-banana-lite",
+      parameters: { prompt: "a banana" },
+    }));
+
+    expect(response.status).toBe(200);
+    expect(createReservedMediaJob).toHaveBeenCalledWith(expect.objectContaining({
+      inputAssetIds: [],
+    }));
+    expect(dispatchMediaJob).toHaveBeenCalledWith(expect.objectContaining({
+      jobId: "job_1",
+    }));
   });
 
   it("returns the queued job response without caching", async () => {
