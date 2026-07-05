@@ -16,6 +16,16 @@ export type ReconciliationMediaJob = {
   kind: "image" | "video" | "audio";
 };
 
+export type MediaDispatchSource = "create" | "reconcile" | "webhook";
+
+export type RecordMediaJobTriggerDispatchInput = {
+  jobId: string;
+  runId: string;
+  source: MediaDispatchSource;
+  idempotencyKey: string;
+  dispatchedAt?: string;
+};
+
 type ReconciliationRpcRow = {
   id?: unknown;
   user_id?: unknown;
@@ -53,6 +63,26 @@ export async function findMediaJobsForTriggerReconciliation(limit = 25): Promise
     const kind = mediaKindValue(row.media_kind);
     return jobId && userId && modelId && kind ? [{ jobId, userId, modelId, kind }] : [];
   });
+}
+
+export async function recordMediaJobTriggerDispatch({
+  jobId,
+  runId,
+  source,
+  idempotencyKey,
+  dispatchedAt = new Date().toISOString(),
+}: RecordMediaJobTriggerDispatchInput): Promise<void> {
+  const { error } = await createSupabaseAdminClient().rpc("record_media_job_trigger_dispatch", {
+    p_job_id: jobId,
+    p_run_id: runId,
+    p_dispatch_source: source,
+    p_idempotency_key: idempotencyKey,
+    p_dispatched_at: dispatchedAt,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 function stringValue(value: unknown) {
