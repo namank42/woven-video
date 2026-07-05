@@ -55,6 +55,9 @@
 **Files:**
 - Modify: `lib/media/env.ts`
 - Modify: `tests/media/env.test.ts`
+- Modify: `tests/media/assets.test.ts`
+- Modify: `tests/media/output-assets.test.ts`
+- Modify: `tests/media/output-urls.test.ts`
 
 **Interfaces:**
 - Produces: `type MediaUploadCompletionMode = "callback" | "manual"`
@@ -182,6 +185,18 @@ Add the field to the object returned by `getMediaEnv()`:
     uploadCompletionMode: uploadCompletionModeEnv(),
 ```
 
+Update typed `MediaEnv` fixtures in these files so they include the new field:
+
+- `tests/media/assets.test.ts`
+- `tests/media/output-assets.test.ts`
+- `tests/media/output-urls.test.ts`
+
+Add this property to each `const mediaEnv: MediaEnv = { ... }` fixture:
+
+```ts
+  uploadCompletionMode: "callback",
+```
+
 - [ ] **Step 4: Run env tests and verify pass**
 
 Run:
@@ -195,7 +210,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit Task 1**
 
 ```bash
-git add lib/media/env.ts tests/media/env.test.ts
+git add lib/media/env.ts tests/media/env.test.ts tests/media/assets.test.ts tests/media/output-assets.test.ts tests/media/output-urls.test.ts
 git commit -m "feat(media): parse upload completion mode"
 ```
 
