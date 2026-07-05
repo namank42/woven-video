@@ -20,11 +20,24 @@
 
 - Wrangler environments support separate deploy targets from one Worker project. Deploying an environment creates a distinct Worker name based on the top-level Worker name and environment name.
 - Environment-specific Wrangler config can override routes and vars, which is enough for separate production and dev media domains such as `media.woven.video` and `media-dev.woven.video`.
+- Environment-specific bindings and variables are not inherited; any dev environment needs its own `r2_buckets`, routes, and vars.
+- Wrangler deploy accepts `--env <name>`, for example `npx wrangler deploy --env staging`.
 - Worker variables and bindings are configured in Wrangler config, while secrets are uploaded separately with `wrangler secret put` or set in the Cloudflare dashboard.
 - Docs show environment-specific routes and vars under `env.<name>`, including multiple production routes.
 - Source: Context7 `/websites/developers_cloudflare_workers`, queried 2026-07-05:
   - `workers/wrangler/environments`
   - Worker variables, secrets, and bindings docs
+
+## Wrangler R2 Provisioning (context7: `/websites/developers_cloudflare_r2`)
+
+- Create an R2 bucket with `npx wrangler r2 bucket create <bucket-name>`.
+- List buckets with `wrangler r2 bucket list`.
+- Apply a lifecycle configuration from JSON with `npx wrangler r2 bucket lifecycle set <bucket-name> --file <file-path>`.
+- Add a lifecycle rule interactively/with options through `npx wrangler r2 bucket lifecycle add <bucket-name> [OPTIONS]`.
+- Source: Context7 `/websites/developers_cloudflare_r2`, queried 2026-07-05:
+  - `r2/get-started/workers-api/index.md`
+  - `r2/buckets/create-buckets`
+  - `r2/buckets/object-lifecycles/index.md`
 
 ## Design Implications For Woven
 
