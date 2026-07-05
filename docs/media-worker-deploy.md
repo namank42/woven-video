@@ -4,6 +4,8 @@ This runbook keeps the app, Supabase schema, media Worker, R2 bucket, and reel-c
 
 ## Required Infrastructure
 
+Production:
+
 - Cloudflare R2 bucket: `woven-media`
 - Cloudflare Worker routes:
   - `https://media.woven.video/uploads/*`
@@ -43,6 +45,7 @@ npx wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangl
 ```
 
 For local provider smoke, `.env.local` must use the same `MEDIA_TOKEN_SECRET` value as the dev Worker.
+The app and deployed Worker use `MEDIA_WORKER_SHARED_SECRET` for Worker/internal route auth.
 Harness must never receive `MEDIA_WORKER_SHARED_SECRET`.
 
 ## App Environment
@@ -68,6 +71,7 @@ CRON_SECRET=<random 16+ character secret for Vercel Cron>
 ```
 
 The timeout, Fal webhook, Trigger, and cron values are consumed by the hosted-media flow. Set them before enabling the completed media executor path.
+The app uses `MEDIA_WORKER_SHARED_SECRET` for Worker/internal route auth. Harness must never receive this secret.
 
 ## Trigger.dev Configuration
 
@@ -75,6 +79,49 @@ The timeout, Fal webhook, Trigger, and cron values are consumed by the hosted-me
 - `TRIGGER_SECRET_KEY` is required anywhere Woven API code dispatches Trigger tasks.
 - `TRIGGER_ACCESS_TOKEN` is required for non-interactive Trigger deploys.
 - Configure Supabase, Fal, ElevenLabs, and media storage secrets in Trigger.dev Cloud with the same names used by local `.env.local`.
+
+## Dev R2 And Worker Provisioning
+
+Verify Wrangler is logged into the Cloudflare account that owns `woven.video`:
+
+```bash
+npx wrangler whoami
+npx wrangler r2 bucket list
+```
+
+Verify `media-dev.woven.video` has a proxied DNS record in Cloudflare. Worker Routes require a
+proxied DNS record for the hostname. If there is no real origin for this dev hostname, create a
+proxied `AAAA` record pointing to `100::` through the Cloudflare dashboard or API before deploying
+the Worker routes.
+
+Create the dev bucket if it is missing:
+
+```bash
+npx wrangler r2 bucket create woven-media-dev
+```
+
+Apply lifecycle cleanup for local smoke objects:
+
+```bash
+npx wrangler r2 bucket lifecycle set woven-media-dev --file workers/media/r2-dev-lifecycle.json
+```
+
+Set dev Worker secrets:
+
+```bash
+npx wrangler secret put MEDIA_TOKEN_SECRET --config workers/media/wrangler.jsonc --env dev
+npx wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangler.jsonc --env dev
+```
+
+Deploy the dev Worker:
+
+```bash
+pnpm run media:edge:deploy:dev
+```
+
+Do not point local provider smoke at `https://media.woven.video`; that would write local test objects
+to production storage and the production Worker would try to complete uploads against the production
+app.
 
 ## Deployment Order
 
@@ -123,49 +170,6 @@ through the deployed dev Worker and `woven-media-dev`.
 
 Trigger.dev is the supported executor in local and production. Do not run a separate polling worker.
 
-## Dev R2 And Worker Provisioning
-
-Verify Wrangler is logged into the Cloudflare account that owns `woven.video`:
-
-```bash
-npx wrangler whoami
-npx wrangler r2 bucket list
-```
-
-Verify `media-dev.woven.video` has a proxied DNS record in Cloudflare. Worker Routes require a
-proxied DNS record for the hostname. If there is no real origin for this dev hostname, create a
-proxied `AAAA` record pointing to `100::` through the Cloudflare dashboard or API before deploying
-the Worker routes.
-
-Create the dev bucket if it is missing:
-
-```bash
-npx wrangler r2 bucket create woven-media-dev
-```
-
-Apply lifecycle cleanup for local smoke objects:
-
-```bash
-npx wrangler r2 bucket lifecycle set woven-media-dev --file workers/media/r2-dev-lifecycle.json
-```
-
-Set dev Worker secrets:
-
-```bash
-npx wrangler secret put MEDIA_TOKEN_SECRET --config workers/media/wrangler.jsonc --env dev
-npx wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangler.jsonc --env dev
-```
-
-Deploy the dev Worker:
-
-```bash
-pnpm run media:edge:deploy:dev
-```
-
-Do not point local provider smoke at `https://media.woven.video`; that would write local test objects
-to production storage and the production Worker would try to complete uploads against the production
-app.
-
 ## Curated Media Model Catalog
 
 Clean schema deployments seed enabled production media rows in `model_pricing_rules` through
@@ -197,7 +201,7 @@ The catalog response must include image, video, and audio rows, `input_asset_sch
 5. Create a hosted media job that references the uploaded input.
 6. Confirm the job starts as `queued`, then `running` or `waiting_provider`.
 7. Confirm output URLs are absent in stored `generation_jobs.output` and present in `GET /api/v1/media/jobs/:jobId`.
-8. Confirm `GET https://media.woven.video/objects/:assetId?token=...` returns the output before retention expiry.
+8. Confirm `GET https://media-dev.woven.video/objects/:assetId?token=...` returns the output before retention expiry during local provider smoke. Use the production `https://media.woven.video/objects/:assetId?token=...` URL only when explicitly verifying production.
 9. After Task 4 implements cleanup, invoke `GET /api/internal/media/cleanup` with `Authorization: Bearer $CRON_SECRET` in staging and confirm expired R2 keys are deleted.
 
 ## Local SQL RPC Tests
