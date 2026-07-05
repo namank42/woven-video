@@ -30,6 +30,7 @@ const mediaEnv: MediaEnv = {
   downloadUrlTtlSeconds: 60,
   outputRetentionSeconds: 2_592_000,
   jobTimeoutSeconds: 3600,
+  uploadCompletionMode: "callback",
   falWebhookBaseUrl: null,
   falWebhookJwksUrl: null,
 };

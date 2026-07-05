@@ -1,3 +1,5 @@
+export type MediaUploadCompletionMode = "callback" | "manual";
+
 export type MediaEnv = {
   baseUrl: string;
   tokenSecret: string;
@@ -7,6 +9,7 @@ export type MediaEnv = {
   downloadUrlTtlSeconds: number;
   outputRetentionSeconds: number;
   jobTimeoutSeconds: number;
+  uploadCompletionMode: MediaUploadCompletionMode;
   falWebhookBaseUrl: string | null;
   falWebhookJwksUrl: string | null;
 };
@@ -51,6 +54,33 @@ function optionalUrlEnv(name: string, fallback: string | null = null): string | 
   return raw.replace(/\/+$/, "");
 }
 
+function uploadCompletionModeEnv(): MediaUploadCompletionMode {
+  const raw = process.env.MEDIA_UPLOAD_COMPLETION_MODE?.trim() || "callback";
+  if (raw === "callback" || raw === "manual") {
+    return raw;
+  }
+  throw new Error("MEDIA_UPLOAD_COMPLETION_MODE must be callback or manual.");
+}
+
+export function isLoopbackMediaBaseUrl(baseUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  return (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    hostname === "::1" ||
+    hostname === "[::1]"
+  );
+}
+
 export function getMediaEnv(): MediaEnv {
   const tokenSecret = secretEnv("MEDIA_TOKEN_SECRET");
   const workerSharedSecret = secretEnv("MEDIA_WORKER_SHARED_SECRET");
@@ -64,6 +94,7 @@ export function getMediaEnv(): MediaEnv {
     downloadUrlTtlSeconds: integerEnv("MEDIA_DOWNLOAD_URL_TTL_SECONDS", 15 * 60),
     outputRetentionSeconds: integerEnv("MEDIA_OUTPUT_RETENTION_SECONDS", 30 * 24 * 60 * 60),
     jobTimeoutSeconds: integerEnv("MEDIA_JOB_TIMEOUT_SECONDS", 3600),
+    uploadCompletionMode: uploadCompletionModeEnv(),
     falWebhookBaseUrl: optionalUrlEnv("MEDIA_FAL_WEBHOOK_BASE_URL"),
     falWebhookJwksUrl: optionalUrlEnv("FAL_WEBHOOK_JWKS_URL", DEFAULT_FAL_WEBHOOK_JWKS_URL),
   };

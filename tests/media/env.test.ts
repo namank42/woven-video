@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { getMediaEnv, getMediaJobTimeoutSeconds } from "@/lib/media/env";
+import {
+  getMediaEnv,
+  getMediaJobTimeoutSeconds,
+  isLoopbackMediaBaseUrl,
+} from "@/lib/media/env";
 
 const originalEnv = process.env;
 const validSecret = "x".repeat(32);
@@ -67,6 +71,37 @@ describe("media env", () => {
     });
 
     expect(getMediaEnv().baseUrl).toBe("https://media.example.test");
+  });
+
+  it("defaults upload completion mode to callback and parses manual mode", () => {
+    setMediaEnv();
+    expect(getMediaEnv().uploadCompletionMode).toBe("callback");
+
+    setMediaEnv({
+      MEDIA_UPLOAD_COMPLETION_MODE: "manual",
+    });
+    expect(getMediaEnv().uploadCompletionMode).toBe("manual");
+  });
+
+  it("rejects unknown upload completion modes", () => {
+    setMediaEnv({
+      MEDIA_UPLOAD_COMPLETION_MODE: "client",
+    });
+
+    expect(() => getMediaEnv()).toThrow(
+      "MEDIA_UPLOAD_COMPLETION_MODE must be callback or manual.",
+    );
+  });
+
+  it("detects media base URLs that cloud providers cannot fetch", () => {
+    expect(isLoopbackMediaBaseUrl("http://127.0.0.1:8787")).toBe(true);
+    expect(isLoopbackMediaBaseUrl("http://localhost:8787")).toBe(true);
+    expect(isLoopbackMediaBaseUrl("http://dev.localhost:8787")).toBe(true);
+    expect(isLoopbackMediaBaseUrl("http://[::1]:8787")).toBe(true);
+
+    expect(isLoopbackMediaBaseUrl("https://media-dev.woven.video")).toBe(false);
+    expect(isLoopbackMediaBaseUrl("https://media.woven.video")).toBe(false);
+    expect(isLoopbackMediaBaseUrl("not a url")).toBe(false);
   });
 
   it("parses optional Fal webhook URLs and trims trailing slashes", () => {
