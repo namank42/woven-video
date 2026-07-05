@@ -145,23 +145,23 @@ Pricing basis:
 Note: this documented endpoint is text-to-image. The pricing page copy says generation/editing, but
 the candidate endpoint does not accept image input.
 
-### Nano Banana Lite on Fal
+### Nano Banana 2 Lite on Fal
 
 Sources:
 
-- `https://fal.ai/models/fal-ai/nano-banana-lite/api`
-- `https://fal.ai/models/fal-ai/nano-banana-lite/llms.txt`
-- `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/nano-banana-lite`
-- `https://fal.ai/models/fal-ai/nano-banana-lite/edit/api`
-- `https://fal.ai/models/fal-ai/nano-banana-lite/edit/llms.txt`
-- `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/nano-banana-lite/edit`
+- `https://fal.ai/models/google/nano-banana-2-lite/api`
+- `https://fal.ai/models/google/nano-banana-2-lite/llms.txt`
+- `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=google/nano-banana-2-lite`
+- `https://fal.ai/models/google/nano-banana-2-lite/edit/api`
+- `https://fal.ai/models/google/nano-banana-2-lite/edit/llms.txt`
+- `https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=google/nano-banana-2-lite/edit`
 
 Endpoints:
 
 | Public model id | Fal endpoint | Kind | Required provider inputs | Output path |
 | --- | --- | --- | --- | --- |
-| `fal-ai/nano-banana-lite` | `fal-ai/nano-banana-lite` | image | `prompt` | `images` |
-| `fal-ai/nano-banana-lite/edit` | `fal-ai/nano-banana-lite/edit` | image | `prompt`, Woven `reference_images` mapped to `image_urls` | `images` |
+| `google/nano-banana-2-lite` | `google/nano-banana-2-lite` | image | `prompt` | `images` |
+| `google/nano-banana-2-lite/edit` | `google/nano-banana-2-lite/edit` | image | `prompt`, Woven `reference_images` mapped to `image_urls` | `images` |
 
 Parameters:
 
@@ -182,11 +182,11 @@ Parameters:
 
 Pricing basis:
 
-- Fal documents both Lite endpoints as `$1 per units`.
-- Woven should model the unit as per generated image for reservation safety: `num_images * $1.00`
-  provider cost, then apply the standard 20% hosted markup for a public `$1.20/image` estimate.
-- If Fal later clarifies the unit as per request instead of per image, update the seeded formula
-  rate without changing the public catalog contract.
+- Superseded on 2026-07-05 by `docs/superpowers/research/2026-07-05-fal-nano-banana-lite-pricing.md`.
+- Fal documents both Lite endpoint pages as `$1 per units`, but Fal's pricing page lists `Nanobanana`
+  image pricing at `$0.0398/image`.
+- Woven should model Lite as `num_images * $0.0398` provider cost, then apply the standard 20%
+  hosted markup for a public `$0.0478/image` estimate.
 
 ### Gemini Omni Flash on Fal
 

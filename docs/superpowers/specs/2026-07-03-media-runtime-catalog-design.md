@@ -58,8 +58,8 @@ represented by the first catalog contract:
 - `openai/gpt-image-2`
 - `openai/gpt-image-2/edit`
 - `fal-ai/nano-banana-pro`
-- `fal-ai/nano-banana-lite`
-- `fal-ai/nano-banana-lite/edit`
+- `google/nano-banana-2-lite`
+- `google/nano-banana-2-lite/edit`
 - `fal-ai/gemini-omni-flash`
 - `fal-ai/gemini-omni-flash/image-to-video`
 - `fal-ai/gemini-omni-flash/reference-to-video`

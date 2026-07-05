@@ -75,24 +75,25 @@ describe("quoteMediaJob", () => {
     });
   });
 
-  it("quotes Nano Banana Lite from image count and provider unit pricing", () => {
+  it("quotes Nano Banana Lite from Fal image pricing", () => {
     const quote = quoteMediaJob({
       model: mediaModel({
-        id: "fal-ai/nano-banana-lite",
+        id: "google/nano-banana-2-lite",
+        pricing: { ...model.pricing, minimumUsdMicros: 0 },
         pricingFormula: {
           type: "nano_banana",
           image_parameter: "num_images",
-          provider_rate_usd_per_image: "1.00",
+          provider_rate_usd_per_image: "0.0398",
         },
       }),
-      parameters: { num_images: 2 },
+      parameters: { num_images: 3 },
     });
 
     expect(quote).toMatchObject({
       estimateKind: "parameter_quote",
-      providerCostUsdMicros: 2_000_000,
-      chargedAmountUsdMicros: 2_400_000,
-      reservedAmountUsdMicros: 2_400_000,
+      providerCostUsdMicros: 119_400,
+      chargedAmountUsdMicros: 143_280,
+      reservedAmountUsdMicros: 143_280,
       formula: "nano_banana",
     });
   });

@@ -39,7 +39,7 @@ describe("Fal media webhook route", () => {
     expect(dispatchMediaJob).toHaveBeenCalledWith({
       jobId: "job_1",
       userId: "user_1",
-      modelId: "fal-ai/nano-banana-lite",
+      modelId: "google/nano-banana-2-lite",
       kind: "image",
       source: "webhook",
     });
@@ -403,7 +403,7 @@ function mockSupabaseWebhookJob({
     user_id: "user_1",
   },
   input = {
-    media_model_id: "fal-ai/nano-banana-lite",
+    media_model_id: "google/nano-banana-2-lite",
     operation: "image_generation",
   },
 }: {

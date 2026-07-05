@@ -144,7 +144,7 @@ describe("media job routes", () => {
     const createReservedMediaJob = vi.fn(async () => ({
       id: "job_1",
       status: "queued",
-      model: "fal-ai/nano-banana-lite",
+      model: "google/nano-banana-2-lite",
       estimatedCostUsdMicros: 100_000,
       reservedCreditsUsdMicros: 100_000,
       createdAt: "2026-07-05T12:00:00.000Z",
@@ -163,7 +163,7 @@ describe("media job routes", () => {
     }));
     vi.doMock("@/lib/media/model-registry", () => ({
       getMediaModel: vi.fn(async () => ({
-        id: "fal-ai/nano-banana-lite",
+        id: "google/nano-banana-2-lite",
         kind: "image",
         parameterSchema: { type: "object" },
         inputAssetSchema: { roles: [] },
@@ -183,7 +183,7 @@ describe("media job routes", () => {
 
     const { POST } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {
-      model: "fal-ai/nano-banana-lite",
+      model: "google/nano-banana-2-lite",
       parameters: { prompt: "a banana" },
     }));
 
@@ -327,7 +327,7 @@ describe("media job routes", () => {
     const createReservedMediaJob = vi.fn(async () => ({
       id: "job_1",
       status: "queued",
-      model: "fal-ai/nano-banana-lite",
+      model: "google/nano-banana-2-lite",
       estimatedCostUsdMicros: 1_200_000,
       reservedCreditsUsdMicros: 1_200_000,
       createdAt: "2026-07-03T12:00:00.000Z",
@@ -344,7 +344,7 @@ describe("media job routes", () => {
     vi.doMock("@/lib/api/license", () => ({ licenseGateResponse: vi.fn(async () => null) }));
     vi.doMock("@/lib/media/model-registry", () => ({
       getMediaModel: vi.fn(async () => ({
-        id: "fal-ai/nano-banana-lite",
+        id: "google/nano-banana-2-lite",
         kind: "image",
         parameterSchema: { type: "object" },
         inputAssetSchema: { roles: [] },
@@ -362,7 +362,7 @@ describe("media job routes", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { POST } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {
-      model: "fal-ai/nano-banana-lite",
+      model: "google/nano-banana-2-lite",
       parameters: { prompt: "a mountain" },
     }));
 
@@ -378,7 +378,7 @@ describe("media job routes", () => {
     const createReservedMediaJob = vi.fn(async () => ({
       id: "job_1",
       status: "queued",
-      model: "fal-ai/nano-banana-lite",
+      model: "google/nano-banana-2-lite",
       estimatedCostUsdMicros: 1_200_000,
       reservedCreditsUsdMicros: 1_200_000,
       createdAt: "2026-07-03T12:00:00.000Z",
@@ -397,7 +397,7 @@ describe("media job routes", () => {
     vi.doMock("@/lib/api/license", () => ({ licenseGateResponse: vi.fn(async () => null) }));
     vi.doMock("@/lib/media/model-registry", () => ({
       getMediaModel: vi.fn(async () => ({
-        id: "fal-ai/nano-banana-lite",
+        id: "google/nano-banana-2-lite",
         kind: "image",
         parameterSchema: { type: "object" },
         inputAssetSchema: { roles: [] },
@@ -415,7 +415,7 @@ describe("media job routes", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const { POST } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {
-      model: "fal-ai/nano-banana-lite",
+      model: "google/nano-banana-2-lite",
       parameters: { prompt: "a mountain" },
     }));
     const responseBody = await response.clone().json();
@@ -596,7 +596,7 @@ describe("media job routes", () => {
     }));
     vi.doMock("@/lib/media/model-registry", () => ({
       getMediaModel: vi.fn(async () => ({
-        id: "fal-ai/nano-banana-lite",
+        id: "google/nano-banana-2-lite",
         kind: "image",
         parameterSchema: {
           type: "object",
@@ -620,7 +620,7 @@ describe("media job routes", () => {
 
     const { POST } = await import("@/app/api/v1/media/jobs/route");
     const response = await POST(jsonRequest("/api/v1/media/jobs", {
-      model: "fal-ai/nano-banana-lite",
+      model: "google/nano-banana-2-lite",
       parameters: {
         prompt: "test image prompt",
         num_images: "1",
@@ -731,7 +731,7 @@ describe("media job routes", () => {
         reserved_amount_usd_micros: 1_200_000,
         final_cost_usd_micros: 0,
         progress: { stage: "failed", percent: null },
-        input: { media_model_id: "fal-ai/nano-banana-lite" },
+        input: { media_model_id: "google/nano-banana-2-lite" },
         output: null,
         error: "model_not_enabled",
         created_at: "2026-07-01T12:00:00.000Z",
@@ -765,7 +765,7 @@ describe("media job routes", () => {
     await expect(response.json()).resolves.toMatchObject({
       id: "job_1",
       status: "failed",
-      model: "fal-ai/nano-banana-lite",
+      model: "google/nano-banana-2-lite",
       error: {
         code: "model_not_enabled",
         message: "Media model is not enabled.",
@@ -789,7 +789,7 @@ describe("media job routes", () => {
         reserved_amount_usd_micros: 1_200_000,
         final_cost_usd_micros: 0,
         progress: { stage: "failed", percent: null },
-        input: { media_model_id: "fal-ai/nano-banana-lite" },
+        input: { media_model_id: "google/nano-banana-2-lite" },
         output: null,
         error: "media_job_timed_out",
         created_at: "2026-07-01T12:00:00.000Z",

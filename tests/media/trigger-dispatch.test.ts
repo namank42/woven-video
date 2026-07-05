@@ -32,7 +32,7 @@ describe("dispatchMediaJob", () => {
     await expect(dispatchMediaJob({
       jobId: "job_123",
       userId: "user_123",
-      modelId: "fal-ai/nano-banana-lite",
+      modelId: "google/nano-banana-2-lite",
       kind: "image",
       source: "create",
     })).resolves.toEqual({ runId: "run_123" });
@@ -49,7 +49,7 @@ describe("dispatchMediaJob", () => {
           "media-job:job_123",
           "media-kind:image",
           "media-queue:media-image",
-          "media-model:fal-ai/nano-banana-lite",
+          "media-model:google/nano-banana-2-lite",
           "media-dispatch-source:create",
           "media-user:user_123",
         ],
@@ -74,7 +74,7 @@ describe("dispatchMediaJob", () => {
     await expect(dispatchMediaJob({
       jobId: "job_123",
       userId: "user_123",
-      modelId: "fal-ai/nano-banana-lite",
+      modelId: "google/nano-banana-2-lite",
       kind: "image",
       source: "webhook",
     })).resolves.toEqual({ runId: "run_123" });

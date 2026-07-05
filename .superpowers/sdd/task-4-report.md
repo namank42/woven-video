@@ -1,71 +1,62 @@
-# Task 4 Report
+# Task 4 Report - Replace Stale Lite IDs In Active Tests And Docs
 
-## Implementation summary
+## What changed
 
-- Added `validateProviderFetchableMediaBaseUrl` in `lib/media/provider-input-urls.ts` to enforce the provider-fetchable `MEDIA_BASE_URL` rule only when a job includes uploaded input asset IDs.
-- Updated `app/api/v1/media/jobs/route.ts` to run that guard immediately after `parseMediaJobInputAssets` succeeds and before `createReservedMediaJob`, returning the brief-mandated `media_storage_misconfigured` error for localhost-style `MEDIA_BASE_URL` values.
-- Expanded `tests/media/job-routes.test.ts` with the two Task 4 route cases and restored `process.env` after each test so the localhost override stays isolated.
+- Replaced the stale Lite model ID `fal-ai/nano-banana-lite` with `google/nano-banana-2-lite` across the active media test fixtures.
+- Updated the media runtime catalog spec to list the Google Lite IDs instead of the legacy Fal IDs.
+- Updated the older media runtime catalog research note so its active endpoint/source table now points at the Google Lite endpoints.
+- Aligned the DB RPC integration test with the Google Lite catalog entries.
+- Kept the intentional migration/history references in the migration SQLs, the catalog-seed test, and the superseded pricing note.
 
-## Tests and results
-
-- RED command:
-  - `pnpm test tests/media/job-routes.test.ts`
-  - Result: FAIL, 1 test failed and 15 passed.
-- GREEN command:
-  - `pnpm test tests/media/job-routes.test.ts`
-  - Result: PASS, 1 test file passed and 16 tests passed.
-- Self-review check:
-  - `git diff --check -- app/api/v1/media/jobs/route.ts lib/media/provider-input-urls.ts tests/media/job-routes.test.ts .superpowers/sdd/task-4-report.md`
-  - Result: PASS, no diff formatting issues.
-
-## TDD RED/GREEN evidence
-
-### RED
+## Test command and output summary
 
 Command:
 
 ```bash
-pnpm test tests/media/job-routes.test.ts
+pnpm test tests/media/pricing.test.ts tests/media/job-routes.test.ts tests/media/fal-webhook-route.test.ts tests/media/trigger-dispatch.test.ts tests/media/trigger-tasks.test.ts tests/pricing-page-rates.test.ts tests/media/catalog-seed.test.ts
 ```
 
-Observed failure:
+Result:
 
-```text
-FAIL  tests/media/job-routes.test.ts > media job routes > rejects uploaded-input provider jobs when MEDIA_BASE_URL points at localhost
-AssertionError: expected 503 to be 500
-```
+- 7 test files passed
+- 52 tests passed
+- No failures in the targeted media suite
 
-This showed the uploaded-input route still reached reservation/dispatch code instead of failing early on localhost `MEDIA_BASE_URL`.
-
-### GREEN
+## Stale-ID scan output and rationale
 
 Command:
 
 ```bash
-pnpm test tests/media/job-routes.test.ts
+rg -n "fal-ai/nano-banana-lite" tests lib supabase docs/superpowers/research docs/superpowers/specs
 ```
 
-Observed result:
+Remaining references:
 
-```text
-Test Files  1 passed (1)
-     Tests  16 passed (16)
-```
+- `docs/superpowers/research/2026-07-05-fal-nano-banana-lite-pricing.md` - intentional historical/superseded note that explains the migration from the old Fal Lite endpoints to the Google Lite endpoints.
+- `tests/media/catalog-seed.test.ts` - intentional migration verification for the seed and follow-up migration SQL.
+- `supabase/migrations/20260705131500_migrate_nano_banana_2_lite_endpoints.sql` - intentional migration SQL that rewrites old IDs to the new Google IDs.
+- `supabase/migrations/20260705123000_adjust_nano_banana_lite_pricing.sql` - intentional migration SQL that still references the old IDs while adjusting the historical pricing data.
+
+No unexpected stale-ID references remained in active tests or current spec/research docs after the replacements.
 
 ## Files changed
 
-- `lib/media/provider-input-urls.ts`
-- `app/api/v1/media/jobs/route.ts`
 - `tests/media/job-routes.test.ts`
-- `.superpowers/sdd/task-4-report.md`
+- `tests/media/fal-webhook-route.test.ts`
+- `tests/media/trigger-dispatch.test.ts`
+- `tests/media/trigger-tasks.test.ts`
+- `tests/media/pricing.test.ts`
+- `tests/media/db-rpcs.integration.test.ts`
+- `docs/superpowers/research/2026-07-03-media-runtime-catalog-docs.md`
+- `docs/superpowers/specs/2026-07-03-media-runtime-catalog-design.md`
 
 ## Self-review findings
 
-- The guard is scoped to provider-fetched uploaded inputs only; text-only jobs still reserve and dispatch normally with a localhost `MEDIA_BASE_URL`.
-- The route now fails before job reservation and before Trigger dispatch, which matches the task requirement to block misconfigured uploaded-input jobs early.
-- The new helper reuses `isLoopbackMediaBaseUrl` from `lib/media/env.ts` and keeps the decision logic out of the route body.
-- I did not touch unrelated workspace changes, including the pre-existing untracked `pnpm-workspace.yaml`.
+- Verified the active media tests now use `google/nano-banana-2-lite` consistently.
+- Verified the current catalog spec no longer points engineers at `fal-ai/nano-banana-lite`.
+- Verified the old ID still appears only in migration/history surfaces allowed by the brief.
 
 ## Concerns
 
-- The focused vitest run still emits existing Node warnings about `module.register()` deprecation and missing `--localstorage-file`, but the Task 4 assertions pass and the warnings are unrelated to this change.
+- `tests/media/catalog-seed.test.ts` and the migration SQLs intentionally still mention the old IDs for migration coverage and historical correctness.
+- The superseded 2026-07-05 pricing note still contains the legacy IDs by design.
