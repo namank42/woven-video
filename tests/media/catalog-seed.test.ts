@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { mediaModelRates } from "@/lib/pricing-page-rates";
@@ -6,6 +6,10 @@ import { mediaModelRates } from "@/lib/pricing-page-rates";
 const migration = readFileSync(
   join(process.cwd(), "supabase/migrations/20260703180000_seed_media_runtime_catalog.sql"),
   "utf8",
+);
+const nanoBananaLiteEndpointMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260705131500_migrate_nano_banana_2_lite_endpoints.sql",
 );
 
 describe("media runtime catalog seed", () => {
@@ -51,6 +55,39 @@ describe("media runtime catalog seed", () => {
     }
   });
 
+  it("seeds Nano Banana 2 Lite with Fal image pricing", () => {
+    const rows = metadataRows();
+    for (const id of ["google/nano-banana-2-lite", "google/nano-banana-2-lite/edit"]) {
+      const metadata = rows.get(id) as CatalogMetadata;
+      expect(metadata.public_id).toBe(id);
+      expect(metadata.provider_endpoint).toBe(id);
+      expect(metadata.pricing_formula).toMatchObject({
+        type: "nano_banana",
+        provider_rate_usd_per_image: "0.0398",
+      });
+      expect(seedColumnsForModel(id)).toMatchObject({
+        markupBps: 2_000,
+        minimumChargeUsdMicros: 0,
+        reserveAmountUsdMicros: 47_760,
+      });
+    }
+  });
+
+  it("includes a follow-up migration for databases that already applied the old Nano Banana Lite price", () => {
+    expect(existsSync(nanoBananaLiteEndpointMigrationPath)).toBe(true);
+    const correction = readFileSync(nanoBananaLiteEndpointMigrationPath, "utf8");
+
+    expect(correction).toContain("'google/nano-banana-2-lite'");
+    expect(correction).toContain("'google/nano-banana-2-lite/edit'");
+    expect(correction).toContain("'fal-ai/nano-banana-lite'");
+    expect(correction).toContain("'fal-ai/nano-banana-lite/edit'");
+    expect(correction).toContain("enabled = false");
+    expect(correction).toContain("minimum_charge_usd_micros = 0");
+    expect(correction).toContain("reserve_amount_usd_micros = 47760");
+    expect(correction).toContain("provider_rate_usd_per_image");
+    expect(correction).toContain("0.0398");
+  });
+
   it("seeds Seedance reference rows with cross-role input asset constraints", () => {
     const rows = metadataRows();
     for (const id of [
@@ -67,6 +104,8 @@ describe("media runtime catalog seed", () => {
 
 type CatalogMetadata = {
   public_id: string;
+  provider_endpoint: string;
+  pricing_formula: Record<string, unknown>;
   parameter_schema: {
     properties: Record<string, Record<string, unknown>>;
   };
@@ -82,4 +121,18 @@ function metadataRows() {
     rows.set(metadata.public_id, metadata);
   }
   return rows;
+}
+
+function seedColumnsForModel(modelId: string) {
+  const escapedModelId = modelId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    String.raw`\(\s*'fal',\s*'${escapedModelId}',\s*'[^']+',\s*'[^']+',\s*(\d+),\s*(\d+),\s*(\d+),`,
+  );
+  const match = migration.match(pattern);
+  expect(match).not.toBeNull();
+  return {
+    markupBps: Number(match?.[1]),
+    minimumChargeUsdMicros: Number(match?.[2]),
+    reserveAmountUsdMicros: Number(match?.[3]),
+  };
 }
