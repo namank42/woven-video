@@ -9,7 +9,7 @@ type ProcessMediaJobTaskShape = {
 type ReconcileMediaJobsTaskShape = {
   id: string;
   cron: string;
-  run: () => Promise<{ dispatched: number }>;
+  run: () => Promise<{ finalized: number; dispatched: number }>;
 };
 
 const mocks = vi.hoisted(() => ({
@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   schedulesTask: vi.fn((definition) => definition),
   waitFor: vi.fn(async () => undefined),
   processMediaJob: vi.fn(),
+  finalizeExpiredMediaJobsForReconciliation: vi.fn(),
   findMediaJobsForTriggerReconciliation: vi.fn(),
   dispatchMediaJob: vi.fn(),
 }));
@@ -30,6 +31,7 @@ vi.mock("@trigger.dev/sdk", () => ({
 }));
 vi.mock("@/lib/media/executor", () => ({ processMediaJob: mocks.processMediaJob }));
 vi.mock("@/lib/media/job-claims", () => ({
+  finalizeExpiredMediaJobsForReconciliation: mocks.finalizeExpiredMediaJobsForReconciliation,
   findMediaJobsForTriggerReconciliation: mocks.findMediaJobsForTriggerReconciliation,
 }));
 vi.mock("@/lib/media/trigger-dispatch", () => ({
@@ -82,6 +84,10 @@ describe("Trigger media tasks", () => {
   });
 
   it("defines a scheduled reconciliation task that redispatches stale jobs idempotently", async () => {
+    mocks.finalizeExpiredMediaJobsForReconciliation.mockResolvedValue([
+      { jobId: "expired_1" },
+      { jobId: "expired_2" },
+    ]);
     mocks.findMediaJobsForTriggerReconciliation.mockResolvedValue([
       { jobId: "job_1", userId: "user_1", modelId: "fal-ai/nano-banana-lite", kind: "image" },
       { jobId: "job_2", userId: "user_2", modelId: "fal-ai/veo3.1", kind: "video" },
@@ -91,19 +97,42 @@ describe("Trigger media tasks", () => {
 
     expect(reconcileTask.id).toBe("reconcile-media-jobs");
     expect(reconcileTask.cron).toBe("*/5 * * * *");
-    await expect(reconcileTask.run()).resolves.toEqual({ dispatched: 2 });
+    await expect(reconcileTask.run()).resolves.toEqual({ finalized: 2, dispatched: 2 });
+    expect(mocks.finalizeExpiredMediaJobsForReconciliation).toHaveBeenCalledWith(100);
+    expect(mocks.findMediaJobsForTriggerReconciliation).toHaveBeenCalledWith(25);
     expect(mocks.dispatchMediaJob).toHaveBeenCalledTimes(2);
     expect(mocks.dispatchMediaJob).toHaveBeenNthCalledWith(1, {
       jobId: "job_1",
       userId: "user_1",
       modelId: "fal-ai/nano-banana-lite",
       kind: "image",
+      source: "reconcile",
     });
     expect(mocks.dispatchMediaJob).toHaveBeenNthCalledWith(2, {
       jobId: "job_2",
       userId: "user_2",
       modelId: "fal-ai/veo3.1",
       kind: "video",
+      source: "reconcile",
+    });
+  });
+
+  it("still dispatches stale jobs when no expired jobs were finalized", async () => {
+    mocks.finalizeExpiredMediaJobsForReconciliation.mockResolvedValue([]);
+    mocks.findMediaJobsForTriggerReconciliation.mockResolvedValue([
+      { jobId: "job_1", userId: "user_1", modelId: "fal-ai/nano-banana-lite", kind: "image" },
+    ]);
+
+    const { reconcileMediaJobsTask } = await import("@/trigger/media");
+    const reconcileTask = reconcileMediaJobsTask as unknown as ReconcileMediaJobsTaskShape;
+
+    await expect(reconcileTask.run()).resolves.toEqual({ finalized: 0, dispatched: 1 });
+    expect(mocks.dispatchMediaJob).toHaveBeenCalledWith({
+      jobId: "job_1",
+      userId: "user_1",
+      modelId: "fal-ai/nano-banana-lite",
+      kind: "image",
+      source: "reconcile",
     });
   });
 });

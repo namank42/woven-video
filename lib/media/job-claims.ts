@@ -16,6 +16,14 @@ export type ReconciliationMediaJob = {
   kind: "image" | "video" | "audio";
 };
 
+export type ExpiredMediaJobFinalization = {
+  jobId: string;
+  userId: string;
+  previousStatus: string;
+  status: string;
+  error: string;
+};
+
 export type MediaDispatchSource = "create" | "reconcile" | "webhook";
 
 export type RecordMediaJobTriggerDispatchInput = {
@@ -31,6 +39,14 @@ type ReconciliationRpcRow = {
   user_id?: unknown;
   media_model_id?: unknown;
   media_kind?: unknown;
+};
+
+type ExpiredMediaJobFinalizationRpcRow = {
+  id?: unknown;
+  user_id?: unknown;
+  previous_status?: unknown;
+  status?: unknown;
+  error?: unknown;
 };
 
 export async function claimMediaJobById(jobId: string, leaseSeconds = 300): Promise<MediaJobClaimRow | null> {
@@ -62,6 +78,30 @@ export async function findMediaJobsForTriggerReconciliation(limit = 25): Promise
     const modelId = stringValue(row.media_model_id);
     const kind = mediaKindValue(row.media_kind);
     return jobId && userId && modelId && kind ? [{ jobId, userId, modelId, kind }] : [];
+  });
+}
+
+export async function finalizeExpiredMediaJobsForReconciliation(
+  limit = 100,
+): Promise<ExpiredMediaJobFinalization[]> {
+  const { data, error } = await createSupabaseAdminClient().rpc(
+    "finalize_expired_media_jobs_for_reconciliation",
+    { p_limit: limit, p_now: new Date().toISOString() },
+  );
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).flatMap((row: ExpiredMediaJobFinalizationRpcRow) => {
+    const jobId = stringValue(row.id);
+    const userId = stringValue(row.user_id);
+    const previousStatus = stringValue(row.previous_status);
+    const status = stringValue(row.status);
+    const jobError = stringValue(row.error);
+    return jobId && userId && previousStatus && status && jobError
+      ? [{ jobId, userId, previousStatus, status, error: jobError }]
+      : [];
   });
 }
 

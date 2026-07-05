@@ -1,7 +1,10 @@
 import { queue, schedules, task, wait } from "@trigger.dev/sdk";
 
 import { processMediaJob } from "@/lib/media/executor";
-import { findMediaJobsForTriggerReconciliation } from "@/lib/media/job-claims";
+import {
+  finalizeExpiredMediaJobsForReconciliation,
+  findMediaJobsForTriggerReconciliation,
+} from "@/lib/media/job-claims";
 import { dispatchMediaJob, mediaQueueForKind } from "@/lib/media/trigger-dispatch";
 import { elevenLabsMediaAdapter } from "@/lib/media/providers/elevenlabs";
 import { falMediaAdapter } from "@/lib/media/providers/fal";
@@ -36,6 +39,7 @@ export const reconcileMediaJobsTask = schedules.task({
   id: "reconcile-media-jobs",
   cron: "*/5 * * * *",
   run: async () => {
+    const finalized = await finalizeExpiredMediaJobsForReconciliation(100);
     const jobs = await findMediaJobsForTriggerReconciliation(25);
 
     for (const job of jobs) {
@@ -44,9 +48,10 @@ export const reconcileMediaJobsTask = schedules.task({
         userId: job.userId,
         modelId: job.modelId,
         kind: job.kind,
+        source: "reconcile",
       });
     }
 
-    return { dispatched: jobs.length };
+    return { finalized: finalized.length, dispatched: jobs.length };
   },
 });
