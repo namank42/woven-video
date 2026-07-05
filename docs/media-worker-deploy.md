@@ -151,25 +151,43 @@ same RPC used by scheduled reconciliation, not a production backfill.
 Run this only against local Supabase:
 
 ```bash
-eval "$(supabase status -o env | awk -F= '/^SUPABASE_URL=|^SUPABASE_SERVICE_ROLE_KEY=/{print "export " $0}')"
+eval "$(supabase status -o env | awk -F= '
+  /^SUPABASE_URL=|^SUPABASE_SERVICE_ROLE_KEY=/{print "export " $0}
+  /^API_URL=/{print "export SUPABASE_URL=" $2}
+  /^SERVICE_ROLE_KEY=/{print "export SUPABASE_SERVICE_ROLE_KEY=" $2}
+')"
 pnpm exec tsx -e 'import { createClient } from "@supabase/supabase-js";
+void (async () => {
 const url = process.env.SUPABASE_URL!;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const admin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 const { data, error } = await admin.rpc("finalize_expired_media_jobs_for_reconciliation", { p_limit: 1000, p_now: new Date().toISOString() });
 if (error) throw error;
-console.log(JSON.stringify({ finalized: data?.length ?? 0, jobs: data }, null, 2));'
+console.log(JSON.stringify({ finalized: data?.length ?? 0, jobs: data }, null, 2));
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});'
 ```
 
 Verify no expired active media jobs remain:
 
 ```bash
-eval "$(supabase status -o env | awk -F= '/^SUPABASE_URL=|^SUPABASE_SERVICE_ROLE_KEY=/{print "export " $0}')"
+eval "$(supabase status -o env | awk -F= '
+  /^SUPABASE_URL=|^SUPABASE_SERVICE_ROLE_KEY=/{print "export " $0}
+  /^API_URL=/{print "export SUPABASE_URL=" $2}
+  /^SERVICE_ROLE_KEY=/{print "export SUPABASE_SERVICE_ROLE_KEY=" $2}
+')"
 pnpm exec tsx -e 'import { createClient } from "@supabase/supabase-js";
+void (async () => {
 const admin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { autoRefreshToken: false, persistSession: false } });
 const { data, error } = await admin.from("generation_jobs").select("id,status,error,model,expires_at").eq("type", "media_job").in("status", ["creating", "queued", "running", "waiting_provider"]).lte("expires_at", new Date().toISOString());
 if (error) throw error;
-console.log(JSON.stringify({ remaining: data?.length ?? 0, jobs: data }, null, 2));'
+console.log(JSON.stringify({ remaining: data?.length ?? 0, jobs: data }, null, 2));
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});'
 ```
 
 Expected: `remaining` is `0`.
