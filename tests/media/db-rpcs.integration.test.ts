@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { listMediaModels } from "@/lib/media/model-registry";
 
 const runDbTests = process.env.RUN_SUPABASE_DB_TESTS === "1";
@@ -15,6 +15,8 @@ type ReconciliationRpcRow = {
   media_model_id: string;
   media_kind: string;
 };
+
+const createdUserIds = new Set<string>();
 
 function getAdminClient() {
   if (!supabaseUrl || !serviceRoleKey) {
@@ -34,6 +36,18 @@ function normalizeNullComposite<T extends Record<string, unknown> | null | undef
 }
 
 describeDb("media SQL RPC integration", () => {
+  afterEach(async () => {
+    if (createdUserIds.size === 0) return;
+    const admin = getAdminClient();
+    const userIds = [...createdUserIds];
+    createdUserIds.clear();
+
+    await Promise.all(userIds.map(async (userId) => {
+      const { error } = await admin.auth.admin.deleteUser(userId);
+      if (error) throw error;
+    }));
+  });
+
   it("lists the enabled production media catalog seeded from the pricing page", async () => {
     const models = await listMediaModels();
     const ids = new Set(models.map((model) => model.id));
@@ -199,6 +213,107 @@ describeDb("media SQL RPC integration", () => {
     expect(rows.has(succeededJobId)).toBe(false);
   });
 
+  it("finalizes expired active media jobs without dispatching them for reconciliation", async () => {
+    const admin = getAdminClient();
+    const { userId, accountId } = await createUserAndAccount();
+    const expiredAt = "2026-07-01T11:00:00.000Z";
+    const now = "2026-07-01T12:00:00.000Z";
+    const creatingJobId = await insertMediaJob({ userId, accountId, status: "creating", reserved: 0, expiresAt: expiredAt });
+    const queuedJobId = await insertMediaJob({ userId, accountId, status: "queued", reserved: 100000, expiresAt: expiredAt });
+    const runningJobId = await insertMediaJob({ userId, accountId, status: "running", reserved: 100000, expiresAt: expiredAt });
+    const waitingJobId = await insertMediaJob({
+      userId,
+      accountId,
+      status: "waiting_provider",
+      reserved: 100000,
+      expiresAt: expiredAt,
+    });
+
+    const { data: finalized, error: finalizeError } = await admin.rpc("finalize_expired_media_jobs_for_reconciliation", {
+      p_limit: 25,
+      p_now: now,
+    });
+    expect(finalizeError).toBeNull();
+    expect(new Set((finalized ?? []).map((row: { id: string }) => row.id))).toEqual(new Set([
+      creatingJobId,
+      queuedJobId,
+      runningJobId,
+      waitingJobId,
+    ]));
+
+    const { data: jobs, error: jobsError } = await admin
+      .from("generation_jobs")
+      .select("id, status, error, final_cost_usd_micros, completed_at")
+      .in("id", [creatingJobId, queuedJobId, runningJobId, waitingJobId]);
+    expect(jobsError).toBeNull();
+    for (const job of jobs ?? []) {
+      expect(job).toMatchObject({
+        status: "failed",
+        error: "media_job_timed_out",
+        final_cost_usd_micros: 0,
+      });
+      expect(job.completed_at).toBeTruthy();
+    }
+
+    const { data: reconciliationRows, error: reconciliationError } = await admin.rpc(
+      "find_media_jobs_for_trigger_reconciliation",
+      {
+        p_limit: 25,
+        p_now: now,
+      }
+    );
+    expect(reconciliationError).toBeNull();
+    const reconciliationIds = new Set((reconciliationRows ?? []).map((row: ReconciliationRpcRow) => row.id));
+    expect(reconciliationIds.has(creatingJobId)).toBe(false);
+    expect(reconciliationIds.has(queuedJobId)).toBe(false);
+    expect(reconciliationIds.has(runningJobId)).toBe(false);
+    expect(reconciliationIds.has(waitingJobId)).toBe(false);
+  });
+
+  it("does not derive unknown media operations as video during reconciliation", async () => {
+    const admin = getAdminClient();
+    const { userId, accountId } = await createUserAndAccount();
+    const jobId = await insertMediaJob({
+      userId,
+      accountId,
+      status: "queued",
+      reserved: 100000,
+      operation: "unknown_generation",
+    });
+    const staleQueuedCreatedAt = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+    await admin.from("generation_jobs").update({ created_at: staleQueuedCreatedAt }).eq("id", jobId);
+
+    const { data, error } = await admin.rpc("find_media_jobs_for_trigger_reconciliation", {
+      p_limit: 25,
+      p_now: new Date().toISOString(),
+    });
+
+    expect(error).toBeNull();
+    expect((data ?? []).some((row: ReconciliationRpcRow) => row.id === jobId)).toBe(false);
+  });
+
+  it("records Trigger dispatch metadata under generation job input", async () => {
+    const admin = getAdminClient();
+    const { userId, accountId } = await createUserAndAccount();
+    const jobId = await insertMediaJob({ userId, accountId, status: "queued", reserved: 100000 });
+
+    const { data, error } = await admin.rpc("record_media_job_trigger_dispatch", {
+      p_job_id: jobId,
+      p_run_id: "run_123",
+      p_dispatch_source: "reconcile",
+      p_idempotency_key: jobId,
+      p_dispatched_at: "2026-07-01T12:00:00.000Z",
+    });
+
+    expect(error).toBeNull();
+    expect(data?.input?.trigger_dispatch).toEqual({
+      run_id: "run_123",
+      dispatch_source: "reconcile",
+      idempotency_key: jobId,
+      dispatched_at: "2026-07-01T12:00:00+00:00",
+    });
+  });
+
   it("rejects settlement with a stale claim token", async () => {
     const admin = getAdminClient();
     const { userId, accountId } = await createUserAndAccount();
@@ -282,6 +397,7 @@ async function createUserAndAccount() {
   });
   if (userError) throw userError;
   const userId = userResult.user.id;
+  createdUserIds.add(userId);
 
   const { data: account, error: accountError } = await admin
     .from("billing_accounts")
@@ -303,12 +419,16 @@ async function insertMediaJob({
   status,
   reserved,
   inputAssetIds = [],
+  expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  operation = "video_generation",
 }: {
   userId: string;
   accountId: string;
   status: string;
   reserved: number;
   inputAssetIds?: string[];
+  expiresAt?: string;
+  operation?: string;
 }) {
   const admin = getAdminClient();
   const { data, error } = await admin
@@ -324,12 +444,12 @@ async function insertMediaJob({
       reserved_amount_usd_micros: reserved,
       input: {
         media_model_id: "frontier-video",
-        operation: "video_generation",
+        operation,
         parameters: { prompt: "test" },
         input_asset_ids: inputAssetIds,
       },
       progress: {},
-      expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      expires_at: expiresAt,
     })
     .select("id")
     .single();
