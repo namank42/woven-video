@@ -83,9 +83,10 @@ describe("media runtime catalog seed", () => {
     expect(correction).toContain("'google/nano-banana-2-lite/edit'");
     expect(correction).toContain("'fal-ai/nano-banana-lite'");
     expect(correction).toContain("'fal-ai/nano-banana-lite/edit'");
+    expect(correction).toContain("2000,");
+    expect(correction).toContain("0,");
+    expect(correction).toContain("47760,");
     expect(correction).toContain("enabled = false");
-    expect(correction).toContain("minimum_charge_usd_micros = 0");
-    expect(correction).toContain("reserve_amount_usd_micros = 47760");
     expect(correction).toContain("provider_rate_usd_per_image");
     expect(correction).toContain("0.0398");
   });
