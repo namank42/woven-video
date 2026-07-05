@@ -1,20 +1,27 @@
 {
-  "Rules": [
+  "rules": [
     {
-      "ID": "delete-local-smoke-media-after-7-days",
-      "Status": "Enabled",
-      "Filter": {
-        "Prefix": "users/"
+      "id": "delete-local-smoke-media-after-7-days",
+      "enabled": true,
+      "conditions": {
+        "prefix": "users/"
       },
-      "Expiration": {
-        "Days": 7
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 604800
+        }
       }
     },
     {
-      "ID": "abort-incomplete-dev-media-uploads-after-1-day",
-      "Status": "Enabled",
-      "AbortIncompleteMultipartUpload": {
-        "DaysAfterInitiation": 1
+      "id": "abort-incomplete-dev-media-uploads-after-1-day",
+      "enabled": true,
+      "conditions": {},
+      "abortMultipartUploadsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 86400
+        }
       }
     }
   ]
