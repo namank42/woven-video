@@ -24,7 +24,7 @@ Local provider smoke:
 - Local app route: `http://127.0.0.1:3000`
 - Local Supabase: `http://127.0.0.1:54321`
 
-Both environments require Supabase migrations through `20260703190000_trigger_media_executor.sql`.
+Both environments require all Supabase migrations in this branch to be applied, including the current latest hosted-media migration such as `20260705120000_media_reconciliation_timeouts.sql`. Do not stop at `20260703190000_trigger_media_executor.sql`.
 
 Do not route all of `media.woven.video/*` to this Worker. The host also serves existing top-level landing and hero assets such as `woven-hero-v*.mp4` and `woven-hero-v*.png`; the Worker must only own `/uploads/*`, `/objects/*`, and `/internal/*`.
 
@@ -129,7 +129,7 @@ app.
 2. Set Worker secrets with `npx wrangler secret put`.
 3. Deploy the Cloudflare media edge Worker with `pnpm run media:edge:deploy`.
 4. Set app env vars in Vercel.
-5. Apply Supabase migrations.
+5. Apply all Supabase migrations in this branch.
 6. Deploy the app.
 7. Deploy Trigger.dev tasks with `pnpm run trigger:deploy`.
 8. After the cleanup task lands, confirm Vercel Cron is active for `/api/internal/media/cleanup`.
