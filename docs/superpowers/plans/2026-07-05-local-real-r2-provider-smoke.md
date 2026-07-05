@@ -864,9 +864,7 @@ Add this test for the new route:
     );
     const response = await POST(
       jsonRequest("/api/v1/media/uploads/asset_1/complete", {}),
-      { params: Promise.resolve({ assetId: "asset_1" }) } as RouteContext<
-        "/api/v1/media/uploads/[assetId]/complete"
-      >,
+      { params: Promise.resolve({ assetId: "asset_1" }) },
     );
 
     expect(dynamic).toBe("force-dynamic");
@@ -908,9 +906,7 @@ Add this test after it:
     const { POST } = await import("@/app/api/v1/media/uploads/[assetId]/complete/route");
     const response = await POST(
       jsonRequest("/api/v1/media/uploads/asset_1/complete", {}),
-      { params: Promise.resolve({ assetId: "asset_1" }) } as RouteContext<
-        "/api/v1/media/uploads/[assetId]/complete"
-      >,
+      { params: Promise.resolve({ assetId: "asset_1" }) },
     );
 
     expect(response.status).toBe(404);
@@ -974,9 +970,13 @@ import { getMediaEnv } from "@/lib/media/env";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+type UploadCompleteRouteContext = {
+  params: Promise<{ assetId: string }>;
+};
+
 export async function POST(
   request: Request,
-  context: RouteContext<"/api/v1/media/uploads/[assetId]/complete">,
+  context: UploadCompleteRouteContext,
 ) {
   const authResult = await requireApiAuth(request);
   if (!authResult.ok) return authResult.response;
@@ -1314,6 +1314,7 @@ Production:
 Local provider smoke:
 
 - Cloudflare R2 bucket: `woven-media-dev`
+- Cloudflare proxied DNS record for `media-dev.woven.video`
 - Cloudflare Worker routes:
   - `https://media-dev.woven.video/uploads/*`
   - `https://media-dev.woven.video/objects/*`
@@ -1364,6 +1365,11 @@ Verify Wrangler is logged into the Cloudflare account that owns `woven.video`:
 npx wrangler whoami
 npx wrangler r2 bucket list
 ```
+
+Verify `media-dev.woven.video` has a proxied DNS record in Cloudflare. Worker Routes require a
+proxied DNS record for the hostname. If there is no real origin for this dev hostname, create a
+proxied `AAAA` record pointing to `100::` through the Cloudflare dashboard or API before deploying
+the Worker routes.
 
 Create the dev bucket if it is missing:
 
@@ -1480,6 +1486,7 @@ git commit -m "docs(media): document local real r2 smoke setup"
 - Consumes: Cloudflare account with access to the `woven.video` zone
 - Consumes: `workers/media/wrangler.jsonc`
 - Consumes: `workers/media/r2-dev-lifecycle.json`
+- Produces: proxied Cloudflare DNS for `media-dev.woven.video`
 - Produces: deployed dev Worker at `https://media-dev.woven.video`
 - Produces: dev R2 bucket `woven-media-dev`
 
@@ -1494,7 +1501,29 @@ npx wrangler r2 bucket list
 
 Expected: Wrangler is authenticated to the account that owns `woven.video`. If it is not, stop and ask the user to switch accounts or provide the right Cloudflare token.
 
-- [ ] **Step 2: Create dev bucket if missing**
+- [ ] **Step 2: Verify or create dev DNS record**
+
+Check whether the dev media hostname resolves:
+
+```bash
+node --input-type=module -e 'import { resolveAny } from "node:dns/promises";
+try {
+  const records = await resolveAny("media-dev.woven.video");
+  console.log(JSON.stringify(records, null, 2));
+} catch (error) {
+  console.error(error);
+  process.exit(1);
+}'
+```
+
+Expected: DNS records exist for `media-dev.woven.video`.
+
+If DNS does not resolve, create a proxied DNS record in Cloudflare for `media-dev.woven.video` before
+continuing. If there is no real origin, use a proxied `AAAA` record pointing to `100::`. If the local
+Wrangler/API credentials cannot create DNS records, stop and ask the user to create it in the
+Cloudflare dashboard instead of deploying a Worker route that cannot receive traffic.
+
+- [ ] **Step 3: Create dev bucket if missing**
 
 Run only if `woven-media-dev` is not in the bucket list:
 
@@ -1504,7 +1533,7 @@ npx wrangler r2 bucket create woven-media-dev
 
 Expected: command succeeds or reports the bucket already exists.
 
-- [ ] **Step 3: Apply dev lifecycle policy**
+- [ ] **Step 4: Apply dev lifecycle policy**
 
 Run:
 
@@ -1514,7 +1543,7 @@ npx wrangler r2 bucket lifecycle set woven-media-dev --file workers/media/r2-dev
 
 Expected: lifecycle policy is accepted.
 
-- [ ] **Step 4: Set dev Worker secrets**
+- [ ] **Step 5: Set dev Worker secrets**
 
 Run:
 
@@ -1525,7 +1554,7 @@ npx wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangl
 
 Expected: both secrets are stored for the `dev` environment. Use the same `MEDIA_TOKEN_SECRET` value that local `.env.local` uses for provider smoke. Do not paste secrets into source files or chat.
 
-- [ ] **Step 5: Deploy dev Worker**
+- [ ] **Step 6: Deploy dev Worker**
 
 Run:
 
@@ -1535,7 +1564,7 @@ pnpm run media:edge:deploy:dev
 
 Expected: Wrangler deploys the `woven-media-dev` Worker environment with routes for `media-dev.woven.video/uploads/*`, `/objects/*`, and `/internal/*`.
 
-- [ ] **Step 6: Verify app-side local smoke config**
+- [ ] **Step 7: Verify app-side local smoke config**
 
 Check `.env.local` manually or with a non-printing grep that does not reveal secrets:
 
@@ -1550,7 +1579,7 @@ MEDIA_BASE_URL=https://media-dev.woven.video
 MEDIA_UPLOAD_COMPLETION_MODE=manual
 ```
 
-- [ ] **Step 7: Run focused tests**
+- [ ] **Step 8: Run focused tests**
 
 Run:
 
@@ -1560,7 +1589,7 @@ pnpm test tests/media/env.test.ts tests/media/media-worker.test.ts tests/media/a
 
 Expected: PASS.
 
-- [ ] **Step 8: Run full test suite**
+- [ ] **Step 9: Run full test suite**
 
 Run:
 
@@ -1570,7 +1599,7 @@ pnpm test
 
 Expected: PASS, allowing any pre-existing skipped tests.
 
-- [ ] **Step 9: Run build**
+- [ ] **Step 10: Run build**
 
 Run:
 
@@ -1580,7 +1609,7 @@ pnpm run build
 
 Expected: PASS. If this fails only because the sandbox cannot bind a Turbopack port, rerun outside the sandbox and record that the outside-sandbox build passed.
 
-- [ ] **Step 10: Commit any verification doc updates**
+- [ ] **Step 11: Commit any verification doc updates**
 
 If Task 6 reveals a runbook correction, commit only that doc correction:
 

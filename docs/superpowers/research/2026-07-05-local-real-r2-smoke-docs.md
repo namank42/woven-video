@@ -24,8 +24,11 @@
 - Wrangler deploy accepts `--env <name>`, for example `npx wrangler deploy --env staging`.
 - Worker variables and bindings are configured in Wrangler config, while secrets are uploaded separately with `wrangler secret put` or set in the Cloudflare dashboard.
 - Docs show environment-specific routes and vars under `env.<name>`, including multiple production routes.
+- Worker Routes on subdomains require a Cloudflare proxied DNS record for that hostname. If the hostname has no real origin, Cloudflare docs describe a proxied `AAAA` record pointing to `100::` as a placeholder; Cloudflare recommends Custom Domains when the Worker owns the whole hostname.
 - Source: Context7 `/websites/developers_cloudflare_workers`, queried 2026-07-05:
   - `workers/wrangler/environments`
+  - `workers/configuration/routing/routes`
+  - `workers/configuration/routing/custom-domains`
   - Worker variables, secrets, and bindings docs
 
 ## Wrangler R2 Provisioning (context7: `/websites/developers_cloudflare_r2`)
