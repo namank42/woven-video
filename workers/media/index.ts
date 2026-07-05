@@ -4,7 +4,10 @@ type Env = {
   MEDIA_WORKER_SHARED_SECRET: string;
   WOVEN_API_BASE_URL: string;
   MEDIA_MAX_UPLOAD_BYTES: string;
+  UPLOAD_COMPLETION_MODE?: string;
 };
+
+type UploadCompletionMode = "callback" | "manual";
 
 type UploadTokenPayload = {
   kind: "upload";
@@ -97,6 +100,11 @@ async function handleUpload(
     return textResponse("Missing body", 400);
   }
 
+  const uploadCompletionMode = parseUploadCompletionMode(env.UPLOAD_COMPLETION_MODE);
+  if (!uploadCompletionMode) {
+    return textResponse("Invalid upload completion mode", 500);
+  }
+
   await env.MEDIA_BUCKET.put(payload.key, request.body, {
     httpMetadata: { contentType },
     customMetadata: {
@@ -106,7 +114,7 @@ async function handleUpload(
     },
   });
 
-  if (payload.jobId) {
+  if (payload.jobId || uploadCompletionMode === "manual") {
     return jsonResponse({ ok: true });
   }
 
@@ -399,6 +407,14 @@ function parsePositiveInteger(value: string | null): number | null {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed <= 0) return null;
   return parsed;
+}
+
+function parseUploadCompletionMode(raw: string | undefined): UploadCompletionMode | null {
+  const value = raw?.trim() || "callback";
+  if (value === "callback" || value === "manual") {
+    return value;
+  }
+  return null;
 }
 
 async function rollbackUploadedObject(env: Env, key: string): Promise<void> {

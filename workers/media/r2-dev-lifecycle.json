@@ -1,0 +1,21 @@
+{
+  "Rules": [
+    {
+      "ID": "delete-local-smoke-media-after-7-days",
+      "Status": "Enabled",
+      "Filter": {
+        "Prefix": "users/"
+      },
+      "Expiration": {
+        "Days": 7
+      }
+    },
+    {
+      "ID": "abort-incomplete-dev-media-uploads-after-1-day",
+      "Status": "Enabled",
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}

@@ -8,6 +8,7 @@ type WorkerEnv = {
   MEDIA_WORKER_SHARED_SECRET: string;
   WOVEN_API_BASE_URL: string;
   MEDIA_MAX_UPLOAD_BYTES: string;
+  UPLOAD_COMPLETION_MODE?: string;
 };
 
 type PutRecord = {
@@ -128,6 +129,60 @@ describe("media Worker", () => {
         }),
       }),
     );
+  });
+
+  it("writes valid input uploads in manual mode without calling the completion endpoint", async () => {
+    const env = testEnv({ uploadCompletionMode: "manual" });
+    const token = await uploadToken({
+      key: "users/user_1/media/tmp/asset_1/input.png",
+      sizeBytes: 14,
+    });
+    const completionFetch = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal("fetch", completionFetch);
+
+    const response = await mediaWorker.fetch(new Request(
+      `https://media.example.test/uploads/asset_1?token=${token}`,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "image/png",
+          "content-length": "14",
+        },
+        body: "uploaded bytes",
+      },
+    ), env);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(env.MEDIA_BUCKET.puts).toEqual([{
+      key: "users/user_1/media/tmp/asset_1/input.png",
+      text: "uploaded bytes",
+      options: {
+        httpMetadata: { contentType: "image/png" },
+        customMetadata: { "user-id": "user_1", "asset-id": "asset_1" },
+      },
+    }]);
+    expect(completionFetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects unknown upload completion modes before storing the upload", async () => {
+    const env = testEnv({ uploadCompletionMode: "client" });
+    const token = await uploadToken({
+      key: "users/user_1/media/tmp/asset_1/input.png",
+      sizeBytes: 5,
+    });
+    const completionFetch = vi.fn();
+    vi.stubGlobal("fetch", completionFetch);
+
+    const response = await mediaWorker.fetch(uploadRequest("asset_1", token, {
+      body: "hello",
+      contentLength: "5",
+    }), env);
+
+    expect(response.status).toBe(500);
+    await expect(response.text()).resolves.toBe("Invalid upload completion mode");
+    expect(env.MEDIA_BUCKET.puts).toEqual([]);
+    expect(completionFetch).not.toHaveBeenCalled();
   });
 
   it("writes valid output uploads to R2 without calling the completion endpoint", async () => {
@@ -661,13 +716,17 @@ describe("media Worker", () => {
   });
 });
 
-function testEnv(options: { maxUploadBytes?: string } = {}): WorkerEnv {
+function testEnv(options: {
+  maxUploadBytes?: string;
+  uploadCompletionMode?: string;
+} = {}): WorkerEnv {
   return {
     MEDIA_BUCKET: new FakeBucket(),
     MEDIA_TOKEN_SECRET: "token-secret",
     MEDIA_WORKER_SHARED_SECRET: "worker-secret",
     WOVEN_API_BASE_URL: "https://app.example.test/",
     MEDIA_MAX_UPLOAD_BYTES: options.maxUploadBytes ?? "1000",
+    UPLOAD_COMPLETION_MODE: options.uploadCompletionMode,
   };
 }
 

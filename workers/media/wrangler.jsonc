@@ -26,6 +26,38 @@
   ],
   "vars": {
     "WOVEN_API_BASE_URL": "https://www.woven.video",
-    "MEDIA_MAX_UPLOAD_BYTES": "104857600"
+    "MEDIA_MAX_UPLOAD_BYTES": "104857600",
+    "UPLOAD_COMPLETION_MODE": "callback"
+  },
+  "env": {
+    "dev": {
+      "name": "woven-media-dev",
+      "routes": [
+        {
+          "pattern": "media-dev.woven.video/uploads/*",
+          "zone_name": "woven.video"
+        },
+        {
+          "pattern": "media-dev.woven.video/objects/*",
+          "zone_name": "woven.video"
+        },
+        {
+          "pattern": "media-dev.woven.video/internal/*",
+          "zone_name": "woven.video"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "MEDIA_BUCKET",
+          "bucket_name": "woven-media-dev",
+          "remote": true
+        }
+      ],
+      "vars": {
+        "WOVEN_API_BASE_URL": "https://www.woven.video",
+        "MEDIA_MAX_UPLOAD_BYTES": "104857600",
+        "UPLOAD_COMPLETION_MODE": "manual"
+      }
+    }
   }
 }
