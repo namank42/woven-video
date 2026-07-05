@@ -71,6 +71,8 @@ describe("media runtime catalog seed", () => {
         reserveAmountUsdMicros: 47_760,
       });
     }
+    expect(rows.has("fal-ai/nano-banana-lite")).toBe(false);
+    expect(rows.has("fal-ai/nano-banana-lite/edit")).toBe(false);
   });
 
   it("includes a follow-up migration for databases that already applied the old Nano Banana Lite price", () => {
