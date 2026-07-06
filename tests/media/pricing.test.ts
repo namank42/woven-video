@@ -14,6 +14,23 @@ const model = {
   },
 } as unknown as MediaModel;
 
+const SIZED_RATES = {
+  low: { standard: "0.01", large: "0.01", max: "0.02" },
+  medium: { standard: "0.07", large: "0.07", max: "0.13" },
+  high: { standard: "0.27", large: "0.28", max: "0.51" },
+};
+
+const sizedModel = mediaModel({
+  pricing: { ...model.pricing, markupBps: 2_000, minimumUsdMicros: 10_000 },
+  pricingFormula: {
+    type: "gpt_image_sized",
+    size_parameter: "image_size",
+    quality_parameter: "quality",
+    image_parameter: "num_images",
+    provider_rate_usd_by_quality_and_size: SIZED_RATES,
+  } as unknown as MediaModel["pricingFormula"],
+});
+
 describe("chargeMediaUsdMicros", () => {
   it("applies 20 percent markup over raw cost", () => {
     expect(chargeMediaUsdMicros({ model, rawCostUsd: "0.25" })).toMatchObject({
@@ -138,6 +155,31 @@ describe("quoteMediaJob", () => {
       }),
       parameters: { duration: "auto", resolution: "720p" },
     })).toThrow("media_quote_requires_explicit_duration");
+  });
+});
+
+describe("gpt_image_sized", () => {
+  it("prices named presets at the standard tier", () => {
+    const quote = quoteMediaJob({ model: sizedModel, parameters: { quality: "high", image_size: "landscape_4_3" } });
+    expect(quote.providerCostUsdMicros).toBe(270_000);
+    expect(quote.chargedAmountUsdMicros).toBe(324_000); // +20% markup
+    expect(quote.inputs.size_tier).toBe("standard");
+  });
+  it("prices auto size at the large tier", () => {
+    const quote = quoteMediaJob({ model: sizedModel, parameters: { quality: "high", image_size: "auto" } });
+    expect(quote.providerCostUsdMicros).toBe(280_000);
+  });
+  it("prices custom dimensions by megapixels", () => {
+    const quote = quoteMediaJob({ model: sizedModel, parameters: { quality: "medium", image_size: { width: 3840, height: 2160 } } });
+    expect(quote.providerCostUsdMicros).toBe(130_000); // 8.29 MP -> max tier
+  });
+  it("multiplies by num_images and treats auto quality as high", () => {
+    const quote = quoteMediaJob({ model: sizedModel, parameters: { quality: "auto", num_images: 3 } });
+    expect(quote.providerCostUsdMicros).toBe(3 * 270_000); // default size -> standard
+  });
+  it("rejects sizes above the priced 4K tier", () => {
+    expect(() => quoteMediaJob({ model: sizedModel, parameters: { image_size: { width: 3840, height: 3840 } } }))
+      .toThrow("media_quote_unsupported_size");
   });
 });
 

@@ -10,7 +10,7 @@ export function quoteMediaJob({
 }): MediaPricingQuote {
   const formula = model.pricingFormula;
 
-  switch (formula.type) {
+  switch (formula.type as string) {
     case "nano_banana":
       return quoteProviderCost(
         model,
@@ -47,6 +47,21 @@ export function quoteMediaJob({
       );
     case "music_minutes":
       return quoteMusic(model, formula, parameters);
+    case "gpt_image_sized": {
+      const sizeParameter = stringValue(formula.size_parameter) ?? "image_size";
+      const tier = gptImageSizeTier(parameters[sizeParameter]);
+      return quoteProviderCost(
+        model,
+        "conservative_quote",
+        "gpt_image_sized",
+        quoteGptImageSizedProviderCost(formula, parameters, tier),
+        {
+          num_images: integerParameter(parameters, stringValue(formula.image_parameter) ?? "num_images", 1),
+          quality: stringParameter(parameters, stringValue(formula.quality_parameter) ?? "quality", "high"),
+          size_tier: tier,
+        },
+      );
+    }
     case "gpt_image_conservative":
       return quoteProviderCost(
         model,
@@ -230,6 +245,47 @@ function quoteMusic(
     formula: "music_minutes",
     inputs: { music_length_ms: musicLengthMs },
   };
+}
+
+const GPT_IMAGE_SIZE_PRESETS_MEGAPIXELS: Record<string, number> = {
+  square_hd: 1.05, square: 0.27, portrait_4_3: 0.79,
+  portrait_16_9: 0.59, landscape_4_3: 0.79, landscape_16_9: 0.59,
+};
+const GPT_IMAGE_SIZE_TIERS = [
+  { tier: "standard", maxMegapixels: 2.1 },
+  { tier: "large", maxMegapixels: 3.7 },
+  { tier: "max", maxMegapixels: 8.3 },
+] as const;
+
+export function gptImageSizeTier(imageSize: unknown): "standard" | "large" | "max" {
+  if (isRecord(imageSize)) {
+    const width = positiveNumberValue(imageSize.width);
+    const height = positiveNumberValue(imageSize.height);
+    if (!width || !height) throw new Error("media_quote_unsupported_size");
+    const megapixels = (width * height) / 1_000_000;
+    const match = GPT_IMAGE_SIZE_TIERS.find((entry) => megapixels <= entry.maxMegapixels);
+    if (!match) throw new Error("media_quote_unsupported_size");
+    return match.tier;
+  }
+  const name = stringValue(imageSize);
+  if (!name) return "standard";
+  if (name === "auto") return "large";
+  if (name in GPT_IMAGE_SIZE_PRESETS_MEGAPIXELS) return "standard";
+  throw new Error("media_quote_unsupported_size");
+}
+
+function quoteGptImageSizedProviderCost(
+  formula: MediaPricingFormula,
+  parameters: Record<string, unknown>,
+  tier: "standard" | "large" | "max",
+) {
+  const rates = recordValue(formula.provider_rate_usd_by_quality_and_size);
+  const quality = stringParameter(parameters, stringValue(formula.quality_parameter) ?? "quality", "high");
+  const normalizedQuality = quality === "auto" ? "high" : quality;
+  const numImages = integerParameter(parameters, stringValue(formula.image_parameter) ?? "num_images", 1);
+  const tierRates = recordValue(rates?.[normalizedQuality]) ?? recordValue(rates?.high);
+  const rate = stringValue(tierRates?.[tier]) ?? stringValue(tierRates?.max) ?? "0";
+  return usdToMicrosCeil(rate) * numImages;
 }
 
 function quoteGptImageProviderCost(
