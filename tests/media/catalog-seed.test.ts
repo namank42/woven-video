@@ -11,6 +11,10 @@ const nanoBananaLiteEndpointMigrationPath = join(
   process.cwd(),
   "supabase/migrations/20260705131500_migrate_nano_banana_2_lite_endpoints.sql",
 );
+const gptImageSizedRatesMigrationPath = join(
+  process.cwd(),
+  "supabase/migrations/20260706122000_reseed_gpt_image_sized_rates.sql",
+);
 
 describe("media runtime catalog seed", () => {
   it("seeds every pricing-page media model id", () => {
@@ -91,6 +95,28 @@ describe("media runtime catalog seed", () => {
     expect(correction).toContain("0.0398");
   });
 
+  it("includes a GPT Image 2 sized-rate reseed migration", () => {
+    expect(existsSync(gptImageSizedRatesMigrationPath)).toBe(true);
+    const reseed = readFileSync(gptImageSizedRatesMigrationPath, "utf8");
+
+    expect(reseed).toContain("update public.model_pricing_rules");
+    expect(reseed).toContain("minimum_charge_usd_micros = 10000");
+    expect(reseed).toContain("where provider = 'fal'");
+    expect(reseed).toContain("and model in ('openai/gpt-image-2', 'openai/gpt-image-2/edit')");
+    expect(reseed).toContain("and operation = 'image_generation'");
+    expect(extractPricingFormula(reseed)).toEqual({
+      type: "gpt_image_sized",
+      size_parameter: "image_size",
+      quality_parameter: "quality",
+      image_parameter: "num_images",
+      provider_rate_usd_by_quality_and_size: {
+        low: { standard: "0.01", large: "0.01", max: "0.02" },
+        medium: { standard: "0.07", large: "0.07", max: "0.13" },
+        high: { standard: "0.27", large: "0.28", max: "0.51" },
+      },
+    });
+  });
+
   it("seeds Seedance reference rows with cross-role input asset constraints", () => {
     const rows = metadataRows();
     for (const id of [
@@ -138,4 +164,10 @@ function seedColumnsForModel(modelId: string) {
     minimumChargeUsdMicros: Number(match?.[2]),
     reserveAmountUsdMicros: Number(match?.[3]),
   };
+}
+
+function extractPricingFormula(sql: string) {
+  const match = sql.match(/\$\$([\s\S]*?)\$\$::jsonb/);
+  expect(match).not.toBeNull();
+  return JSON.parse(match?.[1] ?? "{}") as Record<string, unknown>;
 }
