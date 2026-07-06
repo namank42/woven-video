@@ -50,6 +50,7 @@ describe("Fal media webhook route", () => {
     const admin = mockSupabaseWebhookFlow({
       selectResults: [
         { data: null, error: null },
+        { data: { id: "job_hint_1" }, error: null },
         {
           data: {
             id: "job_hint_1",
@@ -129,7 +130,7 @@ describe("Fal media webhook route", () => {
         { data: null, error: null },
         { data: null, error: null },
       ],
-      updateResults: [{ error: null }, { error: null }],
+      updateResults: [{ error: null }],
     });
     mockFalWebhookVerifier();
     const dispatchMediaJob = vi.fn(async () => ({ runId: "run_1" }));
@@ -145,9 +146,9 @@ describe("Fal media webhook route", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(admin.updateOperations).toContainEqual({
+    expect(admin.selectOperations).toContainEqual({
       table: "generation_jobs",
-      values: { provider_job_id: "fal_req_hint_miss" },
+      columns: "id",
       filters: [
         ["eq", "id", "job_hint_1"],
         ["eq", "provider_attempt_nonce", "nonce_wrong"],
@@ -157,6 +158,7 @@ describe("Fal media webhook route", () => {
         ["in", "status", ["running", "waiting_provider"]],
       ],
     });
+    expect(admin.updateOperations).toEqual([]);
     expect(dispatchMediaJob).not.toHaveBeenCalled();
   });
 

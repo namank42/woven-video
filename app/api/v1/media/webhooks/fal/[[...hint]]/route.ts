@@ -71,6 +71,24 @@ export async function POST(request: Request, context: RouteContext) {
     .maybeSingle();
 
   if (!mapped?.id && hintJobId && hintNonce) {
+    const { data: hintedJob, error: hintError } = await admin
+      .from("generation_jobs")
+      .select("id")
+      .eq("id", hintJobId)
+      .eq("provider_attempt_nonce", hintNonce)
+      .eq("provider", "fal")
+      .eq("type", "media_job")
+      .is("provider_job_id", null)
+      .in("status", ["running", "waiting_provider"])
+      .maybeSingle();
+    if (hintError) {
+      console.error("Failed to load Fal webhook hint candidate", hintError);
+      return apiError("Unable to load media job webhook state.", 500, "provider_failed");
+    }
+    if (!hintedJob?.id) {
+      return okResponse();
+    }
+
     const { error: adoptError } = await admin
       .from("generation_jobs")
       .update({ provider_job_id: requestId })
@@ -156,14 +174,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
   }
 
-  return Response.json(
-    { ok: true },
-    {
-      headers: {
-        "cache-control": "no-store",
-      },
-    },
-  );
+  return okResponse();
 }
 
 function parseJsonObject(rawBody: Buffer): unknown {
@@ -172,4 +183,15 @@ function parseJsonObject(rawBody: Buffer): unknown {
   } catch {
     return null;
   }
+}
+
+function okResponse() {
+  return Response.json(
+    { ok: true },
+    {
+      headers: {
+        "cache-control": "no-store",
+      },
+    },
+  );
 }
