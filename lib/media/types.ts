@@ -81,7 +81,8 @@ export type MediaPricingFormula = {
     | "seedance_seconds"
     | "kling_seconds"
     | "music_minutes"
-    | "gpt_image_conservative";
+    | "gpt_image_conservative"
+    | "gpt_image_sized";
   [key: string]: unknown;
 };
 

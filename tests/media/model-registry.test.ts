@@ -145,6 +145,23 @@ describe("parseMediaModel", () => {
       },
     }))).toBeNull();
   });
+
+  it("parses rows with gpt image sized pricing formula metadata", () => {
+    const model = parseMediaModel(validRule({
+      model: "openai/gpt-image-2",
+      operation: "image_generation",
+      display_name: "GPT Image 2",
+      metadata: {
+        public_id: "openai/gpt-image-2",
+        provider_endpoint: "openai/gpt-image-2",
+        kind: "image",
+        pricing_formula: { type: "gpt_image_sized" },
+      },
+    }));
+
+    expect(model).not.toBeNull();
+    expect(model?.pricingFormula.type).toBe("gpt_image_sized");
+  });
 });
 
 function validRule(overrides: Partial<ModelPricingRule> & { metadata?: Record<string, unknown> } = {}): ModelPricingRule {
