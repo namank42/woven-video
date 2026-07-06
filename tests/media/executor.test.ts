@@ -71,6 +71,7 @@ describe("processMediaJob", () => {
       uploadUrlTtlSeconds: 900,
       downloadUrlTtlSeconds: 900,
       outputRetentionSeconds: 2_592_000,
+      falWebhookBaseUrl: null,
     });
     mocks.signMediaToken.mockImplementation(async (payload: { assetId?: string }) =>
       `token-for-${payload.assetId}`
@@ -201,6 +202,7 @@ describe("processMediaJob", () => {
       inputUrls: [],
       inputAssets: [],
       providerJobId: null,
+      webhookUrl: null,
       signal: undefined,
     });
     expect(adapter.run).toHaveBeenNthCalledWith(2, {
@@ -209,7 +211,131 @@ describe("processMediaJob", () => {
       inputUrls: [],
       inputAssets: [],
       providerJobId: "fal_req_1",
+      webhookUrl: null,
       signal: undefined,
+    });
+  });
+
+  it("persists an attempt nonce and passes a hinted webhook url before submitting", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    mocks.getMediaEnv.mockReturnValue({
+      baseUrl: "https://media.example.test",
+      tokenSecret: "token-secret",
+      workerSharedSecret: "worker-secret",
+      maxUploadBytes: 1000,
+      uploadUrlTtlSeconds: 900,
+      downloadUrlTtlSeconds: 900,
+      outputRetentionSeconds: 2_592_000,
+      falWebhookBaseUrl: "https://hooks.example.test",
+    });
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow(), null],
+      providerAttemptRows: [{ provider_attempt_nonce: null, progress: {} }],
+    });
+    const adapter = {
+      run: vi.fn(async () => {
+        admin.events.push("adapter.run");
+        return {
+          status: "waiting_provider" as const,
+          providerJobId: "fal_req_1",
+        };
+      }),
+    } satisfies MediaProviderAdapter;
+
+    await expect(processMediaJob({
+      jobId: "job_1",
+      adapters: { fal: adapter },
+      waitFor: async () => undefined,
+    })).resolves.toEqual({
+      jobId: "job_1",
+      status: "not_claimed",
+    });
+
+    const updatePayload = admin.generationJobs.update.mock.calls[0]?.[0] as Record<string, unknown> | undefined;
+    const nonce = updatePayload?.provider_attempt_nonce;
+    expect(nonce).toEqual(expect.stringMatching(/^[0-9a-f-]{36}$/));
+    expect(admin.generationJobs.updateEq).toHaveBeenCalledWith("id", "job_1");
+    expect(admin.generationJobs.updateEq).toHaveBeenCalledWith("claim_token", claimToken);
+    expect(admin.generationJobs.updateIs).toHaveBeenCalledWith("provider_job_id", null);
+    expect(admin.events.indexOf("generation_jobs.update.maybeSingle"))
+      .toBeLessThan(admin.events.indexOf("adapter.run"));
+    expect(adapter.run).toHaveBeenCalledWith(expect.objectContaining({
+      providerJobId: null,
+      webhookUrl: `https://hooks.example.test/api/v1/media/webhooks/fal/job_1/${nonce}`,
+    }));
+  });
+
+  it("does not resubmit when a nonce exists without a provider job id", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow({ provider_job_id: null }), null],
+      providerAttemptRows: [{ provider_attempt_nonce: "nonce_existing", progress: {} }],
+    });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "waiting_provider" as const,
+        providerJobId: "fal_req_1",
+      })),
+    } satisfies MediaProviderAdapter;
+    const waitFor = vi.fn(async () => undefined);
+
+    await expect(processMediaJob({ jobId: "job_1", adapters: { fal: adapter }, waitFor })).resolves.toEqual({
+      jobId: "job_1",
+      status: "not_claimed",
+    });
+
+    expect(adapter.run).not.toHaveBeenCalled();
+    expect(waitFor).toHaveBeenCalledWith({ seconds: 5 });
+    expect(admin.generationJobs.update).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "mark_media_job_waiting_provider", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_provider_job_id: null,
+      p_progress: {
+        stage: "provider_wait",
+        percent: null,
+        message: "Waiting on provider",
+      },
+    });
+  });
+
+  it("returns waiting_provider when persisting the provider job id keeps failing", async () => {
+    vi.useFakeTimers();
+    mocks.getMediaModel.mockResolvedValue(model);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const admin = mockAdminWith({
+      claimedJobs: [jobRow(), null],
+      providerAttemptRows: [{ provider_attempt_nonce: null, progress: {} }],
+      rpcResults: {
+        mark_media_job_waiting_provider: {
+          data: null,
+          error: { message: "temporary persist outage" },
+        },
+      },
+    });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "waiting_provider" as const,
+        providerJobId: "provider_new",
+      })),
+    } satisfies MediaProviderAdapter;
+    const waitFor = vi.fn(async () => undefined);
+
+    const result = processMediaJob({ jobId: "job_1", adapters: { fal: adapter }, waitFor });
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(2000);
+    await expect(result).resolves.toEqual({
+      jobId: "job_1",
+      status: "not_claimed",
+    });
+
+    expect(admin.rpc.mock.calls.filter(([name]) => name === "mark_media_job_waiting_provider")).toHaveLength(3);
+    expect(waitFor).toHaveBeenCalledWith({ seconds: 5 });
+    expect(error).toHaveBeenCalledWith("media_provider_job_id_persist_failed", {
+      jobId: "job_1",
+      providerJobId: "provider_new",
+      message: "temporary persist outage",
     });
   });
 
@@ -377,7 +503,7 @@ describe("processMediaJob", () => {
         status: "not_claimed",
       });
 
-    expect(admin.tables).toEqual(["media_assets"]);
+    expect(admin.tables).toEqual(["media_assets", "generation_jobs", "generation_jobs"]);
     expect(mocks.signMediaToken).toHaveBeenNthCalledWith(1, {
       kind: "download",
       sub: "user_1",
@@ -416,6 +542,7 @@ describe("processMediaJob", () => {
         },
       ],
       providerJobId: null,
+      webhookUrl: null,
       signal: undefined,
     });
   });
@@ -482,6 +609,7 @@ describe("processMediaJob", () => {
         },
       ],
       providerJobId: null,
+      webhookUrl: null,
       signal: undefined,
     });
   });
@@ -528,6 +656,7 @@ describe("processMediaJob", () => {
       ],
       inputAssets: [],
       providerJobId: null,
+      webhookUrl: null,
       signal: undefined,
     });
   });
@@ -592,7 +721,7 @@ describe("processMediaJob", () => {
         status: "stale_claim",
       });
 
-    expect(admin.tables).toEqual([]);
+    expect(admin.tables).toEqual(["generation_jobs", "generation_jobs"]);
     expect(admin.rpc).toHaveBeenCalledTimes(2);
   });
 
@@ -628,7 +757,7 @@ describe("processMediaJob", () => {
         status: "succeeded",
       });
 
-    expect(admin.tables).toEqual([]);
+    expect(admin.tables).toEqual(["generation_jobs", "generation_jobs"]);
     expect(admin.rpc).toHaveBeenNthCalledWith(2, "record_and_settle_claimed_media_job", {
       p_job_id: "job_1",
       p_claim_token: claimToken,
@@ -793,7 +922,7 @@ describe("processMediaJob", () => {
         status: "succeeded",
       });
 
-    expect(admin.tables).toEqual([]);
+    expect(admin.tables).toEqual(["generation_jobs", "generation_jobs"]);
     expect(admin.rpc).toHaveBeenCalledTimes(2);
     expect(mocks.createOutputAssetRows).toHaveBeenCalledWith({
       userId: "user_1",
@@ -919,7 +1048,7 @@ describe("processMediaJob", () => {
         status: "failed",
       });
 
-    expect(admin.tables).toEqual([]);
+    expect(admin.tables).toEqual(["generation_jobs", "generation_jobs"]);
     expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_claimed_media_job", {
       p_job_id: "job_1",
       p_claim_token: claimToken,
@@ -962,7 +1091,7 @@ describe("processMediaJob", () => {
     expect(JSON.stringify(admin.rpc.mock.calls)).not.toContain("api_key=secret");
   });
 
-  it("propagates provider_not_configured adapter errors without releasing the reservation", async () => {
+  it("releases the claim when the provider is not configured", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJob: jobRow() });
     const adapter = {
@@ -972,10 +1101,58 @@ describe("processMediaJob", () => {
     } satisfies MediaProviderAdapter;
 
     await expect(processMediaJob({ jobId: "job_1", adapters: { fal: adapter }, waitFor: async () => undefined }))
-      .rejects.toThrow("provider_not_configured");
+      .resolves.toEqual({
+        jobId: "job_1",
+        status: "failed",
+      });
 
-    expect(admin.tables).toEqual([]);
-    expect(admin.rpc).toHaveBeenCalledTimes(1);
+    expect(admin.tables).toEqual(["generation_jobs", "generation_jobs"]);
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_claimed_media_job", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_status: "failed",
+      p_error: "provider_not_configured",
+      p_metadata: { reason: "provider_not_configured" },
+    });
+  });
+
+  it("fails fast when the webhook recorded a provider error", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    const admin = mockAdminWith({
+      claimedJob: jobRow({ provider_job_id: "fal_req_failed" }),
+      providerAttemptRows: [{
+        provider_attempt_nonce: "nonce_existing",
+        progress: {
+          stage: "provider_webhook_error",
+          message: "Fal rejected the request",
+        },
+      }],
+    });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "succeeded" as const,
+        outputs: [{ url: "https://provider.example/output.mp4", type: "video" as const, contentType: "video/mp4" }],
+        rawCostUsd: 1,
+      })),
+    } satisfies MediaProviderAdapter;
+
+    await expect(processMediaJob({ jobId: "job_1", adapters: { fal: adapter }, waitFor: async () => undefined }))
+      .resolves.toEqual({
+        jobId: "job_1",
+        status: "failed",
+      });
+
+    expect(adapter.run).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenNthCalledWith(2, "release_claimed_media_job", {
+      p_job_id: "job_1",
+      p_claim_token: claimToken,
+      p_status: "failed",
+      p_error: "provider_failed",
+      p_metadata: {
+        reason: "provider_failed",
+        provider_error_message: "Fal rejected the request",
+      },
+    });
   });
 
   it("propagates adapter AbortError and does not release the reservation", async () => {
@@ -991,7 +1168,7 @@ describe("processMediaJob", () => {
     await expect(processMediaJob({ jobId: "job_1", adapters: { fal: adapter }, waitFor: async () => undefined }))
       .rejects.toBe(abortError);
 
-    expect(admin.tables).toEqual([]);
+    expect(admin.tables).toEqual(["generation_jobs", "generation_jobs"]);
     expect(admin.rpc).toHaveBeenCalledTimes(1);
   });
 
@@ -1016,7 +1193,7 @@ describe("processMediaJob", () => {
     })).rejects.toBe(abortError);
 
     expect(adapter.run).not.toHaveBeenCalled();
-    expect(admin.tables).toEqual([]);
+    expect(admin.tables).toEqual(["generation_jobs", "generation_jobs"]);
     expect(admin.rpc).toHaveBeenCalledTimes(1);
   });
 
@@ -1066,7 +1243,7 @@ describe("processMediaJob", () => {
         status: "stale_claim",
       });
 
-    expect(admin.tables).toEqual([]);
+    expect(admin.tables).toEqual(["generation_jobs", "generation_jobs"]);
     expect(admin.rpc).toHaveBeenCalledTimes(2);
     expect(mocks.failOutputAssetRowsForAttempt).toHaveBeenCalledWith({
       userId: "user_1",
@@ -1120,7 +1297,7 @@ describe("processMediaJob", () => {
         status: "stale_claim",
       });
 
-    expect(admin.tables).toEqual([]);
+    expect(admin.tables).toEqual(["generation_jobs"]);
     expect(admin.rpc).toHaveBeenCalledTimes(1);
   });
 });
@@ -1267,17 +1444,71 @@ function mockAdminWith({
   claimedJob,
   claimedJobs,
   inputAssetRows = [],
+  providerAttemptRows = [],
+  providerAttemptNoncePersistResults = [],
   rpcResults = {},
   rpcRejects = {},
 }: {
   claimedJob?: unknown | null;
   claimedJobs?: Array<unknown>;
   inputAssetRows?: Array<{ id: string; storage_key: string; content_type?: string }>;
+  providerAttemptRows?: Array<unknown>;
+  providerAttemptNoncePersistResults?: Array<SupabaseResult<unknown>>;
   rpcResults?: Record<string, SupabaseResult<unknown>>;
   rpcRejects?: Record<string, Error>;
 }) {
   const queue = claimedJobs ? [...claimedJobs] : [claimedJob];
   const tables: string[] = [];
+  const events: string[] = [];
+  const providerAttemptQueue = [...providerAttemptRows];
+  const providerAttemptNoncePersistQueue = [...providerAttemptNoncePersistResults];
+  const generationJobs = {
+    select: vi.fn((columns: string) => {
+      events.push(`generation_jobs.select:${columns}`);
+      return generationJobSelectChain;
+    }),
+    selectEq: vi.fn((column: string, value: unknown) => {
+      events.push(`generation_jobs.select.eq:${column}:${String(value)}`);
+      return generationJobSelectChain;
+    }),
+    selectSingle: vi.fn(async () => {
+      events.push("generation_jobs.select.single");
+      return {
+        data: providerAttemptQueue.shift() ?? { provider_attempt_nonce: null, progress: {} },
+        error: null,
+      };
+    }),
+    update: vi.fn((values: Record<string, unknown>) => {
+      events.push("generation_jobs.update");
+      return generationJobUpdateChain;
+    }),
+    updateEq: vi.fn((column: string, value: unknown) => {
+      events.push(`generation_jobs.update.eq:${column}:${String(value)}`);
+      return generationJobUpdateChain;
+    }),
+    updateIs: vi.fn((column: string, value: unknown) => {
+      events.push(`generation_jobs.update.is:${column}:${String(value)}`);
+      return generationJobUpdateChain;
+    }),
+    updateSelect: vi.fn((columns: string) => {
+      events.push(`generation_jobs.update.select:${columns}`);
+      return generationJobUpdateChain;
+    }),
+    updateMaybeSingle: vi.fn(async () => {
+      events.push("generation_jobs.update.maybeSingle");
+      return providerAttemptNoncePersistQueue.shift() ?? { data: { id: "job_1" }, error: null };
+    }),
+  };
+  const generationJobSelectChain = {
+    eq: generationJobs.selectEq,
+    single: generationJobs.selectSingle,
+  };
+  const generationJobUpdateChain = {
+    eq: generationJobs.updateEq,
+    is: generationJobs.updateIs,
+    select: generationJobs.updateSelect,
+    maybeSingle: generationJobs.updateMaybeSingle,
+  };
   const from = vi.fn((table: string) => {
     tables.push(table);
     if (table === "media_assets") {
@@ -1288,6 +1519,12 @@ function mockAdminWith({
       };
       return {
         select: vi.fn(() => chain),
+      };
+    }
+    if (table === "generation_jobs") {
+      return {
+        select: generationJobs.select,
+        update: generationJobs.update,
       };
     }
     throw new Error(`Unexpected Supabase table: ${table}`);
@@ -1311,5 +1548,5 @@ function mockAdminWith({
   });
 
   mocks.createSupabaseAdminClient.mockReturnValue({ from, rpc });
-  return { from, rpc, tables };
+  return { from, rpc, tables, events, generationJobs };
 }

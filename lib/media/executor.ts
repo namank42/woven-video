@@ -113,15 +113,52 @@ async function processMediaJobStep({
     return { jobId: job.id, status };
   }
 
-  const result = await runProviderAdapter({
-    adapter,
-    model,
-    parameters: objectValue(job.input.parameters),
-    inputUrls: signedInputs.inputUrls,
-    inputAssets: signedInputs.inputAssets,
-    providerJobId: job.providerJobId,
-    signal,
-  });
+  let webhookUrl: string | null = null;
+  if (!job.providerJobId) {
+    const attempt = await readProviderAttempt(admin, job.id);
+    if (attempt.nonce) {
+      // A submission may already exist; wait for the webhook self-heal or deadline.
+      const updated = await markWaitingProvider(admin, job, null);
+      return { jobId: job.id, status: updated ? "waiting_provider" : "stale_claim" };
+    }
+    const nonce = crypto.randomUUID();
+    const persisted = await persistProviderAttemptNonce(admin, job, nonce);
+    if (!persisted) {
+      return { jobId: job.id, status: "stale_claim" };
+    }
+    const baseUrl = getMediaEnv().falWebhookBaseUrl;
+    webhookUrl = baseUrl
+      ? `${baseUrl}/api/v1/media/webhooks/fal/${job.id}/${nonce}`
+      : null;
+  } else {
+    const attempt = await readProviderAttempt(admin, job.id);
+    if (attempt.progressStage === "provider_webhook_error") {
+      const status = await releaseJob(admin, job, "provider_failed", {
+        provider_error_message: attempt.progressMessage ?? "provider_webhook_error",
+      });
+      return { jobId: job.id, status };
+    }
+  }
+
+  let result;
+  try {
+    result = await runProviderAdapter({
+      adapter,
+      model,
+      parameters: objectValue(job.input.parameters),
+      inputUrls: signedInputs.inputUrls,
+      inputAssets: signedInputs.inputAssets,
+      providerJobId: job.providerJobId,
+      webhookUrl,
+      signal,
+    });
+  } catch (error) {
+    if (isProviderNotConfiguredError(error)) {
+      const status = await releaseJob(admin, job, "provider_not_configured");
+      return { jobId: job.id, status };
+    }
+    throw error;
+  }
 
   if (result.status === "provider_failed") {
     const status = await releaseJob(admin, job, "provider_failed", safeMetadata(result.metadata));
@@ -129,13 +166,8 @@ async function processMediaJobStep({
   }
 
   if (result.status === "waiting_provider") {
-    const updated = await updateWaitingProviderJob({
-      admin,
-      jobId: job.id,
-      claimToken: job.claimToken,
-      providerJobId: result.providerJobId,
-    });
-    return { jobId: job.id, status: updated ? "waiting_provider" : "stale_claim" };
+    const updated = await markWaitingProviderWithRetry(admin, job, result.providerJobId);
+    return { jobId: job.id, status: updated === "stale" ? "stale_claim" : "waiting_provider" };
   }
 
   if (!job.claimToken) {
@@ -260,6 +292,7 @@ async function runProviderAdapter({
   inputUrls,
   inputAssets,
   providerJobId,
+  webhookUrl,
   signal,
 }: {
   adapter: MediaProviderAdapter;
@@ -268,6 +301,7 @@ async function runProviderAdapter({
   inputUrls: string[];
   inputAssets: ProviderInputAsset[];
   providerJobId: string | null;
+  webhookUrl: string | null;
   signal?: AbortSignal;
 }) {
   if (signal?.aborted) {
@@ -281,6 +315,7 @@ async function runProviderAdapter({
       inputUrls,
       inputAssets,
       providerJobId,
+      webhookUrl,
       signal,
     });
   } catch (error) {
@@ -416,6 +451,71 @@ function inferLegacyRole(
   return null;
 }
 
+async function readProviderAttempt(admin: SupabaseAdminClient, jobId: string) {
+  const { data, error } = await admin
+    .from("generation_jobs")
+    .select("provider_attempt_nonce, progress")
+    .eq("id", jobId)
+    .single();
+  if (error) throw new Error(error.message);
+  const progress = objectValue(data?.progress);
+  return {
+    nonce: stringValue(data?.provider_attempt_nonce),
+    progressStage: stringValue(progress.stage),
+    progressMessage: stringValue(progress.message),
+  };
+}
+
+async function persistProviderAttemptNonce(
+  admin: SupabaseAdminClient,
+  job: { id: string; claimToken: string | null },
+  nonce: string,
+) {
+  if (!job.claimToken) return false;
+  const { data, error } = await admin
+    .from("generation_jobs")
+    .update({ provider_attempt_nonce: nonce })
+    .eq("id", job.id)
+    .eq("claim_token", job.claimToken)
+    .is("provider_job_id", null)
+    .select("id")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return Boolean(data?.id);
+}
+
+async function markWaitingProvider(
+  admin: SupabaseAdminClient,
+  job: { id: string; claimToken: string | null },
+  providerJobId: string | null,
+) {
+  return updateWaitingProviderJob({ admin, jobId: job.id, claimToken: job.claimToken, providerJobId });
+}
+
+async function markWaitingProviderWithRetry(
+  admin: SupabaseAdminClient,
+  job: { id: string; claimToken: string | null },
+  providerJobId: string,
+): Promise<"updated" | "stale" | "unpersisted"> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const updated = await markWaitingProvider(admin, job, providerJobId);
+      return updated ? "updated" : "stale";
+    } catch (error) {
+      if (attempt === 2) {
+        console.error("media_provider_job_id_persist_failed", {
+          jobId: job.id,
+          providerJobId,
+          message: error instanceof Error ? error.message : String(error),
+        });
+        return "unpersisted";
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+    }
+  }
+  return "unpersisted";
+}
+
 async function updateWaitingProviderJob({
   admin,
   jobId,
@@ -425,7 +525,7 @@ async function updateWaitingProviderJob({
   admin: SupabaseAdminClient;
   jobId: string;
   claimToken: string | null;
-  providerJobId: string;
+  providerJobId: string | null;
 }) {
   if (!claimToken) {
     return false;
