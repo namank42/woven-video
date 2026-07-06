@@ -54,12 +54,21 @@ function optionalUrlEnv(name: string, fallback: string | null = null): string | 
   return raw.replace(/\/+$/, "");
 }
 
+function isProductionMediaEnvironment(): boolean {
+  const vercelEnv = process.env.VERCEL_ENV?.trim();
+  if (vercelEnv) return vercelEnv === "production";
+  return process.env.NODE_ENV === "production";
+}
+
 function uploadCompletionModeEnv(): MediaUploadCompletionMode {
   const raw = process.env.MEDIA_UPLOAD_COMPLETION_MODE?.trim() || "callback";
-  if (raw === "callback" || raw === "manual") {
-    return raw;
+  if (raw !== "callback" && raw !== "manual") {
+    throw new Error("MEDIA_UPLOAD_COMPLETION_MODE must be callback or manual.");
   }
-  throw new Error("MEDIA_UPLOAD_COMPLETION_MODE must be callback or manual.");
+  if (raw === "manual" && isProductionMediaEnvironment()) {
+    throw new Error("MEDIA_UPLOAD_COMPLETION_MODE=manual is not allowed in production.");
+  }
+  return raw;
 }
 
 export function isLoopbackMediaBaseUrl(baseUrl: string): boolean {
@@ -70,15 +79,37 @@ export function isLoopbackMediaBaseUrl(baseUrl: string): boolean {
     return false;
   }
 
-  const hostname = url.hostname.toLowerCase();
-  return (
-    hostname === "localhost" ||
-    hostname.endsWith(".localhost") ||
-    hostname === "127.0.0.1" ||
-    hostname === "0.0.0.0" ||
-    hostname === "::1" ||
-    hostname === "[::1]"
-  );
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) return true;
+
+  const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname);
+  if (ipv4) {
+    const [a, b] = [Number(ipv4[1]), Number(ipv4[2])];
+    return (
+      a === 127 ||
+      a === 0 ||
+      a === 10 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168)
+    );
+  }
+
+  if (hostname.includes(":")) {
+    if (hostname === "::" || hostname === "::1") return true;
+    if (
+      hostname.startsWith("fe8") ||
+      hostname.startsWith("fe9") ||
+      hostname.startsWith("fea") ||
+      hostname.startsWith("feb")
+    ) {
+      return true;
+    }
+    if (hostname.startsWith("fc") || hostname.startsWith("fd")) return true;
+    if (hostname.startsWith("::ffff:")) return true;
+  }
+
+  return false;
 }
 
 export function getMediaEnv(): MediaEnv {

@@ -83,6 +83,24 @@ describe("media env", () => {
     expect(getMediaEnv().uploadCompletionMode).toBe("manual");
   });
 
+  it("rejects manual completion mode in production", () => {
+    setMediaEnv({
+      MEDIA_UPLOAD_COMPLETION_MODE: "manual",
+      VERCEL_ENV: "production",
+    });
+
+    expect(() => getMediaEnv()).toThrow("MEDIA_UPLOAD_COMPLETION_MODE");
+  });
+
+  it("allows manual completion mode in preview/dev", () => {
+    setMediaEnv({
+      MEDIA_UPLOAD_COMPLETION_MODE: "manual",
+      VERCEL_ENV: "preview",
+    });
+
+    expect(getMediaEnv().uploadCompletionMode).toBe("manual");
+  });
+
   it("rejects unknown upload completion modes", () => {
     setMediaEnv({
       MEDIA_UPLOAD_COMPLETION_MODE: "client",
@@ -102,6 +120,20 @@ describe("media env", () => {
     expect(isLoopbackMediaBaseUrl("https://media-dev.woven.video")).toBe(false);
     expect(isLoopbackMediaBaseUrl("https://media.woven.video")).toBe(false);
     expect(isLoopbackMediaBaseUrl("not a url")).toBe(false);
+  });
+
+  it.each([
+    ["http://10.0.0.5", true],
+    ["http://192.168.1.1:8787", true],
+    ["http://172.20.3.4", true],
+    ["http://169.254.169.254", true],
+    ["http://[fe80::1]", true],
+    ["http://[fd00::1]", true],
+    ["http://[::ffff:127.0.0.1]", true],
+    ["https://media.woven.video", false],
+    ["http://172.32.0.1", false],
+  ])("isLoopbackMediaBaseUrl(%s) === %s", (url, expected) => {
+    expect(isLoopbackMediaBaseUrl(url)).toBe(expected);
   });
 
   it("parses optional Fal webhook URLs and trims trailing slashes", () => {
