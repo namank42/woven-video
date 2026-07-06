@@ -137,6 +137,9 @@ export async function POST(request: Request) {
     if (message === "upload_not_complete") {
       return apiError("Upload is not complete.", 409, "upload_not_complete");
     }
+    if (message === "upload_expired") {
+      return apiError("Upload has expired.", 400, "upload_expired");
+    }
     if (message === "invalid_media_input" || message.startsWith("media_quote_")) {
       return apiError("Invalid media input.", 400, "invalid_media_input");
     }

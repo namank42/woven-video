@@ -71,7 +71,15 @@ describe("createReservedMediaJob", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-02T12:00:00.000Z"));
     const assetsStep = selectAssetsQuery({
-      data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],
+      data: [
+        {
+          id: "asset_1",
+          status: "uploaded",
+          content_type: "image/png",
+          kind: "input",
+          upload_expires_at: null,
+        },
+      ],
       error: null,
     });
     const insertStep = insertJobQuery({
@@ -170,11 +178,14 @@ describe("createReservedMediaJob", () => {
       ["id", ["asset_1"]],
       ["user_id", "user_1"],
       ["status", "uploaded"],
+      ["kind", "input"],
+      ["or", "upload_expires_at.is.null,upload_expires_at.gt.2026-07-02T12:00:00.000Z"],
     ]);
     expect(queueStep.filters).toEqual([
       ["id", "job_1"],
       ["status", "creating"],
     ]);
+    expect(assetsStep.selected).toBe("id, status, content_type, kind, upload_expires_at");
   });
 
   it("computes the job deadline without requiring token or worker secrets", async () => {
@@ -185,7 +196,15 @@ describe("createReservedMediaJob", () => {
       MEDIA_JOB_TIMEOUT_SECONDS: "7200",
     } as NodeJS.ProcessEnv;
     const assetsStep = selectAssetsQuery({
-      data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],
+      data: [
+        {
+          id: "asset_1",
+          status: "uploaded",
+          content_type: "image/png",
+          kind: "input",
+          upload_expires_at: null,
+        },
+      ],
       error: null,
     });
     const insertStep = insertJobQuery({
@@ -427,7 +446,15 @@ describe("createReservedMediaJob", () => {
 
   it("releases the reservation and fails the job when asset attachment fails after reservation", async () => {
     const assetsStep = selectAssetsQuery({
-      data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],
+      data: [
+        {
+          id: "asset_1",
+          status: "uploaded",
+          content_type: "image/png",
+          kind: "input",
+          upload_expires_at: null,
+        },
+      ],
       error: null,
     });
     const insertStep = insertJobQuery({
@@ -476,7 +503,15 @@ describe("createReservedMediaJob", () => {
 
   it("does not swallow reservation release failures after asset attachment fails", async () => {
     const assetsStep = selectAssetsQuery({
-      data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],
+      data: [
+        {
+          id: "asset_1",
+          status: "uploaded",
+          content_type: "image/png",
+          kind: "input",
+          upload_expires_at: null,
+        },
+      ],
       error: null,
     });
     const insertStep = insertJobQuery({
@@ -518,8 +553,20 @@ describe("createReservedMediaJob", () => {
   it("restores partial asset attachments when the attach result count is short", async () => {
     const assetsStep = selectAssetsQuery({
       data: [
-        { id: "asset_1", status: "uploaded", content_type: "image/png" },
-        { id: "asset_2", status: "uploaded", content_type: "image/png" },
+        {
+          id: "asset_1",
+          status: "uploaded",
+          content_type: "image/png",
+          kind: "input",
+          upload_expires_at: null,
+        },
+        {
+          id: "asset_2",
+          status: "uploaded",
+          content_type: "image/png",
+          kind: "input",
+          upload_expires_at: null,
+        },
       ],
       error: null,
     });
@@ -576,7 +623,15 @@ describe("createReservedMediaJob", () => {
 
   it("still releases the reservation when queue publish fails and input detach fails", async () => {
     const assetsStep = selectAssetsQuery({
-      data: [{ id: "asset_1", status: "uploaded", content_type: "image/png" }],
+      data: [
+        {
+          id: "asset_1",
+          status: "uploaded",
+          content_type: "image/png",
+          kind: "input",
+          upload_expires_at: null,
+        },
+      ],
       error: null,
     });
     const insertStep = insertJobQuery({
@@ -673,7 +728,15 @@ describe("createReservedMediaJob", () => {
 
   it("rejects uploaded inputs whose content type does not match the assigned role", async () => {
     const assetsStep = selectAssetsQuery({
-      data: [{ id: "asset_1", status: "uploaded", content_type: "video/mp4" }],
+      data: [
+        {
+          id: "asset_1",
+          status: "uploaded",
+          content_type: "video/mp4",
+          kind: "input",
+          upload_expires_at: null,
+        },
+      ],
       error: null,
     });
     const admin = mockAdminWith(assetsStep);
@@ -702,6 +765,62 @@ describe("createReservedMediaJob", () => {
     })).rejects.toThrow("invalid_media_input");
 
     expect(admin.tables).toEqual(["media_assets"]);
+  });
+
+  it("rejects uploaded inputs whose asset kind is not input", async () => {
+    const assetsStep = selectAssetsQuery({
+      data: [
+        {
+          id: "asset_1",
+          status: "uploaded",
+          content_type: "image/png",
+          kind: "output",
+          upload_expires_at: null,
+        },
+      ],
+      error: null,
+    });
+    const admin = mockAdminWith(assetsStep);
+
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model,
+      parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "image" }],
+      inputAssetIds: ["asset_1"],
+    })).rejects.toThrow("invalid_media_input");
+
+    expect(admin.tables).toEqual(["media_assets"]);
+    expect(assetsStep.selected).toBe("id, status, content_type, kind, upload_expires_at");
+  });
+
+  it("rejects uploaded inputs whose upload has expired", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-02T12:00:00.000Z"));
+    const assetsStep = selectAssetsQuery({
+      data: [
+        {
+          id: "asset_1",
+          status: "uploaded",
+          content_type: "image/png",
+          kind: "input",
+          upload_expires_at: "2026-07-02T11:59:59.000Z",
+        },
+      ],
+      error: null,
+    });
+    const admin = mockAdminWith(assetsStep);
+
+    await expect(createReservedMediaJob({
+      userId: "user_1",
+      model,
+      parameters: { prompt: "a mountain" },
+      inputAssets: [{ assetId: "asset_1", role: "image" }],
+      inputAssetIds: ["asset_1"],
+    })).rejects.toThrow("upload_expired");
+
+    expect(admin.tables).toEqual(["media_assets"]);
+    expect(assetsStep.selected).toBe("id, status, content_type, kind, upload_expires_at");
   });
 });
 
@@ -755,6 +874,10 @@ function attachAssetsQuery<T>(result: SupabaseResult<T>): QueryStep {
     }),
     eq: vi.fn((column: string, value: unknown) => {
       step.filters.push([column, value]);
+      return chain;
+    }),
+    or: vi.fn((value: string) => {
+      step.filters.push(["or", value]);
       return chain;
     }),
     select,

@@ -16,6 +16,8 @@ type MediaAssetInputRow = {
   id: string;
   status: string;
   content_type: string;
+  kind: string;
+  upload_expires_at: string | null;
 };
 
 type CreatedMediaJobRow = {
@@ -253,7 +255,7 @@ async function validateInputAssets({
 
   const { data: assets, error: assetError } = await admin
     .from("media_assets")
-    .select("id, status, content_type")
+    .select("id, status, content_type, kind, upload_expires_at")
     .eq("user_id", userId)
     .in("id", inputAssetIds);
 
@@ -268,9 +270,19 @@ async function validateInputAssets({
 
   const inputAssetsById = new Map(assetRows.map((asset) => [asset.id, asset]));
 
+  const nowMs = Date.now();
   for (const inputAsset of assetRows) {
+    if (inputAsset.kind !== "input") {
+      throw new Error("invalid_media_input");
+    }
     if (inputAsset.status !== "uploaded") {
       throw new Error("upload_not_complete");
+    }
+    const expiresAtMs = inputAsset.upload_expires_at
+      ? Date.parse(inputAsset.upload_expires_at)
+      : Number.NaN;
+    if (Number.isFinite(expiresAtMs) && expiresAtMs <= nowMs) {
+      throw new Error("upload_expired");
     }
   }
 
@@ -346,6 +358,8 @@ async function attachInputAssets({
     .in("id", inputAssetIds)
     .eq("user_id", userId)
     .eq("status", "uploaded")
+    .eq("kind", "input")
+    .or(`upload_expires_at.is.null,upload_expires_at.gt.${new Date().toISOString()}`)
     .select("id");
 
   if (error) {

@@ -582,6 +582,54 @@ describe("media job routes", () => {
     });
   });
 
+  it("maps upload_expired to a stable public 400 error", async () => {
+    const createReservedMediaJob = vi.fn().mockRejectedValue(new Error("upload_expired"));
+
+    vi.doMock("@/lib/api/auth", () => ({
+      requireApiAuth: vi.fn(async () => ({
+        ok: true,
+        auth: { user: { id: "user_1" } },
+      })),
+    }));
+    vi.doMock("@/lib/api/license", () => ({
+      licenseGateResponse: vi.fn(async () => null),
+    }));
+    vi.doMock("@/lib/media/model-registry", () => ({
+      getMediaModel: vi.fn(async () => ({
+        id: "fal:frontier-video",
+        kind: "video",
+        parameterSchema: { type: "object" },
+        inputAssetSchema: { roles: [] },
+      })),
+    }));
+    vi.doMock("@/lib/media/schema", () => ({
+      validateMediaParameters: vi.fn(() => ({
+        ok: true,
+        value: { prompt: "a mountain" },
+      })),
+    }));
+    vi.doMock("@/lib/media/jobs", () => ({
+      createReservedMediaJob,
+      failReservedMediaJobDispatch: vi.fn(),
+    }));
+    mockTriggerDispatch(vi.fn(async () => ({ runId: "run_123" })));
+
+    const { POST } = await import("@/app/api/v1/media/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/media/jobs", {
+      model: "fal:frontier-video",
+      parameters: { prompt: "a mountain" },
+      input_asset_ids: ["asset_1"],
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "upload_expired",
+        message: "Upload has expired.",
+      },
+    });
+  });
+
   it("rejects stringified Nano Banana Lite typed parameters with invalid_media_input", async () => {
     const createReservedMediaJob = vi.fn();
 
