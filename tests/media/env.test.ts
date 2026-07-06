@@ -92,6 +92,16 @@ describe("media env", () => {
     expect(() => getMediaEnv()).toThrow("MEDIA_UPLOAD_COMPLETION_MODE");
   });
 
+  it("rejects manual completion mode when node env is production and vercel env is absent", () => {
+    setMediaEnv({
+      MEDIA_UPLOAD_COMPLETION_MODE: "manual",
+      VERCEL_ENV: undefined,
+      NODE_ENV: "production",
+    });
+
+    expect(() => getMediaEnv()).toThrow("MEDIA_UPLOAD_COMPLETION_MODE");
+  });
+
   it("allows manual completion mode in preview/dev", () => {
     setMediaEnv({
       MEDIA_UPLOAD_COMPLETION_MODE: "manual",
