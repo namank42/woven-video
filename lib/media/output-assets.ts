@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { getMediaEnv, type MediaEnv } from "@/lib/media/env";
+import { fetchProviderOutput } from "@/lib/media/output-fetch";
 import type { ProviderOutput } from "@/lib/media/provider";
 import { mediaOutputKey } from "@/lib/media/storage-keys";
 import { signMediaToken } from "@/lib/media/tokens";
@@ -44,11 +45,13 @@ export async function createOutputAssetRows({
   jobId,
   claimToken,
   outputs,
+  outputUrlAllowlist,
 }: {
   userId: string;
   jobId: string;
   claimToken: string;
   outputs: ProviderOutput[];
+  outputUrlAllowlist: string[];
 }) {
   const admin = createSupabaseAdminClient();
   const env = getMediaEnv();
@@ -65,6 +68,7 @@ export async function createOutputAssetRows({
         claimToken,
         output,
         outputIndex: index,
+        outputUrlAllowlist,
       });
       materializedOutputs.push(materialized.output);
       if (materialized.createdOrRetried) {
@@ -119,6 +123,7 @@ async function materializeOutputAsset({
   claimToken,
   output,
   outputIndex,
+  outputUrlAllowlist,
 }: {
   admin: SupabaseAdminClient;
   env: MediaEnv;
@@ -127,6 +132,7 @@ async function materializeOutputAsset({
   claimToken: string;
   output: ProviderOutput;
   outputIndex: number;
+  outputUrlAllowlist: string[];
 }) {
   const outputId = deterministicOutputAssetId(jobId, outputIndex);
   const outputAttemptId = deterministicOutputAttemptId(jobId, outputIndex, claimToken);
@@ -172,7 +178,7 @@ async function materializeOutputAsset({
   }
 
   const metadata = outputMetadata(output, outputIndex, outputAttemptId);
-  const bytes = await readProviderOutput(output, env.maxUploadBytes);
+  const bytes = await readProviderOutput(output, env.maxUploadBytes, outputUrlAllowlist);
 
   await prepareOutputAsset({
     admin,
@@ -464,7 +470,11 @@ function outputDescriptor(outputId: string, output: ProviderOutput) {
   };
 }
 
-async function readProviderOutput(output: ProviderOutput, maxBytes: number): Promise<Buffer> {
+async function readProviderOutput(
+  output: ProviderOutput,
+  maxBytes: number,
+  allowlist: string[],
+): Promise<Buffer> {
   if (output.data) {
     assertWithinMaxBytes(output.data.byteLength, maxBytes);
     return Buffer.from(output.data);
@@ -480,47 +490,13 @@ async function readProviderOutput(output: ProviderOutput, maxBytes: number): Pro
     return bytes;
   }
 
-  const url = new URL(output.url);
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("provider_output_url_unsupported");
-  }
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`provider_output_download_failed:${response.status}`);
-  }
-
-  const contentLength = parsePositiveInteger(response.headers.get("content-length"));
-  if (contentLength !== null) {
-    assertWithinMaxBytes(contentLength, maxBytes);
-  }
-
-  return readResponseBytes(response, maxBytes);
-}
-
-async function readResponseBytes(response: Response, maxBytes: number): Promise<Buffer> {
-  if (!response.body) {
-    const bytes = Buffer.from(await response.arrayBuffer());
-    assertWithinMaxBytes(bytes.byteLength, maxBytes);
-    return bytes;
-  }
-
-  const reader = response.body.getReader();
-  const chunks: Buffer[] = [];
-  let totalBytes = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    totalBytes += value.byteLength;
-    if (totalBytes > maxBytes) {
-      await reader.cancel();
-      throw new Error("media_output_too_large");
-    }
-    chunks.push(Buffer.from(value));
-  }
-
-  return Buffer.concat(chunks, totalBytes);
+  const { bytes } = await fetchProviderOutput({
+    url: output.url,
+    allowlist,
+    expectedType: output.type,
+    maxBytes,
+  });
+  return bytes;
 }
 
 function readDataUrl(dataUrl: string): Buffer {
@@ -771,6 +747,9 @@ function safeFailureReason(error: unknown): string {
   if (
     error.message === "media_output_upload_failed:network" ||
     error.message === "media_output_too_large" ||
+    error.message === "media_output_url_not_allowed" ||
+    error.message === "media_output_content_type_mismatch" ||
+    error.message === "media_output_download_timeout" ||
     error.message === "provider_output_missing_data" ||
     error.message === "provider_output_url_unsupported" ||
     error.message === "invalid_provider_output_data_url" ||
@@ -785,12 +764,6 @@ function safeFailureReason(error: unknown): string {
 
 function isStaleClaimError(error: unknown): boolean {
   return error instanceof Error && error.message === "media_job_stale_claim";
-}
-
-function parsePositiveInteger(value: string | null): number | null {
-  if (!value || !/^[0-9]+$/.test(value)) return null;
-  const parsed = Number(value);
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 function numberValue(value: number | string): number | null {

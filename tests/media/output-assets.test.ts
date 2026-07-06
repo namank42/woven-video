@@ -36,6 +36,7 @@ const mediaEnv: MediaEnv = {
   falWebhookJwksUrl: null,
 };
 const claimToken = "00000000-0000-4000-8000-000000000001";
+const outputUrlAllowlist = ["fal.media", "*.fal.media"];
 const originalFetch = globalThis.fetch;
 const nowSeconds = Math.floor(Date.parse("2026-07-01T12:00:00.000Z") / 1000);
 
@@ -95,12 +96,12 @@ describe("createOutputAssetRows", () => {
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const result = await createOutputAssetRows({
+    const result = await createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
       outputs: [{
-        url: "https://provider.example/audio.mp3",
+        url: "https://v3b.fal.media/audio.mp3",
         data: Uint8Array.from([1, 2, 3, 4]),
         contentType: "audio/mpeg",
         type: "audio",
@@ -128,7 +129,7 @@ describe("createOutputAssetRows", () => {
         output_attempt_id: outputAttemptId,
       },
     });
-    expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain("v3b.fal.media");
     expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain(claimToken);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -203,26 +204,29 @@ describe("createOutputAssetRows", () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       void init;
       const url = String(input);
-      if (url === "https://provider.example/audio.mp3") {
-        return new Response(Uint8Array.from([5, 6, 7]), { status: 200 });
+      if (url === "https://v3b.fal.media/audio.mp3") {
+        return new Response(Uint8Array.from([5, 6, 7]), {
+          status: 200,
+          headers: { "content-type": "audio/mpeg" },
+        });
       }
       return new Response(null, { status: 200 });
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const result = await createOutputAssetRows({
+    const result = await createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
       outputs: [{
-        url: "https://provider.example/audio.mp3",
+        url: "https://v3b.fal.media/audio.mp3",
         contentType: "audio/mpeg",
         type: "audio",
       }],
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(String(fetchMock.mock.calls[0][0])).toBe("https://provider.example/audio.mp3");
+    expect(String(fetchMock.mock.calls[0][0])).toBe("https://v3b.fal.media/audio.mp3");
     expect(String(fetchMock.mock.calls[1][0]).startsWith(`https://media.example.test/uploads/${outputId}?token=`)).toBe(true);
     await expect(bytesFromBody(fetchMock.mock.calls[1][1]?.body)).resolves.toEqual([5, 6, 7]);
     expect(admin.rpc).toHaveBeenNthCalledWith(1, "prepare_claimed_media_output_asset", expect.objectContaining({
@@ -234,7 +238,7 @@ describe("createOutputAssetRows", () => {
         output_attempt_id: outputAttemptId,
       },
     }));
-    expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain("v3b.fal.media");
     expect(JSON.stringify(admin.rpc.mock.calls[0]![1]!.p_metadata)).not.toContain(claimToken);
     expect(result.outputs).toEqual([{
       id: outputId,
@@ -259,12 +263,12 @@ describe("createOutputAssetRows", () => {
     });
     globalThis.fetch = vi.fn(async () => new Response("nope", { status: 503 })) as unknown as typeof fetch;
 
-    await expect(createOutputAssetRows({
+    await expect(createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
       outputs: [{
-        url: "https://provider.example/audio.mp3",
+        url: "https://v3b.fal.media/audio.mp3",
         data: Uint8Array.from([1, 2, 3]),
         contentType: "audio/mpeg",
         type: "audio",
@@ -285,7 +289,7 @@ describe("createOutputAssetRows", () => {
         failed_at: "2026-07-01T12:00:00.000Z",
       },
     });
-    expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain("v3b.fal.media");
     expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain(claimToken);
   });
 
@@ -306,12 +310,12 @@ describe("createOutputAssetRows", () => {
       throw new Error("connection reset with internal host details");
     }) as unknown as typeof fetch;
 
-    await expect(createOutputAssetRows({
+    await expect(createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
       outputs: [{
-        url: "https://provider.example/audio.mp3",
+        url: "https://v3b.fal.media/audio.mp3",
         data: Uint8Array.from([1, 2, 3]),
         contentType: "audio/mpeg",
         type: "audio",
@@ -325,7 +329,7 @@ describe("createOutputAssetRows", () => {
         failure_reason: "media_output_upload_failed:network",
       }),
     }));
-    expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain("provider.example");
+    expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain("v3b.fal.media");
     expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain("connection reset");
     expect(JSON.stringify(admin.rpc.mock.calls[1]![1]!.p_metadata)).not.toContain(claimToken);
   });
@@ -334,7 +338,7 @@ describe("createOutputAssetRows", () => {
     const existingStep = selectQuery({ data: null, error: null });
     const admin = mockAdminWith({ selectSteps: [existingStep] });
 
-    await expect(createOutputAssetRows({
+    await expect(createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
@@ -354,17 +358,20 @@ describe("createOutputAssetRows", () => {
     const fetchMock = vi.fn(async () => (
       new Response("too large", {
         status: 200,
-        headers: { "content-length": String(mediaEnv.maxUploadBytes + 1) },
+        headers: {
+          "content-type": "audio/mpeg",
+          "content-length": String(mediaEnv.maxUploadBytes + 1),
+        },
       })
     ));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    await expect(createOutputAssetRows({
+    await expect(createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
       outputs: [{
-        url: "https://provider.example/audio.mp3",
+        url: "https://v3b.fal.media/audio.mp3",
         contentType: "audio/mpeg",
         type: "audio",
       }],
@@ -418,7 +425,7 @@ describe("createOutputAssetRows", () => {
     const fetchMock = vi.fn();
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const result = await createOutputAssetRows({
+    const result = await createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
@@ -506,7 +513,7 @@ describe("createOutputAssetRows", () => {
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const result = await createOutputAssetRows({
+    const result = await createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
@@ -582,7 +589,7 @@ describe("createOutputAssetRows", () => {
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    await expect(createOutputAssetRows({
+    await expect(createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
@@ -647,7 +654,7 @@ describe("createOutputAssetRows", () => {
     });
     globalThis.fetch = vi.fn(async () => new Response("nope", { status: 503 })) as unknown as typeof fetch;
 
-    await expect(createOutputAssetRows({
+    await expect(createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
@@ -687,7 +694,7 @@ describe("createOutputAssetRows", () => {
       ],
     });
 
-    await expect(createOutputAssetRows({
+    await expect(createRows({
       userId: "user_1",
       jobId: "job_1",
       claimToken,
@@ -754,6 +761,15 @@ describe("failOutputAssetRowsForAttempt", () => {
     });
   });
 });
+
+function createRows(
+  input: Omit<Parameters<typeof createOutputAssetRows>[0], "outputUrlAllowlist">,
+) {
+  return createOutputAssetRows({
+    ...input,
+    outputUrlAllowlist,
+  });
+}
 
 function selectQuery<T>(result: SupabaseResult<T>): QueryStep {
   const step: QueryStep = { root: {}, filters: [] };

@@ -188,6 +188,7 @@ async function processMediaJobStep({
       jobId: job.id,
       claimToken: job.claimToken,
       outputs: result.outputs,
+      outputUrlAllowlist: adapter.outputUrlAllowlist,
     });
   } catch (error) {
     if (isStaleClaimError(error)) {

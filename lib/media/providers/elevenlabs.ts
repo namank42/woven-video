@@ -12,6 +12,7 @@ type AudioStream = ReadableStream<Uint8Array> | AsyncIterable<Uint8Array> | Arra
 const DEFAULT_OUTPUT_FORMAT = "mp3_44100_128";
 
 export const elevenLabsMediaAdapter: MediaProviderAdapter = {
+  outputUrlAllowlist: [],
   async run({ model, parameters, signal }) {
     const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
     if (!apiKey) {

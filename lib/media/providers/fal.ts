@@ -20,6 +20,7 @@ type FalOutputExtractionOptions = {
 const URL_PATTERN = /^https?:\/\//i;
 
 export const falMediaAdapter: MediaProviderAdapter = {
+  outputUrlAllowlist: ["fal.media", "*.fal.media"],
   async run({ model, parameters, inputUrls, inputAssets, providerJobId, webhookUrl, signal }) {
     const endpoint = model.providerEndpoint;
     const input: Record<string, unknown> = {

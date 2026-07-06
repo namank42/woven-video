@@ -33,6 +33,7 @@ export type ProviderRunResult =
     };
 
 export type MediaProviderAdapter = {
+  outputUrlAllowlist: string[];
   run(input: {
     model: MediaModel;
     parameters: Record<string, unknown>;

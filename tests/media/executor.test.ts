@@ -29,6 +29,7 @@ type SupabaseError = { message: string };
 type SupabaseResult<T> = { data: T | null; error: SupabaseError | null };
 
 const claimToken = "00000000-0000-4000-8000-000000000001";
+const falOutputUrlAllowlist = ["fal.media", "*.fal.media"];
 
 const model = {
   id: "fal:frontier-video",
@@ -89,6 +90,7 @@ describe("processMediaJob", () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJob: jobRow() });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({ status: "provider_failed" as const, metadata: { request_id: "fal_req_1" } })),
     } satisfies MediaProviderAdapter;
     const waitFor = vi.fn(async () => undefined);
@@ -117,7 +119,7 @@ describe("processMediaJob", () => {
 
   it("exits without provider work when exact claim returns null", async () => {
     const admin = mockAdminWith({ claimedJob: null });
-    const adapter = { run: vi.fn() } satisfies MediaProviderAdapter;
+    const adapter = { outputUrlAllowlist: falOutputUrlAllowlist, run: vi.fn() } satisfies MediaProviderAdapter;
 
     await expect(processMediaJob({
       jobId: "job_missing",
@@ -143,7 +145,7 @@ describe("processMediaJob", () => {
         expires_at: null,
       },
     });
-    const adapter = { run: vi.fn() } satisfies MediaProviderAdapter;
+    const adapter = { outputUrlAllowlist: falOutputUrlAllowlist, run: vi.fn() } satisfies MediaProviderAdapter;
 
     await expect(processMediaJob({
       jobId: "job_missing",
@@ -167,6 +169,7 @@ describe("processMediaJob", () => {
       ],
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn()
         .mockResolvedValueOnce({ status: "waiting_provider" as const, providerJobId: "fal_req_1" })
         .mockResolvedValueOnce({
@@ -233,6 +236,7 @@ describe("processMediaJob", () => {
       providerAttemptRows: [{ provider_attempt_nonce: null, progress: {} }],
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => {
         admin.events.push("adapter.run");
         return {
@@ -272,6 +276,7 @@ describe("processMediaJob", () => {
       providerAttemptRows: [{ provider_attempt_nonce: "nonce_existing", progress: {} }],
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "waiting_provider" as const,
         providerJobId: "fal_req_1",
@@ -314,6 +319,7 @@ describe("processMediaJob", () => {
       },
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "waiting_provider" as const,
         providerJobId: "provider_new",
@@ -345,6 +351,7 @@ describe("processMediaJob", () => {
       claimedJobs: [jobRow(), null],
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "waiting_provider" as const,
         providerJobId: "fal_req_1",
@@ -380,6 +387,7 @@ describe("processMediaJob", () => {
       ],
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "waiting_provider" as const,
         providerJobId: "fal_req_1",
@@ -410,7 +418,7 @@ describe("processMediaJob", () => {
         claim_token: "11111111-1111-4111-8111-111111111111",
       }),
     });
-    const adapter = { run: vi.fn() } satisfies MediaProviderAdapter;
+    const adapter = { outputUrlAllowlist: falOutputUrlAllowlist, run: vi.fn() } satisfies MediaProviderAdapter;
 
     await expect(processMediaJob({ jobId: "job_1", adapters: { fal: adapter }, waitFor: async () => undefined }))
       .resolves.toEqual({
@@ -491,6 +499,7 @@ describe("processMediaJob", () => {
       inputAssetRows,
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "waiting_provider" as const,
         providerJobId: "provider_new",
@@ -582,6 +591,7 @@ describe("processMediaJob", () => {
       ],
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "waiting_provider" as const,
         providerJobId: "provider_new",
@@ -636,6 +646,7 @@ describe("processMediaJob", () => {
       ],
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "waiting_provider" as const,
         providerJobId: "provider_new",
@@ -678,6 +689,7 @@ describe("processMediaJob", () => {
       inputAssetRows: [],
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(),
     } as unknown as MediaProviderAdapter;
 
@@ -709,6 +721,7 @@ describe("processMediaJob", () => {
       },
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "waiting_provider" as const,
         providerJobId: "provider_new",
@@ -729,6 +742,7 @@ describe("processMediaJob", () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJob: jobRow() });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "succeeded" as const,
         rawCostUsd: "0.25",
@@ -802,6 +816,7 @@ describe("processMediaJob", () => {
       userId: "user_1",
       jobId: "job_1",
       claimToken,
+      outputUrlAllowlist: falOutputUrlAllowlist,
       outputs: [
         {
           url: "https://provider.example/output.mp4",
@@ -825,6 +840,7 @@ describe("processMediaJob", () => {
       },
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "succeeded" as const,
         rawCostUsd: "0.25",
@@ -875,6 +891,7 @@ describe("processMediaJob", () => {
       }),
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "succeeded" as const,
         outputs: [{ url: "https://provider.example/output.mp4", type: "video" as const, contentType: "video/mp4" }],
@@ -903,6 +920,7 @@ describe("processMediaJob", () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJob: jobRow() });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "succeeded" as const,
         rawCostUsd: "0.25",
@@ -928,6 +946,7 @@ describe("processMediaJob", () => {
       userId: "user_1",
       jobId: "job_1",
       claimToken,
+      outputUrlAllowlist: falOutputUrlAllowlist,
       outputs: [
         {
           data: Buffer.from([1, 2, 3, 4]),
@@ -975,6 +994,7 @@ describe("processMediaJob", () => {
     );
     const admin = mockAdminWith({ claimedJob: jobRow() });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "succeeded" as const,
         rawCostUsd: "0.25",
@@ -1010,6 +1030,7 @@ describe("processMediaJob", () => {
     mocks.createOutputAssetRows.mockRejectedValueOnce(new Error("media_job_stale_claim"));
     const admin = mockAdminWith({ claimedJob: jobRow() });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "succeeded" as const,
         rawCostUsd: "0.25",
@@ -1037,6 +1058,7 @@ describe("processMediaJob", () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJob: jobRow() });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => {
         throw new Error("provider exploded with token secret");
       }),
@@ -1066,6 +1088,7 @@ describe("processMediaJob", () => {
     const secretMessage = "Provider failed with api_key=secret and request id req_123";
     const admin = mockAdminWith({ claimedJob: jobRow() });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => {
         const error = new Error(secretMessage);
         Object.assign(error, { requestId: "req_123", status: 429 });
@@ -1095,6 +1118,7 @@ describe("processMediaJob", () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJob: jobRow() });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => {
         throw new Error("provider_not_configured");
       }),
@@ -1129,6 +1153,7 @@ describe("processMediaJob", () => {
       }],
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "succeeded" as const,
         outputs: [{ url: "https://provider.example/output.mp4", type: "video" as const, contentType: "video/mp4" }],
@@ -1160,6 +1185,7 @@ describe("processMediaJob", () => {
     const admin = mockAdminWith({ claimedJob: jobRow() });
     const abortError = new DOMException("Worker stopped", "AbortError");
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => {
         throw abortError;
       }),
@@ -1179,6 +1205,7 @@ describe("processMediaJob", () => {
     const abortError = new DOMException("Worker stopped", "AbortError");
     abortController.abort(abortError);
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "waiting_provider" as const,
         providerJobId: "provider_new",
@@ -1224,6 +1251,7 @@ describe("processMediaJob", () => {
       },
     });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "succeeded" as const,
         rawCostUsd: "0.25",
@@ -1278,6 +1306,7 @@ describe("processMediaJob", () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({ claimedJob: jobRow({ claim_token: null }) });
     const adapter = {
+      outputUrlAllowlist: falOutputUrlAllowlist,
       run: vi.fn(async () => ({
         status: "succeeded" as const,
         rawCostUsd: "0.25",
