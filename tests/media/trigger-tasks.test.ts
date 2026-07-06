@@ -89,8 +89,20 @@ describe("Trigger media tasks", () => {
       { jobId: "expired_2" },
     ]);
     mocks.findMediaJobsForTriggerReconciliation.mockResolvedValue([
-      { jobId: "job_1", userId: "user_1", modelId: "google/nano-banana-2-lite", kind: "image" },
-      { jobId: "job_2", userId: "user_2", modelId: "fal-ai/veo3.1", kind: "video" },
+      {
+        jobId: "job_1",
+        userId: "user_1",
+        modelId: "google/nano-banana-2-lite",
+        kind: "image",
+        claimGeneration: "claim-gen-1",
+      },
+      {
+        jobId: "job_2",
+        userId: "user_2",
+        modelId: "fal-ai/veo3.1",
+        kind: "video",
+        claimGeneration: "claim-gen-2",
+      },
     ]);
     const { reconcileMediaJobsTask } = await import("@/trigger/media");
     const reconcileTask = reconcileMediaJobsTask as unknown as ReconcileMediaJobsTaskShape;
@@ -107,6 +119,7 @@ describe("Trigger media tasks", () => {
       modelId: "google/nano-banana-2-lite",
       kind: "image",
       source: "reconcile",
+      idempotencyDiscriminator: "claim-gen-1",
     });
     expect(mocks.dispatchMediaJob).toHaveBeenNthCalledWith(2, {
       jobId: "job_2",
@@ -114,13 +127,20 @@ describe("Trigger media tasks", () => {
       modelId: "fal-ai/veo3.1",
       kind: "video",
       source: "reconcile",
+      idempotencyDiscriminator: "claim-gen-2",
     });
   });
 
   it("still dispatches stale jobs when no expired jobs were finalized", async () => {
     mocks.finalizeExpiredMediaJobsForReconciliation.mockResolvedValue([]);
     mocks.findMediaJobsForTriggerReconciliation.mockResolvedValue([
-      { jobId: "job_1", userId: "user_1", modelId: "google/nano-banana-2-lite", kind: "image" },
+      {
+        jobId: "job_1",
+        userId: "user_1",
+        modelId: "google/nano-banana-2-lite",
+        kind: "image",
+        claimGeneration: "claim-gen-1",
+      },
     ]);
 
     const { reconcileMediaJobsTask } = await import("@/trigger/media");
@@ -133,6 +153,7 @@ describe("Trigger media tasks", () => {
       modelId: "google/nano-banana-2-lite",
       kind: "image",
       source: "reconcile",
+      idempotencyDiscriminator: "claim-gen-1",
     });
   });
 });

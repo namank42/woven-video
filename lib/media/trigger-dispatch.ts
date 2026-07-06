@@ -12,6 +12,7 @@ export type DispatchMediaJobPayload = {
   modelId: string;
   kind: "image" | "video" | "audio";
   source: MediaDispatchSource;
+  idempotencyDiscriminator?: string;
 };
 
 export type TriggerMediaKind = DispatchMediaJobPayload["kind"];
@@ -39,19 +40,31 @@ export function mediaConcurrencyKey(userId: string) {
   return `media-user:${userId}`;
 }
 
+export function mediaDispatchIdempotencyKey(
+  source: MediaDispatchSource,
+  jobId: string,
+  discriminator?: string,
+) {
+  if (source === "create") return `create:${jobId}`;
+  return `${source}:${jobId}:${discriminator ?? "unknown"}`;
+}
+
 export async function dispatchMediaJob({
   jobId,
   userId,
   modelId,
   kind,
   source,
+  idempotencyDiscriminator,
 }: DispatchMediaJobPayload): Promise<DispatchMediaJobResult> {
   const queue = mediaQueueForKind(kind);
+  const idempotencyKey = mediaDispatchIdempotencyKey(source, jobId, idempotencyDiscriminator);
   const handle = await tasks.trigger<typeof processMediaJobTask>(
     "process-media-job",
     { jobId },
     {
-      idempotencyKey: jobId,
+      idempotencyKey,
+      idempotencyKeyTTL: "1h",
       concurrencyKey: mediaConcurrencyKey(userId),
       queue: queue.name,
       tags: [
@@ -71,7 +84,7 @@ export async function dispatchMediaJob({
       jobId,
       runId: handle.id,
       source,
-      idempotencyKey: jobId,
+      idempotencyKey,
     });
   } catch (error) {
     console.error("Failed to record media Trigger dispatch metadata", error);

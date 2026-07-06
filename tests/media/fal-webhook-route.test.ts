@@ -42,6 +42,7 @@ describe("Fal media webhook route", () => {
       modelId: "google/nano-banana-2-lite",
       kind: "image",
       source: "webhook",
+      idempotencyDiscriminator: "fal_req_123",
     });
     expect(response.status).toBe(200);
   });
@@ -97,6 +98,7 @@ describe("Fal media webhook route", () => {
       modelId: "google/nano-banana-2-lite",
       kind: "image",
       source: "webhook",
+      idempotencyDiscriminator: "fal_req_hint",
     });
   });
 
@@ -339,6 +341,7 @@ describe("Fal media webhook route", () => {
       modelId: "google/nano-banana-2-lite",
       kind: "image",
       source: "webhook",
+      idempotencyDiscriminator: "fal_req_error",
     });
   });
 

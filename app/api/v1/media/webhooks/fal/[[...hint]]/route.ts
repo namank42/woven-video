@@ -170,6 +170,7 @@ export async function POST(request: Request, context: RouteContext) {
         modelId: typeof input.media_model_id === "string" ? input.media_model_id : "unknown",
         kind,
         source: "webhook",
+        idempotencyDiscriminator: requestId,
       });
     }
   }

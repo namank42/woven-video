@@ -49,6 +49,7 @@ export const reconcileMediaJobsTask = schedules.task({
         modelId: job.modelId,
         kind: job.kind,
         source: "reconcile",
+        idempotencyDiscriminator: job.claimGeneration,
       });
     }
 
