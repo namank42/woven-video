@@ -41,14 +41,6 @@ export const chatModelRates: ChatModelRate[] = [
     cacheWrite: "$7.50/M",
   },
   {
-    name: "Claude Haiku 4.5",
-    modelId: "anthropic/claude-haiku-4.5",
-    input: "$1.20/M",
-    output: "$6.00/M",
-    cacheRead: "$0.12/M",
-    cacheWrite: "$1.50/M",
-  },
-  {
     name: "GPT-5.5",
     modelId: "openai/gpt-5.5",
     input: "$6.00/M",
@@ -64,14 +56,6 @@ export const chatModelRates: ChatModelRate[] = [
     cacheRead: "$0.19/M",
     cacheWrite: "—",
   },
-  {
-    name: "Grok 4.3",
-    modelId: "xai/grok-4.3",
-    input: "$1.50/M",
-    output: "$3.00/M",
-    cacheRead: "$0.24/M",
-    cacheWrite: "—",
-  },
 ];
 
 export const mediaModelRates: MediaModelRate[] = [
@@ -79,9 +63,8 @@ export const mediaModelRates: MediaModelRate[] = [
     name: "GPT Image 2",
     capability: "Image generation and editing",
     modelIds: ["openai/gpt-image-2", "openai/gpt-image-2/edit"],
-    rate:
-      "Text: $6.00/M input, $1.50/M cached, $12.00/M output · Image: $9.60/M input, $2.40/M cached, $36.00/M output",
-    notes: "Actual request cost varies by image size and quality.",
+    rate: "From $0.02/image",
+    notes: "Varies by quality and size · High quality: $0.33 (standard) – $0.62 (4K)",
   },
   {
     name: "Nano Banana Pro",
@@ -179,7 +162,7 @@ export const mediaModelRates: MediaModelRate[] = [
     capability: "Music generation",
     modelIds: ["music_v2"],
     rate: "$0.20/min",
-    notes: "$0.20 minimum. Up to 5 minutes.",
+    notes: "$0.20 minimum. Up to 10 minutes.",
   },
 ];
 

@@ -13,11 +13,16 @@ describe("pricing page rates", () => {
     expect(chatModelRates.map((rate) => rate.name)).toEqual([
       "Claude Sonnet 4.6",
       "Claude Opus 4.8",
-      "Claude Haiku 4.5",
       "GPT-5.5",
       "Kimi K2.6",
-      "Grok 4.3",
     ]);
+
+    expect(chatModelRates.map((rate) => rate.modelId)).not.toContain(
+      "anthropic/claude-haiku-4.5",
+    );
+    expect(chatModelRates.map((rate) => rate.modelId)).not.toContain(
+      "xai/grok-4.3",
+    );
 
     expect(chatModelRates.find((rate) => rate.name === "GPT-5.5")).toMatchObject(
       {
@@ -70,9 +75,8 @@ describe("pricing page rates", () => {
 
     expect(mediaByName.get("GPT Image 2")).toMatchObject({
       capability: "Image generation and editing",
-      rate:
-        "Text: $6.00/M input, $1.50/M cached, $12.00/M output · Image: $9.60/M input, $2.40/M cached, $36.00/M output",
-      notes: "Actual request cost varies by image size and quality.",
+      rate: "From $0.02/image",
+      notes: "Varies by quality and size · High quality: $0.33 (standard) – $0.62 (4K)",
     });
 
     expect(mediaByName.get("Nano Banana Pro")).toMatchObject({
@@ -136,7 +140,7 @@ describe("pricing page rates", () => {
       capability: "Music generation",
       modelIds: ["music_v2"],
       rate: "$0.20/min",
-      notes: "$0.20 minimum. Up to 5 minutes.",
+      notes: "$0.20 minimum. Up to 10 minutes.",
     });
   });
 

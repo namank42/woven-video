@@ -38,7 +38,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "Which models can I use?",
-    a: "The same lineup either way — Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5, GPT-5.5, Kimi K2.6, and Grok 4.3. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or use Woven-hosted models (charged from your prepaid balance). See the pricing page for per-model rates.",
+    a: "Use Claude Sonnet 4.6, Claude Opus 4.8, GPT-5.5, and Kimi K2.6 with Woven-hosted credits. You can also bring your own Anthropic and OpenAI keys or sign in with ChatGPT for GPT-5+ on your existing plan. See the pricing page for per-model rates.",
   },
   {
     q: "Can I use ChatGPT with Woven?",
@@ -81,7 +81,7 @@ export const pricingFaqs: FaqItem[] = [
   },
   {
     q: "Do I need hosted credits?",
-    a: "No. Hosted credits are optional — only needed for Woven-hosted Claude and GPT models. You can use your own API keys or ChatGPT sign-in without topping up.",
+    a: "No. Hosted credits are optional — only needed for Woven-hosted models. You can use your own API keys or ChatGPT sign-in without topping up.",
   },
   {
     q: "How do hosted model rates work?",

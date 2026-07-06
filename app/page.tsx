@@ -93,7 +93,7 @@ const featureCards: FeatureCard[] = [
     icon: KeyIcon,
     eyebrow: "Your keys, or ours",
     title: "Your keys, ChatGPT, or Woven-hosted.",
-    body: "Try Woven free for 7 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance — same lineup, no key juggling.",
+    body: "Try Woven free for 7 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance.",
   },
   {
     icon: LayersIcon,
@@ -474,7 +474,7 @@ function Pricing() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Top up a prepaid balance anytime to run Woven-hosted Claude and GPT —
+              Top up a prepaid balance anytime to run Woven-hosted models —
               layered on top of your license, no key management.{" "}
               <Link
                 href="/pricing"

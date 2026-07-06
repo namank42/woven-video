@@ -48,12 +48,12 @@ Hosted model and media pricing should produce estimated and final costs in `usd_
 
 `model_pricing_rules` lists Woven-hosted models, reserve amounts, minimum charges, and Woven markup. V1 starts with `markup_bps = 2000` (20%). Reservations are small temporary holds in `usd_micros`; final settlement uses provider cost plus markup after usage is known.
 
-Initial hosted chat models:
+Current hosted chat models:
 
 - `anthropic/claude-sonnet-4.6`
 - `anthropic/claude-opus-4.8`
-- `anthropic/claude-haiku-4.5`
 - `openai/gpt-5.5`
+- `moonshotai/kimi-k2.6`
 
 `ledger_entries` is the append-only ledger. Every balance-changing operation writes an entry with `amount_usd_micros` and `balance_after_usd_micros`. The unique `(source, source_id, kind)` constraint is the idempotency boundary for Stripe webhooks and job accounting.
 
