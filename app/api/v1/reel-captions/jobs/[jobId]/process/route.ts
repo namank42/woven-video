@@ -8,6 +8,7 @@ import {
   getReelCaptionPricing,
   markupUsdMicros,
   providerRawCostUsdForDuration,
+  REEL_CAPTION_JOB_TYPE,
   REEL_CAPTION_OPERATION,
 } from "@/lib/reel-captions/pricing";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
@@ -243,6 +244,7 @@ async function loadJob(
     )
     .eq("id", jobId)
     .eq("user_id", userId)
+    .eq("type", REEL_CAPTION_JOB_TYPE)
     .maybeSingle();
 
   if (error) {
@@ -268,6 +270,7 @@ async function claimQueuedJob(
     })
     .eq("id", jobId)
     .eq("status", "queued")
+    .eq("type", REEL_CAPTION_JOB_TYPE)
     .select("id")
     .maybeSingle();
 

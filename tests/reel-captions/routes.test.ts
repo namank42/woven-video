@@ -212,6 +212,30 @@ describe("reel captions routes", () => {
     expect(admin.rpc).not.toHaveBeenCalled();
   });
 
+  it("returns not found when the caption status route is given a media job id", async () => {
+    const admin = mockStatusAdmin({
+      jobResult: null,
+    });
+
+    mockCaptionRouteDependencies({ admin });
+
+    const { GET } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/route");
+    const response = await GET(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}`),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_job_not_found" },
+    });
+    expect(admin.jobFilters).toEqual([
+      ["id", JOB_ID],
+      ["user_id", USER_ID],
+      ["type", "reel_captions"],
+    ]);
+  });
+
   it("releases the reservation and skips media asset lookup for malformed caption media asset ids", async () => {
     const admin = mockProcessAdmin({
       asset: null,
@@ -411,6 +435,47 @@ describe("reel captions routes", () => {
     });
     expect(transcribeWithElevenLabs).not.toHaveBeenCalled();
     expect(admin.usageInsert).not.toHaveBeenCalled();
+  });
+
+  it("filters caption processing job queries to reel caption rows only", async () => {
+    const getReelCaptionPricing = vi.fn(async () => {
+      throw new Error("pricing failed");
+    });
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/wav",
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, getReelCaptionPricing });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_generation_failed" },
+    });
+    expect(admin.jobFilters).toEqual([
+      ["id", JOB_ID],
+      ["user_id", USER_ID],
+      ["type", "reel_captions"],
+    ]);
+    expect(admin.claimFilters).toEqual([
+      ["id", JOB_ID],
+      ["status", "queued"],
+      ["type", "reel_captions"],
+    ]);
   });
 
   it("logs caption claim errors and returns a safe public error", async () => {
@@ -810,6 +875,8 @@ function mockProcessAdmin({
   const admin = {
     cleanupAssetUpdate: null as unknown,
     cleanupAssetFilters: [] as Array<[string, unknown]>,
+    jobFilters: [] as Array<[string, unknown]>,
+    claimFilters: [] as Array<[string, unknown]>,
     claimUpdate: vi.fn(),
     usageInsert: vi.fn(),
     from: vi.fn((table: string) => {
@@ -817,7 +884,10 @@ function mockProcessAdmin({
         return {
           select: vi.fn(() => {
             const chain = {
-              eq: vi.fn(() => chain),
+              eq: vi.fn((column: string, value: unknown) => {
+                admin.jobFilters.push([column, value]);
+                return chain;
+              }),
               maybeSingle: vi.fn(async () => ({
                 data: jobLookupError ? null : generationJob,
                 error: jobLookupError,
@@ -828,7 +898,10 @@ function mockProcessAdmin({
           update: vi.fn((values: unknown) => {
             admin.claimUpdate(values);
             const chain = {
-              eq: vi.fn(() => chain),
+              eq: vi.fn((column: string, value: unknown) => {
+                admin.claimFilters.push([column, value]);
+                return chain;
+              }),
               in: vi.fn(async () => ({ data: claimResult, error: null })),
               select: vi.fn(() => ({
                 maybeSingle: vi.fn(async () => ({
@@ -885,6 +958,41 @@ function mockProcessAdmin({
         remove: vi.fn(async () => ({ data: null, error: null })),
       })),
     },
+  };
+
+  return admin;
+}
+
+function mockStatusAdmin({
+  jobResult,
+  jobLookupError = null,
+}: {
+  jobResult: Record<string, unknown> | null;
+  jobLookupError?: { message: string } | null;
+}) {
+  const admin = {
+    jobFilters: [] as Array<[string, unknown]>,
+    from: vi.fn((table: string) => {
+      if (table !== "generation_jobs") {
+        throw new Error(`Unexpected table ${table}`);
+      }
+
+      return {
+        select: vi.fn(() => {
+          const chain = {
+            eq: vi.fn((column: string, value: unknown) => {
+              admin.jobFilters.push([column, value]);
+              return chain;
+            }),
+            maybeSingle: vi.fn(async () => ({
+              data: jobLookupError ? null : jobResult,
+              error: jobLookupError,
+            })),
+          };
+          return chain;
+        }),
+      };
+    }),
   };
 
   return admin;

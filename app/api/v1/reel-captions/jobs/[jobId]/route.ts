@@ -1,5 +1,6 @@
 import { requireApiAuth } from "@/lib/api/auth";
 import { apiError } from "@/lib/api/responses";
+import { REEL_CAPTION_JOB_TYPE } from "@/lib/reel-captions/pricing";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export async function GET(request: Request, context: RouteContext) {
     )
     .eq("id", jobId)
     .eq("user_id", authResult.auth.user.id)
+    .eq("type", REEL_CAPTION_JOB_TYPE)
     .maybeSingle();
 
   if (error) {
