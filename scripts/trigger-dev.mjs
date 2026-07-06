@@ -11,8 +11,9 @@ if (!triggerProjectRef) {
   process.exit(1);
 }
 
-const child = spawn("npx", [
-  "trigger.dev@latest",
+const child = spawn("pnpm", [
+  "exec",
+  "trigger",
   "dev",
   "start",
   "--project-ref",

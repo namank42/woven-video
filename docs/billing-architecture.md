@@ -61,7 +61,9 @@ Current hosted chat models:
 
 `usage_events` records provider usage, raw provider cost, and Woven charged amount for auditability.
 
-The `generated-media` storage bucket is private. Authenticated users can read objects stored under a top-level folder named with their user ID.
+Hosted media inputs and outputs live in Cloudflare R2 behind the media worker
+(`media.woven.video`). Download URLs are short-lived signed links minted on
+status reads; retention is enforced by the media cleanup job.
 
 ## RPC Contract
 
