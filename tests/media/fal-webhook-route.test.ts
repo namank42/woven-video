@@ -21,8 +21,8 @@ describe("Fal media webhook route", () => {
     const dispatchMediaJob = vi.fn(async () => ({ runId: "run_1" }));
     vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
 
-    const { POST, dynamic, runtime } = await import("@/app/api/v1/media/webhooks/fal/route");
-    const response = await POST(signedJsonRequest({ request_id: "fal_req_123" }));
+    const { POST, dynamic, runtime } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const response = await POST(signedJsonRequest({ request_id: "fal_req_123" }), routeContext());
 
     expect(dynamic).toBe("force-dynamic");
     expect(runtime).toBe("nodejs");
@@ -46,6 +46,59 @@ describe("Fal media webhook route", () => {
     expect(response.status).toBe(200);
   });
 
+  it("adopts the request id when the job is found by path hint and nonce", async () => {
+    const admin = mockSupabaseWebhookFlow({
+      selectResults: [
+        { data: null, error: null },
+        {
+          data: {
+            id: "job_hint_1",
+            user_id: "user_1",
+            input: {
+              media_model_id: "google/nano-banana-2-lite",
+              operation: "image_generation",
+            },
+          },
+          error: null,
+        },
+      ],
+      updateResults: [{ error: null }, { error: null }],
+    });
+    mockFalWebhookVerifier();
+    const dispatchMediaJob = vi.fn(async () => ({ runId: "run_1" }));
+    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+
+    const route = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const POST = route.POST as (
+      request: Request,
+      context: { params: Promise<{ hint?: string[] }> },
+    ) => Promise<Response>;
+    const response = await POST(signedJsonRequest({ request_id: "fal_req_hint" }), {
+      params: Promise.resolve({ hint: ["job_hint_1", "nonce_1"] }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(admin.updateOperations).toContainEqual({
+      table: "generation_jobs",
+      values: { provider_job_id: "fal_req_hint" },
+      filters: [
+        ["eq", "id", "job_hint_1"],
+        ["eq", "provider_attempt_nonce", "nonce_1"],
+        ["eq", "provider", "fal"],
+        ["eq", "type", "media_job"],
+        ["is", "provider_job_id", null],
+        ["in", "status", ["running", "waiting_provider"]],
+      ],
+    });
+    expect(dispatchMediaJob).toHaveBeenCalledWith({
+      jobId: "job_hint_1",
+      userId: "user_1",
+      modelId: "google/nano-banana-2-lite",
+      kind: "image",
+      source: "webhook",
+    });
+  });
+
   it("does not dispatch a Trigger run when webhook job operation is unknown", async () => {
     mockSupabaseWebhookJob({
       error: null,
@@ -59,8 +112,8 @@ describe("Fal media webhook route", () => {
     vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
-    const response = await POST(signedJsonRequest({ request_id: "fal_req_123" }));
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const response = await POST(signedJsonRequest({ request_id: "fal_req_123" }), routeContext());
 
     expect(response.status).toBe(200);
     expect(dispatchMediaJob).not.toHaveBeenCalled();
@@ -70,33 +123,70 @@ describe("Fal media webhook route", () => {
     });
   });
 
+  it("ignores a hint with a wrong nonce", async () => {
+    const admin = mockSupabaseWebhookFlow({
+      selectResults: [
+        { data: null, error: null },
+        { data: null, error: null },
+      ],
+      updateResults: [{ error: null }, { error: null }],
+    });
+    mockFalWebhookVerifier();
+    const dispatchMediaJob = vi.fn(async () => ({ runId: "run_1" }));
+    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+
+    const route = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const POST = route.POST as (
+      request: Request,
+      context: { params: Promise<{ hint?: string[] }> },
+    ) => Promise<Response>;
+    const response = await POST(signedJsonRequest({ request_id: "fal_req_hint_miss" }), {
+      params: Promise.resolve({ hint: ["job_hint_1", "nonce_wrong"] }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(admin.updateOperations).toContainEqual({
+      table: "generation_jobs",
+      values: { provider_job_id: "fal_req_hint_miss" },
+      filters: [
+        ["eq", "id", "job_hint_1"],
+        ["eq", "provider_attempt_nonce", "nonce_wrong"],
+        ["eq", "provider", "fal"],
+        ["eq", "type", "media_job"],
+        ["is", "provider_job_id", null],
+        ["in", "status", ["running", "waiting_provider"]],
+      ],
+    });
+    expect(dispatchMediaJob).not.toHaveBeenCalled();
+  });
+
   it("accepts Fal requestId camelCase payloads", async () => {
     const { eq } = mockSupabaseUpdate({ error: null });
     mockFalWebhookVerifier();
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
-    const response = await POST(signedJsonRequest({ requestId: "fal_req_camel" }));
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const response = await POST(signedJsonRequest({ requestId: "fal_req_camel" }), routeContext());
 
     expect(eq).toHaveBeenNthCalledWith(1, "provider_job_id", "fal_req_camel");
     expect(response.status).toBe(200);
   });
 
   it("fences updates to jobs still waiting on the provider", async () => {
-    const { eq } = mockSupabaseUpdate({ error: null });
+    const { in: inFilter } = mockSupabaseUpdate({ error: null });
     mockFalWebhookVerifier();
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
-    await POST(signedJsonRequest({ request_id: "fal_req_replay" }));
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    await POST(signedJsonRequest({ request_id: "fal_req_replay" }), routeContext());
 
-    expect(eq).toHaveBeenCalledWith("status", "waiting_provider");
+    expect(inFilter).toHaveBeenCalledWith("status", ["running", "waiting_provider"]);
   });
 
   it("rejects unsigned webhooks before touching Supabase", async () => {
     const { createSupabaseAdminClient } = mockSupabaseUpdate({ error: null });
     const { verifyFalWebhookSignature } = mockFalWebhookVerifier();
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
-    const response = await POST(jsonRequest({ request_id: "fal_req_unsigned" }));
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const response = await POST(jsonRequest({ request_id: "fal_req_unsigned" }), routeContext());
 
     expect(response.status).toBe(401);
     expect(verifyFalWebhookSignature).not.toHaveBeenCalled();
@@ -109,8 +199,8 @@ describe("Fal media webhook route", () => {
       error: falVerifierError("invalid", "signature_mismatch"),
     });
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
-    const response = await POST(signedJsonRequest({ request_id: "fal_req_invalid" }));
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const response = await POST(signedJsonRequest({ request_id: "fal_req_invalid" }), routeContext());
 
     expect(response.status).toBe(401);
     expect(verifyFalWebhookSignature).toHaveBeenCalledOnce();
@@ -124,8 +214,8 @@ describe("Fal media webhook route", () => {
     });
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
-    const response = await POST(signedJsonRequest({ request_id: "fal_req_infra" }));
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const response = await POST(signedJsonRequest({ request_id: "fal_req_infra" }), routeContext());
 
     expect(response.status).toBe(503);
     expect(verifyFalWebhookSignature).toHaveBeenCalledOnce();
@@ -139,10 +229,10 @@ describe("Fal media webhook route", () => {
     const { createSupabaseAdminClient } = mockSupabaseUpdate({ error: null });
     mockFalWebhookVerifier();
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
-    const invalidJson = await POST(signedRequest("{"));
-    const arrayBody = await POST(signedJsonRequest([]));
-    const missingId = await POST(signedJsonRequest({ status: "completed" }));
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const invalidJson = await POST(signedRequest("{"), routeContext());
+    const arrayBody = await POST(signedJsonRequest([]), routeContext());
+    const missingId = await POST(signedJsonRequest({ status: "completed" }), routeContext());
 
     expect(invalidJson.status).toBe(400);
     await expect(invalidJson.json()).resolves.toMatchObject({
@@ -163,8 +253,8 @@ describe("Fal media webhook route", () => {
     mockSupabaseUpdate({ error: null });
     const { verifyFalWebhookSignature } = mockFalWebhookVerifier();
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
-    const invalidJson = await POST(signedRequest("{"));
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const invalidJson = await POST(signedRequest("{"), routeContext());
 
     expect(invalidJson.status).toBe(400);
     expect(verifyFalWebhookSignature).toHaveBeenCalledOnce();
@@ -176,8 +266,8 @@ describe("Fal media webhook route", () => {
     mockFalWebhookVerifier();
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
-    const response = await POST(signedJsonRequest({ request_id: "fal_req_123" }));
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const response = await POST(signedJsonRequest({ request_id: "fal_req_123" }), routeContext());
 
     expect(response.status).toBe(500);
     expect(consoleError).toHaveBeenCalledWith("Failed to update Fal media webhook state", error);
@@ -186,6 +276,67 @@ describe("Fal media webhook route", () => {
         message: "Unable to update media job webhook state.",
         code: "provider_failed",
       },
+    });
+  });
+
+  it("records provider_webhook_error progress on ERROR payloads", async () => {
+    const admin = mockSupabaseWebhookFlow({
+      selectResults: [
+        { data: { id: "job_1" }, error: null },
+        {
+          data: {
+            id: "job_1",
+            user_id: "user_1",
+            input: {
+              media_model_id: "google/nano-banana-2-lite",
+              operation: "image_generation",
+            },
+          },
+          error: null,
+        },
+      ],
+      updateResults: [{ error: null }],
+    });
+    mockFalWebhookVerifier();
+    const dispatchMediaJob = vi.fn(async () => ({ runId: "run_1" }));
+    vi.doMock("@/lib/media/trigger-dispatch", () => ({ dispatchMediaJob }));
+
+    const route = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
+    const POST = route.POST as (
+      request: Request,
+      context?: { params: Promise<{ hint?: string[] }> },
+    ) => Promise<Response>;
+    const response = await POST(signedJsonRequest({
+      request_id: "fal_req_error",
+      status: "ERROR",
+      error: "Invalid status code: 422",
+    }), routeContext());
+
+    expect(response.status).toBe(200);
+    expect(admin.updateOperations).toContainEqual({
+      table: "generation_jobs",
+      values: {
+        progress: {
+          stage: "provider_webhook_error",
+          percent: null,
+          message: "Invalid status code: 422",
+        },
+        last_provider_poll_at: expect.any(String),
+        claim_expires_at: "1970-01-01T00:00:00.000Z",
+      },
+      filters: [
+        ["eq", "provider_job_id", "fal_req_error"],
+        ["eq", "provider", "fal"],
+        ["eq", "type", "media_job"],
+        ["in", "status", ["running", "waiting_provider"]],
+      ],
+    });
+    expect(dispatchMediaJob).toHaveBeenCalledWith({
+      jobId: "job_1",
+      userId: "user_1",
+      modelId: "google/nano-banana-2-lite",
+      kind: "image",
+      source: "webhook",
     });
   });
 
@@ -215,7 +366,7 @@ describe("Fal media webhook route", () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch;
     const { createSupabaseAdminClient, eq } = mockSupabaseUpdate({ error: null });
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
     const response = await POST(new Request("https://example.test/api/v1/media/webhooks/fal", {
       method: "POST",
       headers: {
@@ -226,7 +377,7 @@ describe("Fal media webhook route", () => {
         "x-fal-webhook-signature": signature,
       },
       body,
-    }));
+    }), routeContext());
 
     expect(response.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledWith("https://rest.fal.ai/.well-known/jwks.json", {
@@ -255,7 +406,7 @@ describe("Fal media webhook route", () => {
     const { createSupabaseAdminClient } = mockSupabaseUpdate({ error: null });
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    const { POST } = await import("@/app/api/v1/media/webhooks/fal/route");
+    const { POST } = await import("@/app/api/v1/media/webhooks/fal/[[...hint]]/route");
     const response = await POST(new Request("https://example.test/api/v1/media/webhooks/fal", {
       method: "POST",
       headers: {
@@ -266,7 +417,7 @@ describe("Fal media webhook route", () => {
         "x-fal-webhook-signature": "a".repeat(128),
       },
       body,
-    }));
+    }), routeContext());
 
     expect(response.status).toBe(503);
     expect(createSupabaseAdminClient).not.toHaveBeenCalled();
@@ -300,6 +451,12 @@ function signedRequest(body: string): Request {
     },
     body,
   });
+}
+
+function routeContext(hint?: string[]) {
+  return {
+    params: Promise.resolve(hint ? { hint } : {}),
+  };
 }
 
 function mockFalWebhookVerifier({
@@ -376,15 +533,18 @@ function mockSupabaseUpdate({
   error: { message: string } | null;
 }) {
   const updateEq = vi.fn();
+  const updateIn = vi.fn();
   const selectEq = vi.fn().mockReturnThis();
+  const selectIn = vi.fn().mockReturnThis();
   const maybeSingle = vi.fn(async () => ({ data: null, error: null }));
   const updateChain = {
     eq: updateEq.mockReturnThis(),
+    in: updateIn.mockReturnThis(),
     then: (resolve: (value: { error: { message: string } | null }) => unknown) => {
       return Promise.resolve({ error }).then(resolve);
     },
   };
-  const select = vi.fn(() => ({ eq: selectEq, maybeSingle }));
+  const select = vi.fn(() => ({ eq: selectEq, in: selectIn, maybeSingle }));
   const update = vi.fn(() => updateChain);
   const from = vi.fn(() => ({ update, select }));
   const createSupabaseAdminClient = vi.fn(() => ({ from }));
@@ -393,7 +553,7 @@ function mockSupabaseUpdate({
     createSupabaseAdminClient,
   }));
 
-  return { createSupabaseAdminClient, from, update, select, eq: updateEq, maybeSingle };
+  return { createSupabaseAdminClient, from, update, select, eq: updateEq, in: updateIn, maybeSingle };
 }
 
 function mockSupabaseWebhookJob({
@@ -418,11 +578,111 @@ function mockSupabaseWebhookJob({
       }
     : job;
   const eq = vi.fn().mockReturnThis();
+  const inFilter = vi.fn().mockReturnThis();
   const maybeSingle = vi.fn(async () => ({ data: resolvedJob, error }));
-  const update = vi.fn(() => ({ eq }));
-  const select = vi.fn(() => ({ eq, maybeSingle }));
+  const update = vi.fn(() => ({ eq, in: inFilter }));
+  const select = vi.fn(() => ({ eq, in: inFilter, maybeSingle }));
   const from = vi.fn(() => ({ update, select }));
   const createSupabaseAdminClient = vi.fn(() => ({ from }));
   vi.doMock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient }));
-  return { createSupabaseAdminClient, from, update, select, eq, maybeSingle };
+  return { createSupabaseAdminClient, from, update, select, eq, in: inFilter, maybeSingle };
+}
+
+type SupabaseResult<T> = { data: T; error: { message: string } | null };
+type SupabaseUpdateResult = { error: { message: string } | null };
+type SupabaseFilter = ["eq" | "in" | "is", string, unknown];
+type SupabaseUpdateOperation = {
+  table: string;
+  values: Record<string, unknown>;
+  filters: SupabaseFilter[];
+};
+type SupabaseSelectOperation = {
+  table: string;
+  columns: string;
+  filters: SupabaseFilter[];
+};
+
+function mockSupabaseWebhookFlow({
+  selectResults,
+  updateResults,
+}: {
+  selectResults: SupabaseResult<Record<string, unknown> | null>[];
+  updateResults: SupabaseUpdateResult[];
+}) {
+  const selectOperations: SupabaseSelectOperation[] = [];
+  const updateOperations: SupabaseUpdateOperation[] = [];
+
+  const from = vi.fn((table: string) => ({
+    select: (columns: string) => {
+      const operation: SupabaseSelectOperation = {
+        table,
+        columns,
+        filters: [],
+      };
+      selectOperations.push(operation);
+      return createSelectChain(operation, selectResults.shift() ?? { data: null, error: null });
+    },
+    update: (values: Record<string, unknown>) => {
+      const operation: SupabaseUpdateOperation = {
+        table,
+        values,
+        filters: [],
+      };
+      updateOperations.push(operation);
+      return createUpdateChain(operation, updateResults.shift() ?? { error: null });
+    },
+  }));
+  const createSupabaseAdminClient = vi.fn(() => ({ from }));
+
+  vi.doMock("@/lib/supabase/admin", () => ({ createSupabaseAdminClient }));
+
+  return { createSupabaseAdminClient, from, selectOperations, updateOperations };
+}
+
+function createSelectChain(
+  operation: SupabaseSelectOperation,
+  result: SupabaseResult<Record<string, unknown> | null>,
+) {
+  const chain = {
+    eq(column: string, value: unknown) {
+      operation.filters.push(["eq", column, value]);
+      return chain;
+    },
+    in(column: string, values: unknown[]) {
+      operation.filters.push(["in", column, values]);
+      return chain;
+    },
+    is(column: string, value: unknown) {
+      operation.filters.push(["is", column, value]);
+      return chain;
+    },
+    maybeSingle: vi.fn(async () => result),
+  };
+
+  return chain;
+}
+
+function createUpdateChain(
+  operation: SupabaseUpdateOperation,
+  result: SupabaseUpdateResult,
+) {
+  const chain = {
+    eq(column: string, value: unknown) {
+      operation.filters.push(["eq", column, value]);
+      return chain;
+    },
+    in(column: string, values: unknown[]) {
+      operation.filters.push(["in", column, values]);
+      return chain;
+    },
+    is(column: string, value: unknown) {
+      operation.filters.push(["is", column, value]);
+      return chain;
+    },
+    then(resolve: (value: SupabaseUpdateResult) => unknown) {
+      return Promise.resolve(result).then(resolve);
+    },
+  };
+
+  return chain;
 }

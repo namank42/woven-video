@@ -11,6 +11,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+type RouteContext = { params: Promise<{ hint?: string[] }> };
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -20,7 +22,7 @@ function getFalRequestId(payload: Record<string, unknown>): string {
   return typeof requestId === "string" ? requestId.trim() : "";
 }
 
-export async function POST(request: Request) {
+export async function POST(request: Request, context: RouteContext) {
   const rawBody = Buffer.from(await request.arrayBuffer());
   try {
     const headers = falWebhookHeaders(request);
@@ -56,23 +58,60 @@ export async function POST(request: Request) {
     return apiError("Missing Fal request id.", 400, "invalid_media_input");
   }
 
+  const { hint } = await context.params;
+  const [hintJobId, hintNonce] = hint ?? [];
   const admin = createSupabaseAdminClient();
+
+  const { data: mapped } = await admin
+    .from("generation_jobs")
+    .select("id")
+    .eq("provider_job_id", requestId)
+    .eq("provider", "fal")
+    .eq("type", "media_job")
+    .maybeSingle();
+
+  if (!mapped?.id && hintJobId && hintNonce) {
+    const { error: adoptError } = await admin
+      .from("generation_jobs")
+      .update({ provider_job_id: requestId })
+      .eq("id", hintJobId)
+      .eq("provider_attempt_nonce", hintNonce)
+      .eq("provider", "fal")
+      .eq("type", "media_job")
+      .is("provider_job_id", null)
+      .in("status", ["running", "waiting_provider"]);
+    if (adoptError) {
+      console.error("Failed to adopt Fal request id from webhook hint", adoptError);
+      return apiError("Unable to update media job webhook state.", 500, "provider_failed");
+    }
+  }
+
+  const isProviderError = payload.status === "ERROR";
+  const progress = isProviderError
+    ? {
+        stage: "provider_webhook_error",
+        percent: null,
+        message: typeof payload.error === "string"
+          ? payload.error.slice(0, 500)
+          : "Provider reported an error",
+      }
+    : {
+        stage: "provider_webhook_received",
+        percent: null,
+        message: "Provider callback received",
+      };
 
   const { error } = await admin
     .from("generation_jobs")
     .update({
-      progress: {
-        stage: "provider_webhook_received",
-        percent: null,
-        message: "Provider callback received",
-      },
+      progress,
       last_provider_poll_at: new Date().toISOString(),
       claim_expires_at: "1970-01-01T00:00:00.000Z",
     })
     .eq("provider_job_id", requestId)
     .eq("provider", "fal")
     .eq("type", "media_job")
-    .eq("status", "waiting_provider");
+    .in("status", ["running", "waiting_provider"]);
 
   if (error) {
     console.error("Failed to update Fal media webhook state", error);
@@ -89,7 +128,7 @@ export async function POST(request: Request) {
     .eq("provider_job_id", requestId)
     .eq("provider", "fal")
     .eq("type", "media_job")
-    .eq("status", "waiting_provider")
+    .in("status", ["running", "waiting_provider"])
     .maybeSingle();
 
   if (jobError) {
