@@ -6,6 +6,7 @@ import {
   type MediaDeletionCandidate,
 } from "@/lib/media/cleanup";
 import { getMediaEnv } from "@/lib/media/env";
+import { timingSafeEqualStrings } from "@/lib/security/timing-safe-equal";
 
 const MAX_MEDIA_CLEANUP_KEY_LENGTH = 512;
 const PENDING_PLACEHOLDER_STORAGE_KEY =
@@ -18,7 +19,7 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = request.headers.get("authorization");
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !timingSafeEqualStrings(authHeader ?? "", `Bearer ${cronSecret}`)) {
     return apiError("Unauthorized.", 401, "unauthorized");
   }
 
@@ -34,7 +35,12 @@ export async function POST(request: Request) {
     return apiError("Unable to clean up media assets.", 500, "media_cleanup_failed");
   }
 
-  if (request.headers.get("x-woven-media-worker-secret") !== workerSharedSecret) {
+  if (
+    !timingSafeEqualStrings(
+      request.headers.get("x-woven-media-worker-secret") ?? "",
+      workerSharedSecret,
+    )
+  ) {
     return apiError("Unauthorized.", 401, "unauthorized");
   }
 

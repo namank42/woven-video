@@ -1,6 +1,7 @@
 import { apiError } from "@/lib/api/responses";
 import { markInputAssetUploaded } from "@/lib/media/assets";
 import { getMediaEnv } from "@/lib/media/env";
+import { timingSafeEqualStrings } from "@/lib/security/timing-safe-equal";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,7 +12,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 export async function POST(request: Request) {
   const secret = request.headers.get("x-woven-media-worker-secret");
-  if (secret !== getMediaEnv().workerSharedSecret) {
+  if (!timingSafeEqualStrings(secret ?? "", getMediaEnv().workerSharedSecret)) {
     return apiError("Unauthorized.", 401, "unauthorized");
   }
 
