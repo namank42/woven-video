@@ -185,14 +185,17 @@ async function processMediaJobStep({
     metadata: providerMetadata,
   };
 
-  const { error: settleError } = await admin.rpc("record_and_settle_claimed_media_job", {
-    p_job_id: job.id,
-    p_claim_token: job.claimToken,
-    p_final_cost_usd_micros: charge.chargedAmountUsdMicros,
-    p_output: outputPayload,
-    p_metadata: outputPayload,
-    p_usage_event: usageEvent,
-  });
+  const { data: settledJob, error: settleError } = await admin.rpc(
+    "record_and_settle_claimed_media_job",
+    {
+      p_job_id: job.id,
+      p_claim_token: job.claimToken,
+      p_final_cost_usd_micros: charge.chargedAmountUsdMicros,
+      p_output: outputPayload,
+      p_metadata: outputPayload,
+      p_usage_event: usageEvent,
+    },
+  );
 
   if (settleError) {
     if (isStaleClaimError(settleError)) {
@@ -210,6 +213,19 @@ async function processMediaJobStep({
     }
 
     throw new Error(settleError.message);
+  }
+
+  const settledFinalCost = isRecord(settledJob)
+    ? Number(settledJob.final_cost_usd_micros)
+    : Number.NaN;
+  if (Number.isFinite(settledFinalCost) && settledFinalCost < charge.chargedAmountUsdMicros) {
+    console.warn("media_settlement_capped", {
+      jobId: job.id,
+      modelId: model.id,
+      requestedUsdMicros: charge.chargedAmountUsdMicros,
+      settledUsdMicros: settledFinalCost,
+      overageUsdMicros: charge.chargedAmountUsdMicros - settledFinalCost,
+    });
   }
 
   return { jobId: job.id, status: "succeeded" };

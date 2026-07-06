@@ -683,6 +683,47 @@ describe("processMediaJob", () => {
     });
   });
 
+  it("warns when settlement is capped below the charged amount", async () => {
+    mocks.getMediaModel.mockResolvedValue(model);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockAdminWith({
+      claimedJob: jobRow(),
+      rpcResults: {
+        record_and_settle_claimed_media_job: {
+          data: { id: "job_1", final_cost_usd_micros: 100_000 },
+          error: null,
+        },
+      },
+    });
+    const adapter = {
+      run: vi.fn(async () => ({
+        status: "succeeded" as const,
+        rawCostUsd: "0.25",
+        outputs: [
+          {
+            url: "https://provider.example/output.mp4",
+            contentType: "video/mp4",
+            type: "video" as const,
+          },
+        ],
+      })),
+    } satisfies MediaProviderAdapter;
+
+    await expect(processMediaJob({ jobId: "job_1", adapters: { fal: adapter }, waitFor: async () => undefined }))
+      .resolves.toEqual({
+        jobId: "job_1",
+        status: "succeeded",
+      });
+
+    expect(warn).toHaveBeenCalledWith("media_settlement_capped", {
+      jobId: "job_1",
+      modelId: "fal:frontier-video",
+      requestedUsdMicros: 300_000,
+      settledUsdMicros: 100_000,
+      overageUsdMicros: 200_000,
+    });
+  });
+
   it("settles from stored pricing quote when provider returns no raw cost", async () => {
     mocks.getMediaModel.mockResolvedValue(model);
     const admin = mockAdminWith({
@@ -1257,7 +1298,15 @@ function mockAdminWith({
     if (name in rpcResults) return rpcResults[name];
     if (name === "mark_media_job_waiting_provider") return { data: { id: args.p_job_id }, error: null };
     if (name === "release_claimed_media_job") return { data: { id: args.p_job_id }, error: null };
-    if (name === "record_and_settle_claimed_media_job") return { data: { id: args.p_job_id }, error: null };
+    if (name === "record_and_settle_claimed_media_job") {
+      return {
+        data: {
+          id: args.p_job_id,
+          final_cost_usd_micros: args.p_final_cost_usd_micros,
+        },
+        error: null,
+      };
+    }
     throw new Error(`Unexpected RPC: ${name}`);
   });
 

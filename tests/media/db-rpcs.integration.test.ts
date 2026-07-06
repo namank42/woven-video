@@ -272,6 +272,52 @@ describeDb("media SQL RPC integration", () => {
     expect(reconciliationIds.has(waitingJobId)).toBe(false);
   });
 
+  it("restores the ledger balance when an expired reserved job is finalized", async () => {
+    const admin = getAdminClient();
+    const { userId, accountId } = await createUserAndAccount();
+    await grantBalance(userId, 100_000);
+    const startingBalance = await readAccountBalance(userId);
+    const jobId = await insertMediaJob({
+      userId,
+      accountId,
+      status: "queued",
+      expiresAt: new Date(Date.now() - 60_000).toISOString(),
+    });
+
+    const { error: reserveError } = await admin.rpc("reserve_balance", {
+      p_user_id: userId,
+      p_job_id: jobId,
+      p_amount_usd_micros: 100_000,
+      p_metadata: {
+        provider: "fal",
+        model: "fal-ai/frontier-video",
+        operation: "video_generation",
+        media_model_id: "frontier-video",
+      },
+    });
+    expect(reserveError).toBeNull();
+    expect(await readAccountBalance(userId)).toBe(startingBalance - 100_000);
+
+    const { error } = await admin.rpc("finalize_expired_media_jobs_for_reconciliation", {
+      p_limit: 100,
+      p_now: new Date().toISOString(),
+    });
+    expect(error).toBeNull();
+    expect(await readAccountBalance(userId)).toBe(startingBalance);
+
+    const { data: job, error: jobError } = await admin
+      .from("generation_jobs")
+      .select("status, error, final_cost_usd_micros")
+      .eq("id", jobId)
+      .single();
+    expect(jobError).toBeNull();
+    expect(job).toMatchObject({
+      status: "failed",
+      error: "media_job_timed_out",
+      final_cost_usd_micros: 0,
+    });
+  });
+
   it("does not derive unknown media operations as video during reconciliation", async () => {
     const admin = getAdminClient();
     const { userId, accountId } = await createUserAndAccount();
@@ -336,6 +382,64 @@ describeDb("media SQL RPC integration", () => {
 
     expect(claimed?.id).toBe(jobId);
     expect(error?.message).toBe("media_job_stale_claim");
+  });
+
+  it("caps settlement at the reserved amount and records the overage", async () => {
+    const admin = getAdminClient();
+    const { userId, accountId } = await createUserAndAccount();
+    await grantBalance(userId, 250_000);
+    const jobId = await insertMediaJob({
+      userId,
+      accountId,
+      status: "running",
+      operation: "image_generation",
+      claimToken: randomUUID(),
+    });
+    const { error: reserveError } = await admin.rpc("reserve_balance", {
+      p_user_id: userId,
+      p_job_id: jobId,
+      p_amount_usd_micros: 100_000,
+      p_metadata: {
+        provider: "fal",
+        model: "fal-ai/frontier-video",
+        operation: "image_generation",
+        media_model_id: "frontier-video",
+      },
+    });
+    expect(reserveError).toBeNull();
+    const claimToken = await readClaimToken(jobId);
+
+    const { data, error } = await admin.rpc("record_and_settle_claimed_media_job", {
+      p_job_id: jobId,
+      p_claim_token: claimToken,
+      p_final_cost_usd_micros: 250_000,
+      p_output: { outputs: [] },
+      p_metadata: {},
+      p_usage_event: {
+        user_id: userId,
+        job_id: jobId,
+        provider: "fal",
+        model: "test-model",
+        operation: "image_generation",
+        charged_amount_usd_micros: 250_000,
+        markup_amount_usd_micros: 0,
+        metadata: {},
+      },
+    });
+
+    expect(error).toBeNull();
+    expect(Number(data.final_cost_usd_micros)).toBe(100_000);
+
+    const { data: usage, error: usageError } = await admin
+      .from("usage_events")
+      .select("charged_amount_usd_micros, metadata")
+      .eq("job_id", jobId)
+      .single();
+    expect(usageError).toBeNull();
+    expect(Number(usage.charged_amount_usd_micros)).toBe(100_000);
+    expect(usage.metadata.settlement_capped).toBe(true);
+    expect(Number(usage.metadata.uncapped_cost_usd_micros)).toBe(250_000);
+    expect(Number(usage.metadata.overage_usd_micros)).toBe(150_000);
   });
 
   it("cancels only queued jobs owned by the user", async () => {
@@ -415,22 +519,60 @@ async function createUserAndAccount() {
   return { userId, accountId: account.id as string };
 }
 
+async function grantBalance(userId: string, amountUsdMicros: number) {
+  const admin = getAdminClient();
+  const { error } = await admin.rpc("grant_balance", {
+    p_user_id: userId,
+    p_amount_usd_micros: amountUsdMicros,
+    p_source: "media-db-test",
+    p_source_id: randomUUID(),
+    p_kind: "promo",
+    p_metadata: {},
+  });
+  if (error) throw error;
+}
+
+async function readAccountBalance(userId: string) {
+  const admin = getAdminClient();
+  const { data, error } = await admin
+    .from("ledger_entries")
+    .select("amount_usd_micros")
+    .eq("user_id", userId);
+  if (error) throw error;
+
+  return (data ?? []).reduce((total, row) => total + Number(row.amount_usd_micros), 0);
+}
+
+async function readClaimToken(jobId: string) {
+  const admin = getAdminClient();
+  const { data, error } = await admin
+    .from("generation_jobs")
+    .select("claim_token")
+    .eq("id", jobId)
+    .single();
+  if (error) throw error;
+
+  return data.claim_token as string;
+}
+
 async function insertMediaJob({
   userId,
   accountId,
   status,
-  reserved,
+  reserved = 0,
   inputAssetIds = [],
   expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   operation = "video_generation",
+  claimToken,
 }: {
   userId: string;
   accountId: string;
   status: string;
-  reserved: number;
+  reserved?: number;
   inputAssetIds?: string[];
   expiresAt?: string;
   operation?: string;
+  claimToken?: string;
 }) {
   const admin = getAdminClient();
   const { data, error } = await admin
@@ -452,6 +594,7 @@ async function insertMediaJob({
       },
       progress: {},
       expires_at: expiresAt,
+      ...(claimToken ? { claim_token: claimToken } : {}),
     })
     .select("id")
     .single();
