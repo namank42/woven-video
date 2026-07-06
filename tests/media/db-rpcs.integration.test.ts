@@ -215,6 +215,23 @@ describeDb("media SQL RPC integration", () => {
     expect(rows.has(succeededJobId)).toBe(false);
   });
 
+  it("does not return running jobs whose claim lease is still valid", async () => {
+    const admin = getAdminClient();
+    const jobId = await insertMediaJob({
+      status: "waiting_provider",
+      reserved: 100_000,
+      claimToken: crypto.randomUUID(),
+      claimExpiresAt: new Date(Date.now() + 5 * 60_000).toISOString(), // valid lease
+      lastProviderPollAt: new Date(Date.now() - 10 * 60_000).toISOString(), // stale poll
+      expiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
+    });
+
+    const { data } = await admin.rpc("find_media_jobs_for_trigger_reconciliation", {
+      p_limit: 25, p_now: new Date().toISOString(),
+    });
+    expect((data ?? []).map((row: { id: string }) => row.id)).not.toContain(jobId);
+  });
+
   it("finalizes expired active media jobs without dispatching them for reconciliation", async () => {
     const admin = getAdminClient();
     const { userId, accountId } = await createUserAndAccount();
@@ -307,7 +324,7 @@ describeDb("media SQL RPC integration", () => {
 
     const { data: job, error: jobError } = await admin
       .from("generation_jobs")
-      .select("status, error, final_cost_usd_micros")
+      .select("status, error, final_cost_usd_micros, progress")
       .eq("id", jobId)
       .single();
     expect(jobError).toBeNull();
@@ -316,6 +333,7 @@ describeDb("media SQL RPC integration", () => {
       error: "media_job_timed_out",
       final_cost_usd_micros: 0,
     });
+    expect(job.progress?.stage).toBe("failed");
   });
 
   it("does not derive unknown media operations as video during reconciliation", async () => {
@@ -564,17 +582,24 @@ async function insertMediaJob({
   expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   operation = "video_generation",
   claimToken,
+  claimExpiresAt,
+  lastProviderPollAt,
 }: {
-  userId: string;
-  accountId: string;
+  userId?: string;
+  accountId?: string;
   status: string;
   reserved?: number;
   inputAssetIds?: string[];
   expiresAt?: string;
   operation?: string;
   claimToken?: string;
+  claimExpiresAt?: string;
+  lastProviderPollAt?: string;
 }) {
   const admin = getAdminClient();
+  if (!userId || !accountId) {
+    ({ userId, accountId } = await createUserAndAccount());
+  }
   const { data, error } = await admin
     .from("generation_jobs")
     .insert({
@@ -595,6 +620,8 @@ async function insertMediaJob({
       progress: {},
       expires_at: expiresAt,
       ...(claimToken ? { claim_token: claimToken } : {}),
+      ...(claimExpiresAt ? { claim_expires_at: claimExpiresAt } : {}),
+      ...(lastProviderPollAt ? { last_provider_poll_at: lastProviderPollAt } : {}),
     })
     .select("id")
     .single();

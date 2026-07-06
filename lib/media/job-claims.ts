@@ -14,6 +14,7 @@ export type ReconciliationMediaJob = {
   userId: string;
   modelId: string;
   kind: "image" | "video" | "audio";
+  claimGeneration: string;
 };
 
 export type ExpiredMediaJobFinalization = {
@@ -39,6 +40,7 @@ type ReconciliationRpcRow = {
   user_id?: unknown;
   media_model_id?: unknown;
   media_kind?: unknown;
+  claim_generation?: unknown;
 };
 
 type ExpiredMediaJobFinalizationRpcRow = {
@@ -77,7 +79,8 @@ export async function findMediaJobsForTriggerReconciliation(limit = 25): Promise
     const userId = stringValue(row.user_id);
     const modelId = stringValue(row.media_model_id);
     const kind = mediaKindValue(row.media_kind);
-    return jobId && userId && modelId && kind ? [{ jobId, userId, modelId, kind }] : [];
+    const claimGeneration = stringValue(row.claim_generation) ?? "unknown";
+    return jobId && userId && modelId && kind ? [{ jobId, userId, modelId, kind, claimGeneration }] : [];
   });
 }
 
