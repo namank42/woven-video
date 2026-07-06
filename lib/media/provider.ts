@@ -39,6 +39,7 @@ export type MediaProviderAdapter = {
     inputUrls: string[];
     inputAssets?: ProviderInputAsset[];
     providerJobId?: string | null;
+    webhookUrl?: string | null;
     signal?: AbortSignal;
   }): Promise<ProviderRunResult>;
 };

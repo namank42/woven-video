@@ -1,6 +1,5 @@
 import { fal } from "@fal-ai/client";
 
-import { getMediaEnv } from "@/lib/media/env";
 import type { MediaProviderAdapter, ProviderInputAsset, ProviderOutput } from "@/lib/media/provider";
 import type { MediaModel, MediaParameterSchema } from "@/lib/media/types";
 
@@ -21,7 +20,7 @@ type FalOutputExtractionOptions = {
 const URL_PATTERN = /^https?:\/\//i;
 
 export const falMediaAdapter: MediaProviderAdapter = {
-  async run({ model, parameters, inputUrls, inputAssets, providerJobId, signal }) {
+  async run({ model, parameters, inputUrls, inputAssets, providerJobId, webhookUrl, signal }) {
     const endpoint = model.providerEndpoint;
     const input: Record<string, unknown> = {
       ...model.defaultParameters,
@@ -43,9 +42,8 @@ export const falMediaAdapter: MediaProviderAdapter = {
         input,
         abortSignal: signal,
       };
-      const webhookBaseUrl = getMediaEnv().falWebhookBaseUrl;
-      if (webhookBaseUrl) {
-        submitOptions.webhookUrl = `${webhookBaseUrl}/api/v1/media/webhooks/fal`;
+      if (webhookUrl) {
+        submitOptions.webhookUrl = webhookUrl;
       }
 
       const submitted = await fal.queue.submit(endpoint, submitOptions);
@@ -67,7 +65,7 @@ export const falMediaAdapter: MediaProviderAdapter = {
     });
     const statusText = stringValue((status as unknown as Record<string, unknown>).status) ?? "";
 
-    if (!/completed|succeeded/i.test(statusText)) {
+    if (statusText === "IN_QUEUE" || statusText === "IN_PROGRESS") {
       return {
         status: "waiting_provider",
         providerJobId,
@@ -78,11 +76,37 @@ export const falMediaAdapter: MediaProviderAdapter = {
         },
       };
     }
+    if (statusText !== "COMPLETED") {
+      return {
+        status: "provider_failed",
+        metadata: {
+          endpoint,
+          fal_request_id: providerJobId,
+          fal_status: statusText || "unknown",
+        },
+      };
+    }
 
-    const result = await fal.queue.result(endpoint, {
-      requestId: providerJobId,
-      abortSignal: signal,
-    });
+    let result: unknown;
+    try {
+      result = await fal.queue.result(endpoint, {
+        requestId: providerJobId,
+        abortSignal: signal,
+      });
+    } catch (error) {
+      if (isRecord(error) && (error.name === "ApiError" || error.name === "ValidationError")) {
+        return {
+          status: "provider_failed",
+          metadata: {
+            endpoint,
+            fal_request_id: providerJobId,
+            provider_status: typeof error.status === "number" ? error.status : undefined,
+            provider_error_message: error instanceof Error ? error.message.slice(0, 500) : undefined,
+          },
+        };
+      }
+      throw error;
+    }
     const payload = resultPayload(result);
     const outputs = extractFalOutputs(payload, model.outputTypes, {
       outputPaths: falOutputPaths(model.metadata.fal_output_paths),

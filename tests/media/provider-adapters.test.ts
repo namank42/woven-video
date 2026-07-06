@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
   falStatus: vi.fn(),
   falResult: vi.fn(),
   ElevenLabsClient: vi.fn(),
-  getMediaEnv: vi.fn(),
 }));
 
 vi.mock("@fal-ai/client", () => ({
@@ -24,17 +23,11 @@ vi.mock("@elevenlabs/elevenlabs-js", () => ({
   ElevenLabsClient: mocks.ElevenLabsClient,
 }));
 
-vi.mock("@/lib/media/env", () => ({
-  getMediaEnv: mocks.getMediaEnv,
-}));
-
 describe("falMediaAdapter", () => {
   beforeEach(() => {
     mocks.falSubmit.mockReset();
     mocks.falStatus.mockReset();
     mocks.falResult.mockReset();
-    mocks.getMediaEnv.mockReset();
-    mocks.getMediaEnv.mockReturnValue({ falWebhookBaseUrl: null });
   });
 
   it("extracts output urls only from declared Fal result paths when selectors are provided", async () => {
@@ -137,11 +130,8 @@ describe("falMediaAdapter", () => {
     });
   });
 
-  it("passes the Fal webhook URL when configured", async () => {
+  it("submits with the webhook url passed by the executor", async () => {
     const { falMediaAdapter } = await import("@/lib/media/providers/fal");
-    mocks.getMediaEnv.mockReturnValue({
-      falWebhookBaseUrl: "https://www.woven.video",
-    });
     mocks.falSubmit.mockResolvedValue({ request_id: "fal_req_webhook" });
 
     await falMediaAdapter.run({
@@ -153,11 +143,13 @@ describe("falMediaAdapter", () => {
       }),
       parameters: { prompt: "a mountain" },
       inputUrls: [],
+      providerJobId: null,
+      webhookUrl: "https://www.woven.video/api/v1/media/webhooks/fal/job-1/nonce-1",
     });
 
     expect(mocks.falSubmit).toHaveBeenCalledWith("fal-ai/frontier-video", {
       input: { prompt: "a mountain" },
-      webhookUrl: "https://www.woven.video/api/v1/media/webhooks/fal",
+      webhookUrl: "https://www.woven.video/api/v1/media/webhooks/fal/job-1/nonce-1",
       abortSignal: undefined,
     });
   });
@@ -286,6 +278,41 @@ describe("falMediaAdapter", () => {
     });
 
     expect(mocks.falResult).not.toHaveBeenCalled();
+  });
+
+  it("fails on unknown queue status instead of waiting forever", async () => {
+    const { falMediaAdapter } = await import("@/lib/media/providers/fal");
+    mocks.falStatus.mockResolvedValue({ status: "CANCELLATION_REQUESTED" });
+
+    const result = await falMediaAdapter.run({
+      model: mediaModel(),
+      parameters: {},
+      inputUrls: [],
+      providerJobId: "req-1",
+    });
+
+    expect(result.status).toBe("provider_failed");
+  });
+
+  it("maps an ApiError result fetch to provider_failed", async () => {
+    const { falMediaAdapter } = await import("@/lib/media/providers/fal");
+    mocks.falStatus.mockResolvedValue({ status: "COMPLETED" });
+    const apiError = Object.assign(new Error("Unprocessable Entity"), {
+      name: "ApiError",
+      status: 422,
+      body: {},
+    });
+    mocks.falResult.mockRejectedValue(apiError);
+
+    const result = await falMediaAdapter.run({
+      model: mediaModel(),
+      parameters: {},
+      inputUrls: [],
+      providerJobId: "req-1",
+    });
+
+    expect(result.status).toBe("provider_failed");
+    expect(result.metadata?.provider_status).toBe(422);
   });
 
   it("rejects a completed Fal job when no output urls can be extracted", async () => {
