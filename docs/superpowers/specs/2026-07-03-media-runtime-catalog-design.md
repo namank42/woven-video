@@ -298,8 +298,8 @@ minimum.
 Estimator groups:
 
 - Nano Banana Pro: image count, 4K multiplier, and web search add-on.
-- Nano Banana Lite: image count, using Fal's documented `$1 per units` as a per-output-image
-  provider unit for safe reservation.
+- Nano Banana Lite: image count, using the implemented `$0.0398/image` provider price with 20%
+  hosted markup for a `$0.0478/image` public price and safe reservation.
 - Gemini Omni Flash: generation unit.
 - Veo 3.1 and Veo 3.1 Fast: duration, audio flag, resolution, fast/standard variant.
 - Seedance 2.0 and Seedance 2.0 Fast: explicit duration, resolution, fast/standard variant, and

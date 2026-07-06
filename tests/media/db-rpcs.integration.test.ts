@@ -56,6 +56,8 @@ describeDb("media SQL RPC integration", () => {
     expect(ids.has("openai/gpt-image-2")).toBe(true);
     expect(ids.has("openai/gpt-image-2/edit")).toBe(true);
     expect(ids.has("fal-ai/nano-banana-pro")).toBe(true);
+    expect(ids.has("fal-ai/nano-banana-lite")).toBe(false);
+    expect(ids.has("fal-ai/nano-banana-lite/edit")).toBe(false);
     expect(ids.has("google/nano-banana-2-lite")).toBe(true);
     expect(ids.has("google/nano-banana-2-lite/edit")).toBe(true);
     expect(ids.has("fal-ai/veo3.1")).toBe(true);
