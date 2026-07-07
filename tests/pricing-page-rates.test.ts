@@ -89,14 +89,13 @@ describe("pricing page rates", () => {
       capability: "Image generation and editing",
       modelIds: ["google/nano-banana-2-lite", "google/nano-banana-2-lite/edit"],
       rate: "$0.0478/image",
-      notes: "Uses Fal's $0.0398/image Nanobanana rate with hosted markup.",
+      notes: "Fast image generation and editing.",
     });
 
     expect(mediaByName.get("Gemini Omni Flash")).toMatchObject({
       capability: "Video generation and editing",
       rate: "$1.20/generation",
-      notes:
-        "3-10 seconds. Treats Fal's $1 unit as one generation unit.",
+      notes: "Supports 3-10 second video generations.",
     });
 
     expect(mediaByName.get("Veo 3.1")).toMatchObject({
@@ -191,5 +190,13 @@ describe("pricing page rates", () => {
       "fal-ai/kling-video/v3/standard/text-to-video",
       "fal-ai/kling-video/v3/standard/image-to-video",
     ]);
+  });
+
+  it("keeps public media pricing copy free of provider implementation details", () => {
+    const publicCopy = mediaModelRates
+      .flatMap((rate) => [rate.name, rate.capability, rate.rate, rate.notes])
+      .join(" ");
+
+    expect(publicCopy).not.toMatch(/\bFal\b|provider|hosted markup|unit pricing/i);
   });
 });
