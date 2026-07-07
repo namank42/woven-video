@@ -340,7 +340,9 @@ function MediaModelsTable() {
               <th className="w-[28%] px-6 py-4 font-medium">Model</th>
               <th className="w-[18%] px-6 py-4 font-medium">Capability</th>
               <th className="w-[28%] px-6 py-4 text-right font-medium">Rate</th>
-              <th className="w-[26%] px-6 py-4 text-right font-medium">Notes</th>
+              <th className="w-[26%] px-6 py-4 text-right font-medium">
+                Details
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-background">
@@ -380,7 +382,7 @@ function MediaModelsTable() {
               <dd className="text-right">{model.capability}</dd>
               <dt className="text-muted-foreground">Rate</dt>
               <dd className="text-right tabular-nums">{model.rate}</dd>
-              <dt className="text-muted-foreground">Notes</dt>
+              <dt className="text-muted-foreground">Details</dt>
               <dd className="text-right text-muted-foreground">{model.notes}</dd>
             </dl>
           </div>

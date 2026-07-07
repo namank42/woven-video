@@ -27,4 +27,11 @@ describe("pricing page source", () => {
 
     expect(pageSource).not.toMatch(/model\.modelIds|modelIds\.map/);
   });
+
+  it("labels media qualifiers as public details instead of notes", async () => {
+    const pageSource = await readFile("app/pricing/page.tsx", "utf8");
+
+    expect(pageSource).toMatch(/>\s*Details\s*</);
+    expect(pageSource).not.toMatch(/>\s*Notes\s*</);
+  });
 });

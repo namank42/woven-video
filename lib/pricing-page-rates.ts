@@ -78,7 +78,7 @@ export const mediaModelRates: MediaModelRate[] = [
     capability: "Image generation and editing",
     modelIds: ["google/nano-banana-2-lite", "google/nano-banana-2-lite/edit"],
     rate: "$0.0478/image",
-    notes: "Uses Fal's $0.0398/image Nanobanana rate with hosted markup.",
+    notes: "Fast image generation and editing.",
   },
   {
     name: "Gemini Omni Flash",
@@ -90,7 +90,7 @@ export const mediaModelRates: MediaModelRate[] = [
       "fal-ai/gemini-omni-flash/edit",
     ],
     rate: "$1.20/generation",
-    notes: "3-10 seconds. Treats Fal's $1 unit as one generation unit.",
+    notes: "Supports 3-10 second video generations.",
   },
   {
     name: "Veo 3.1",
