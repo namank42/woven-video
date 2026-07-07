@@ -123,8 +123,8 @@ export const mediaModelRates: MediaModelRate[] = [
       "bytedance/seedance-2.0/image-to-video",
       "bytedance/seedance-2.0/reference-to-video",
     ],
-    rate: "From $0.36/sec",
-    notes: "720p. 1080p: $0.82/sec. Exact estimates shown before job submission.",
+    rate: "$0.36-$0.82/sec",
+    notes: "480p/720p: $0.36/sec. 1080p/4K: $0.82/sec.",
   },
   {
     name: "Seedance 2.0 Fast",
@@ -134,8 +134,9 @@ export const mediaModelRates: MediaModelRate[] = [
       "bytedance/seedance-2.0/fast/image-to-video",
       "bytedance/seedance-2.0/fast/reference-to-video",
     ],
-    rate: "From $0.29/sec",
-    notes: "720p. Exact estimates shown before job submission.",
+    rate: "$0.17-$0.29/sec",
+    notes:
+      "Text/image 480p/720p: $0.29/sec. Reference 480p/720p: $0.17/sec.",
   },
   {
     name: "Kling v3 Pro",
