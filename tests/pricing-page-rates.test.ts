@@ -112,15 +112,15 @@ describe("pricing page rates", () => {
 
     expect(mediaByName.get("Seedance 2.0")).toMatchObject({
       capability: "Video generation",
-      rate: "From $0.36/sec",
-      notes:
-        "720p. 1080p: $0.82/sec. Exact estimates shown before job submission.",
+      rate: "$0.36-$0.82/sec",
+      notes: "480p/720p: $0.36/sec. 1080p/4K: $0.82/sec.",
     });
 
     expect(mediaByName.get("Seedance 2.0 Fast")).toMatchObject({
       capability: "Video generation",
-      rate: "From $0.29/sec",
-      notes: "720p. Exact estimates shown before job submission.",
+      rate: "$0.17-$0.29/sec",
+      notes:
+        "Text/image 480p/720p: $0.29/sec. Reference 480p/720p: $0.17/sec.",
     });
 
     expect(mediaByName.get("Kling v3 Pro")).toMatchObject({
@@ -198,5 +198,6 @@ describe("pricing page rates", () => {
       .join(" ");
 
     expect(publicCopy).not.toMatch(/\bFal\b|provider|hosted markup|unit pricing/i);
+    expect(publicCopy).not.toMatch(/exact estimates? shown before job submission/i);
   });
 });
