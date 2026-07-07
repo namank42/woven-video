@@ -237,14 +237,24 @@ FAL_WEBHOOK_JWKS_URL=
 
 Expected: Trigger tasks can read the same Supabase, provider, and media settings as the Vercel app.
 
-- [ ] **Step 5: Set Cloudflare Worker production secrets**
+- [ ] **Step 5: Check whether the production Cloudflare Worker already exists**
+
+```bash
+npx wrangler secret list --config workers/media/wrangler.jsonc
+```
+
+Expected:
+- If the Worker exists, the command lists secret names or an empty list.
+- If the Worker does not exist, the command fails with `Worker "woven-media" not found`; continue in Task 3 with the first-time Worker creation path.
+
+- [ ] **Step 6: Set Cloudflare Worker production secrets if the Worker already exists**
 
 ```bash
 npx wrangler secret put MEDIA_TOKEN_SECRET --config workers/media/wrangler.jsonc
 npx wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangler.jsonc
 ```
 
-Expected: both secrets are stored for the top-level `woven-media` Worker environment. Use the exact same production values from Vercel.
+Expected: both secrets are stored for the top-level `woven-media` Worker environment. Use the exact same production values from Vercel. If Step 5 reported that the Worker is missing, skip this step for now and set the secrets in Task 3 after the first Worker deploy creates it.
 
 ---
 
@@ -277,7 +287,7 @@ npx wrangler r2 bucket create woven-media
 
 Expected: run only if Step 1 did not show `woven-media`; otherwise skip this command.
 
-- [ ] **Step 3: Deploy the Worker**
+- [ ] **Step 3: Deploy the Worker to create or update it**
 
 ```bash
 pnpm run media:edge:deploy
@@ -285,7 +295,26 @@ pnpm run media:edge:deploy
 
 Expected: deployment exits 0 for Worker `woven-media`.
 
-- [ ] **Step 4: Verify routes are scoped**
+- [ ] **Step 4: Set production Worker secrets after first-time Worker creation if needed**
+
+Run this step if Task 2 Step 5 reported `Worker "woven-media" not found` before Task 3 Step 3:
+
+```bash
+npx wrangler secret put MEDIA_TOKEN_SECRET --config workers/media/wrangler.jsonc
+npx wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangler.jsonc
+```
+
+Expected: both secrets are stored for the top-level `woven-media` Worker environment. Use the exact same production values from Vercel.
+
+- [ ] **Step 5: Verify production Worker secret names**
+
+```bash
+npx wrangler secret list --config workers/media/wrangler.jsonc
+```
+
+Expected: lists both `MEDIA_TOKEN_SECRET` and `MEDIA_WORKER_SHARED_SECRET`.
+
+- [ ] **Step 6: Verify routes are scoped**
 
 Check Cloudflare routes match `workers/media/wrangler.jsonc`:
 
@@ -297,7 +326,7 @@ media.woven.video/internal/*
 
 Expected: no route for plain `media.woven.video/*`.
 
-- [ ] **Step 5: Verify top-level landing assets still bypass the Worker**
+- [ ] **Step 7: Verify top-level landing assets still bypass the Worker**
 
 ```bash
 curl -sI https://media.woven.video/woven-hero-v4.mp4
@@ -306,7 +335,7 @@ curl -sI https://media.woven.video/woven-hero-v4.png
 
 Expected: both return HTTP 200. If either fails after Worker deploy, stop before Vercel deploy because route scope is wrong.
 
-- [ ] **Step 6: Verify protected object route rejects unsigned access**
+- [ ] **Step 8: Verify protected object route rejects unsigned access**
 
 ```bash
 curl -s -o /tmp/woven-media-worker-unsigned.txt -w "%{http_code}\n" https://media.woven.video/objects/not-a-real-asset

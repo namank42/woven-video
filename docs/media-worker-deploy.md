@@ -30,12 +30,17 @@ Do not route all of `media.woven.video/*` to this Worker. The host also serves e
 
 ## Worker Secrets
 
-Set production Worker secrets before deploying production:
+Set production Worker secrets before production traffic uses the Worker.
+If the production Worker already exists, set them before deploying the next version:
 
 ```bash
 npx wrangler secret put MEDIA_TOKEN_SECRET --config workers/media/wrangler.jsonc
 npx wrangler secret put MEDIA_WORKER_SHARED_SECRET --config workers/media/wrangler.jsonc
 ```
+
+If the production Worker does not exist yet, `wrangler secret put` will fail with
+`Worker "woven-media" not found`. For first-time production setup, deploy the Worker once to create
+it, set both secrets, then deploy/verify again before the Vercel app starts issuing media URLs.
 
 Set dev Worker secrets before deploying the `dev` environment:
 
@@ -126,14 +131,15 @@ app.
 ## Deployment Order
 
 1. Create or verify the `woven-media` R2 bucket.
-2. Set Worker secrets with `npx wrangler secret put`.
-3. Deploy the Cloudflare media edge Worker with `pnpm run media:edge:deploy`.
-4. Set app env vars in Vercel.
-5. Apply all Supabase migrations in this branch.
-6. Deploy the app.
+2. If the production Worker does not exist, deploy it once with `pnpm run media:edge:deploy`.
+3. Set Worker secrets with `npx wrangler secret put`.
+4. Deploy or verify the Cloudflare media edge Worker with `pnpm run media:edge:deploy`.
+5. Set app env vars in Vercel.
+6. Apply all Supabase migrations in this branch.
 7. Deploy Trigger.dev tasks with `pnpm run trigger:deploy`.
-8. After the cleanup task lands, confirm Vercel Cron is active for `/api/internal/media/cleanup`.
-9. Smoke-test upload, job creation, job status, output download, and, after the follow-up tasks land, Fal webhook and cleanup.
+8. Merge to `main` only after steps 1-7 are complete; Vercel auto-deploy on merge is the app activation step.
+9. Confirm Vercel Cron is active for `/api/internal/media/cleanup`.
+10. Smoke-test upload, job creation, job status, output download, Fal webhook, and cleanup.
 
 ## Local Development
 
