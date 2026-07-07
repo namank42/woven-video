@@ -48,12 +48,12 @@ Hosted model and media pricing should produce estimated and final costs in `usd_
 
 `model_pricing_rules` lists Woven-hosted models, reserve amounts, minimum charges, and Woven markup. V1 starts with `markup_bps = 2000` (20%). Reservations are small temporary holds in `usd_micros`; final settlement uses provider cost plus markup after usage is known.
 
-Initial hosted chat models:
+Current hosted chat models:
 
 - `anthropic/claude-sonnet-4.6`
 - `anthropic/claude-opus-4.8`
-- `anthropic/claude-haiku-4.5`
 - `openai/gpt-5.5`
+- `moonshotai/kimi-k2.6`
 
 `ledger_entries` is the append-only ledger. Every balance-changing operation writes an entry with `amount_usd_micros` and `balance_after_usd_micros`. The unique `(source, source_id, kind)` constraint is the idempotency boundary for Stripe webhooks and job accounting.
 
@@ -61,7 +61,9 @@ Initial hosted chat models:
 
 `usage_events` records provider usage, raw provider cost, and Woven charged amount for auditability.
 
-The `generated-media` storage bucket is private. Authenticated users can read objects stored under a top-level folder named with their user ID.
+Hosted media inputs and outputs live in Cloudflare R2 behind the media worker
+(`media.woven.video`). Download URLs are short-lived signed links minted on
+status reads; retention is enforced by the media cleanup job.
 
 ## RPC Contract
 
@@ -136,6 +138,14 @@ The route flow:
 7. On failure or cancellation: calls `release_balance_reservation`.
 
 Shared logic lives in `lib/billing/charge-flat-tool.ts` and is reusable for any future flat-fee external API.
+
+## Hosted Media Jobs
+
+Woven-hosted media jobs use `/api/v1/media/*` routes. Supabase stores auth, pricing, job, media asset, ledger, and usage-event rows. Cloudflare R2 stores media bytes behind `media.woven.video`; normal clients receive Woven-domain upload/download URLs, not raw R2 presigned URLs.
+
+Job creation reserves credits before provider work starts. The media worker claims queued jobs with `claim_media_jobs`, calls Fal or ElevenLabs using server-owned keys, records `usage_events`, settles or releases the reservation, and writes final output refs into the job output.
+
+Auto captions use the same R2 media input path and charge `$0.10/min` with a `$0.10` minimum.
 
 ## Job Flow
 

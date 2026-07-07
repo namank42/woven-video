@@ -34,11 +34,11 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "Can Woven generate AI voiceover?",
-    a: "Yes. As part of reel assembly, Woven generates voice from your script alongside footage. Auto captions from the voiceover are available at $0.01/min — see the pricing page for details.",
+    a: "Yes. As part of reel assembly, Woven generates voice from your script alongside footage. Auto captions from the voiceover are available at $0.10/min — see the pricing page for details.",
   },
   {
     q: "Which models can I use?",
-    a: "The same lineup either way — Claude Sonnet 4.6, Claude Opus 4.8, Claude Haiku 4.5, GPT-5.5, Kimi K2.6, and Grok 4.3. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or use Woven-hosted models (charged from your prepaid balance). See the pricing page for per-model rates.",
+    a: "Use Claude Sonnet 4.6, Claude Opus 4.8, GPT-5.5, and Kimi K2.6 with Woven-hosted credits. You can also bring your own Anthropic and OpenAI keys or sign in with ChatGPT for GPT-5+ on your existing plan. See the pricing page for per-model rates.",
   },
   {
     q: "Can I use ChatGPT with Woven?",
@@ -54,7 +54,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "How much do hosted AI models cost?",
-    a: "Hosted models are billed per token from your prepaid balance — for example, Claude Sonnet 4.6 from $3.60/M input and $18.00/M output. Auto captions are $0.01/min. See woven.video/pricing for the full rate table.",
+    a: "Hosted models are billed per token from your prepaid balance — for example, Claude Sonnet 4.6 from $3.60/M input and $18.00/M output. Auto captions are $0.10/min. See woven.video/pricing for the full rate table.",
   },
   {
     q: "Can I bring my own provider keys?",
@@ -81,11 +81,11 @@ export const pricingFaqs: FaqItem[] = [
   },
   {
     q: "Do I need hosted credits?",
-    a: "No. Hosted credits are optional — only needed for Woven-hosted Claude and GPT models. You can use your own API keys or ChatGPT sign-in without topping up.",
+    a: "No. Hosted credits are optional — only needed for Woven-hosted models. You can use your own API keys or ChatGPT sign-in without topping up.",
   },
   {
     q: "How do hosted model rates work?",
-    a: "Each request is charged per token from your prepaid balance at the published rates on this page. Auto captions are $0.01/min. There are no surprise bills.",
+    a: "Each request is charged per token from your prepaid balance at the published rates on this page. Auto captions are $0.10/min. There are no surprise bills.",
   },
   {
     q: "Can I bring my own API keys?",

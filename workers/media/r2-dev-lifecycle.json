@@ -1,0 +1,28 @@
+{
+  "rules": [
+    {
+      "id": "delete-local-smoke-media-after-7-days",
+      "enabled": true,
+      "conditions": {
+        "prefix": "users/"
+      },
+      "deleteObjectsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 604800
+        }
+      }
+    },
+    {
+      "id": "abort-incomplete-dev-media-uploads-after-1-day",
+      "enabled": true,
+      "conditions": {},
+      "abortMultipartUploadsTransition": {
+        "condition": {
+          "type": "Age",
+          "maxAge": 86400
+        }
+      }
+    }
+  ]
+}

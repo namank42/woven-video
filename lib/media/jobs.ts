@@ -1,0 +1,441 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { getMediaJobTimeoutSeconds } from "@/lib/media/env";
+import {
+  inputAssetRoleFor,
+  matchesInputAssetRoleContentType,
+  type MediaJobInputAsset,
+  validateInputAssetRoles,
+} from "@/lib/media/input-assets";
+import { reservationUsdMicros } from "@/lib/media/pricing";
+import { quoteMediaJob, serializeMediaPricingQuote } from "@/lib/media/pricing-quotes";
+import type { MediaModel } from "@/lib/media/types";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+
+type MediaAssetInputRow = {
+  id: string;
+  status: string;
+  content_type: string;
+  kind: string;
+  upload_expires_at: string | null;
+};
+
+type CreatedMediaJobRow = {
+  id: string;
+  status: string;
+  estimated_cost_usd_micros: number | string;
+  reserved_amount_usd_micros: number | string;
+  created_at: string;
+  expires_at: string | null;
+};
+
+type SupabaseAdminClient = SupabaseClient;
+
+const JOB_SELECT = "id, status, estimated_cost_usd_micros, reserved_amount_usd_micros, created_at, expires_at";
+
+export async function createReservedMediaJob({
+  userId,
+  model,
+  parameters,
+  inputAssets,
+  inputAssetIds,
+}: {
+  userId: string;
+  model: MediaModel;
+  parameters: Record<string, unknown>;
+  inputAssets: MediaJobInputAsset[];
+  inputAssetIds: string[];
+}) {
+  if (!inputAssetsMatchIds(inputAssets, inputAssetIds)) {
+    throw new Error("invalid_media_input");
+  }
+
+  const roleValidation = validateInputAssetRoles(inputAssets, model.inputAssetSchema);
+  if (!roleValidation.ok) {
+    throw new Error("invalid_media_input");
+  }
+
+  const admin = createSupabaseAdminClient();
+  const effectiveParameters = {
+    ...model.defaultParameters,
+    ...parameters,
+  };
+  const pricingQuote = quoteMediaJob({ model, parameters: effectiveParameters });
+  const reserveAmount = reservationUsdMicros(model, pricingQuote);
+
+  await validateInputAssets({
+    admin,
+    userId,
+    model,
+    inputAssets,
+    inputAssetIds,
+  });
+
+  const { data: job, error: jobError } = await admin
+    .from("generation_jobs")
+    .insert({
+      user_id: userId,
+      type: "media_job",
+      provider: model.provider,
+      model: model.providerModel,
+      status: "creating",
+      estimated_cost_usd_micros: reserveAmount,
+      expires_at: new Date(Date.now() + getMediaJobTimeoutSeconds() * 1000).toISOString(),
+      input: {
+        media_model_id: model.id,
+        operation: model.operation,
+        parameters: effectiveParameters,
+        input_assets: inputAssets.map((asset) => ({ asset_id: asset.assetId, role: asset.role })),
+        input_asset_ids: inputAssetIds,
+        pricing_quote: serializeMediaPricingQuote(pricingQuote),
+      },
+      progress: { stage: "creating", percent: null },
+    })
+    .select(JOB_SELECT)
+    .single();
+
+  if (jobError || !job?.id) {
+    throw new Error(jobError?.message ?? "media_job_create_failed");
+  }
+
+  const createdJob = job as CreatedMediaJobRow;
+
+  const { error: reserveError } = await admin.rpc("reserve_balance", {
+    p_user_id: userId,
+    p_job_id: createdJob.id,
+    p_amount_usd_micros: reserveAmount,
+    p_metadata: {
+      provider: model.provider,
+      model: model.providerModel,
+      operation: model.operation,
+      media_model_id: model.id,
+    },
+  });
+
+  if (reserveError) {
+    await markJobFailed(admin, createdJob.id, reserveError.message);
+    throw new Error(reserveError.message);
+  }
+
+  try {
+    await attachInputAssets({
+      admin,
+      userId,
+      jobId: createdJob.id,
+      inputAssetIds,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "media_asset_attach_failed";
+    let detachError: Error | null = null;
+    let releaseError: Error | null = null;
+
+    try {
+      await detachInputAssets({
+        admin,
+        userId,
+        jobId: createdJob.id,
+        inputAssetIds,
+      });
+    } catch (cleanupError) {
+      detachError = toError(cleanupError, "media_asset_detach_failed");
+    }
+
+    try {
+      await releaseReservation(admin, createdJob.id, message, "media_asset_attach_failed");
+    } catch (cleanupError) {
+      releaseError = toError(cleanupError, "media_reservation_release_failed");
+    }
+
+    if (releaseError) {
+      throw releaseError;
+    }
+    if (detachError) {
+      throw detachError;
+    }
+
+    throw new Error(message);
+  }
+
+  const { data: queuedJob, error: queueError } = await admin
+    .from("generation_jobs")
+    .update({
+      status: "queued",
+      progress: { stage: "queued", percent: 0 },
+    })
+    .eq("id", createdJob.id)
+    .eq("status", "creating")
+    .select(JOB_SELECT)
+    .single();
+
+  if (queueError || !queuedJob) {
+    const message = queueError?.message ?? "media_job_queue_failed";
+    let detachError: Error | null = null;
+    let releaseError: Error | null = null;
+
+    try {
+      await detachInputAssets({
+        admin,
+        userId,
+        jobId: createdJob.id,
+        inputAssetIds,
+      });
+    } catch (cleanupError) {
+      detachError = toError(cleanupError, "media_asset_detach_failed");
+    }
+
+    try {
+      await releaseReservation(admin, createdJob.id, message, "media_job_queue_failed");
+    } catch (cleanupError) {
+      releaseError = toError(cleanupError, "media_reservation_release_failed");
+    }
+
+    if (releaseError) {
+      throw releaseError;
+    }
+    if (detachError) {
+      throw detachError;
+    }
+
+    throw new Error(message);
+  }
+
+  return normalizeMediaJobRow(queuedJob as CreatedMediaJobRow, model.id, reserveAmount);
+}
+
+export async function failReservedMediaJobDispatch(jobId: string): Promise<void> {
+  const admin = createSupabaseAdminClient();
+  await releaseReservation(
+    admin,
+    jobId,
+    "media_executor_unavailable",
+    "media_executor_unavailable",
+  );
+}
+
+function normalizeMediaJobRow(
+  job: CreatedMediaJobRow,
+  mediaModelId: string,
+  reserveAmount: number,
+) {
+  return {
+    id: String(job.id),
+    status: String(job.status),
+    model: mediaModelId,
+    estimatedCostUsdMicros: Number(job.estimated_cost_usd_micros),
+    reservedCreditsUsdMicros: Number(job.reserved_amount_usd_micros) || reserveAmount,
+    createdAt: String(job.created_at),
+    expiresAt: job.expires_at ? String(job.expires_at) : null,
+  };
+}
+
+async function validateInputAssets({
+  admin,
+  userId,
+  model,
+  inputAssets,
+  inputAssetIds,
+}: {
+  admin: SupabaseAdminClient;
+  userId: string;
+  model: MediaModel;
+  inputAssets: MediaJobInputAsset[];
+  inputAssetIds: string[];
+}) {
+  if (
+    inputAssetIds.length === 0 &&
+    model.supportsUploadedInputs &&
+    model.metadata.requires_uploaded_input === true
+  ) {
+    throw new Error("invalid_media_input");
+  }
+
+  if (inputAssetIds.length === 0) {
+    return;
+  }
+
+  const { data: assets, error: assetError } = await admin
+    .from("media_assets")
+    .select("id, status, content_type, kind, upload_expires_at")
+    .eq("user_id", userId)
+    .in("id", inputAssetIds);
+
+  if (assetError) {
+    throw new Error(assetError.message);
+  }
+
+  const assetRows = (assets ?? []) as MediaAssetInputRow[];
+  if (assetRows.length !== inputAssetIds.length) {
+    throw new Error("invalid_media_input");
+  }
+
+  const inputAssetsById = new Map(assetRows.map((asset) => [asset.id, asset]));
+
+  const nowMs = Date.now();
+  for (const inputAsset of assetRows) {
+    if (inputAsset.kind !== "input") {
+      throw new Error("invalid_media_input");
+    }
+    if (inputAsset.status !== "uploaded") {
+      throw new Error("upload_not_complete");
+    }
+    const expiresAtMs = inputAsset.upload_expires_at
+      ? Date.parse(inputAsset.upload_expires_at)
+      : Number.NaN;
+    if (Number.isFinite(expiresAtMs) && expiresAtMs <= nowMs) {
+      throw new Error("upload_expired");
+    }
+  }
+
+  for (const asset of inputAssets) {
+    const loadedAsset = inputAssetsById.get(asset.assetId);
+    const role = inputAssetRoleFor(model.inputAssetSchema, asset.role);
+
+    if (!loadedAsset) {
+      throw new Error("invalid_media_input");
+    }
+
+    if (role) {
+      if (!matchesInputAssetRoleContentType(loadedAsset.content_type, role)) {
+        throw new Error("invalid_media_input");
+      }
+      continue;
+    }
+
+    const family = loadedAsset.content_type.split("/")[0];
+    if (!family || !model.supportedInputTypes.includes(family)) {
+      throw new Error("invalid_media_input");
+    }
+  }
+}
+
+function inputAssetsMatchIds(inputAssets: MediaJobInputAsset[], inputAssetIds: string[]) {
+  if (inputAssets.length !== inputAssetIds.length) {
+    return false;
+  }
+
+  const inputAssetSet = new Set(inputAssets.map((asset) => asset.assetId));
+  const inputAssetIdSet = new Set(inputAssetIds);
+
+  if (inputAssetSet.size !== inputAssets.length) {
+    return false;
+  }
+
+  if (inputAssetIdSet.size !== inputAssetIds.length) {
+    return false;
+  }
+
+  if (inputAssetSet.size !== inputAssetIdSet.size) {
+    return false;
+  }
+
+  for (const assetId of inputAssetSet) {
+    if (!inputAssetIdSet.has(assetId)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+async function attachInputAssets({
+  admin,
+  userId,
+  jobId,
+  inputAssetIds,
+}: {
+  admin: SupabaseAdminClient;
+  userId: string;
+  jobId: string;
+  inputAssetIds: string[];
+}) {
+  if (inputAssetIds.length === 0) {
+    return;
+  }
+
+  const { data, error } = await admin
+    .from("media_assets")
+    .update({ job_id: jobId, status: "attached" })
+    .in("id", inputAssetIds)
+    .eq("user_id", userId)
+    .eq("status", "uploaded")
+    .eq("kind", "input")
+    .or(`upload_expires_at.is.null,upload_expires_at.gt.${new Date().toISOString()}`)
+    .select("id");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if ((data ?? []).length !== inputAssetIds.length) {
+    throw new Error("media_asset_attach_failed");
+  }
+}
+
+async function detachInputAssets({
+  admin,
+  userId,
+  jobId,
+  inputAssetIds,
+}: {
+  admin: SupabaseAdminClient;
+  userId: string;
+  jobId: string;
+  inputAssetIds: string[];
+}) {
+  if (inputAssetIds.length === 0) {
+    return;
+  }
+
+  const { error } = await admin
+    .from("media_assets")
+    .update({ job_id: null, status: "uploaded" })
+    .eq("job_id", jobId)
+    .eq("user_id", userId)
+    .in("id", inputAssetIds)
+    .select("id");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+async function markJobFailed(
+  admin: SupabaseAdminClient,
+  jobId: string,
+  error: string,
+) {
+  const { error: updateError } = await admin
+    .from("generation_jobs")
+    .update({
+      status: "failed",
+      error,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", jobId);
+
+  if (updateError) {
+    console.error("Failed to mark media job failed", updateError);
+  }
+}
+
+async function releaseReservation(
+  admin: SupabaseAdminClient,
+  jobId: string,
+  error: string,
+  reason: string,
+) {
+  const { error: releaseError } = await admin.rpc("release_balance_reservation", {
+    p_job_id: jobId,
+    p_status: "failed",
+    p_error: error,
+    p_metadata: { reason },
+  });
+
+  if (releaseError) {
+    throw new Error(releaseError.message);
+  }
+}
+
+function toError(error: unknown, fallback: string): Error {
+  return error instanceof Error ? error : new Error(fallback);
+}

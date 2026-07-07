@@ -1,9 +1,9 @@
 # Woven SFX Path Mount Design
 
-**Date:** 2026-06-30  
-**Status:** Approved design - pending written-spec review  
-**Canonical URL:** `https://www.woven.video/sfx`  
-**Repos:** `woven-video` owns the public domain; `woven-sfx` owns the SFX app and catalog  
+**Date:** 2026-06-30
+**Status:** Approved design - pending written-spec review
+**Canonical URL:** `https://www.woven.video/sfx`
+**Repos:** `woven-video` owns the public domain; `woven-sfx` owns the SFX app and catalog
 **Docs digest:** `docs/superpowers/research/2026-06-30-sfx-path-routing-docs.md`
 
 ---
