@@ -48,6 +48,43 @@ describeDb("media SQL RPC integration", () => {
     }));
   });
 
+  it("reports trial unused until any subscription row exists", async () => {
+    const admin = getAdminClient();
+    const { userId } = await createUserAndAccount();
+
+    const before = await admin.rpc("user_trial_used", { p_user_id: userId });
+    expect(before.error).toBeNull();
+    expect(before.data).toBe(false);
+
+    await insertSubscription({ userId, status: "canceled" });
+
+    const after = await admin.rpc("user_trial_used", { p_user_id: userId });
+    expect(after.error).toBeNull();
+    expect(after.data).toBe(true);
+  });
+
+  it.each([
+    "trialing",
+    "active",
+    "past_due",
+    "canceled",
+    "incomplete",
+    "incomplete_expired",
+    "unpaid",
+    "paused",
+  ])("counts %s subscription rows as trial used", async (status) => {
+    const admin = getAdminClient();
+    const { userId } = await createUserAndAccount();
+    await insertSubscription({ userId, status });
+
+    const { data, error } = await admin.rpc("user_trial_used", {
+      p_user_id: userId,
+    });
+
+    expect(error).toBeNull();
+    expect(data).toBe(true);
+  });
+
   it("lists the enabled production media catalog seeded from the pricing page", async () => {
     const models = await listMediaModels();
     const ids = new Set(models.map((model) => model.id));
@@ -571,6 +608,32 @@ async function readClaimToken(jobId: string) {
   if (error) throw error;
 
   return data.claim_token as string;
+}
+
+async function insertSubscription({
+  userId,
+  status,
+}: {
+  userId: string;
+  status: string;
+}) {
+  const admin = getAdminClient();
+  const now = Date.now();
+  const { error } = await admin
+    .from("subscriptions")
+    .insert({
+      user_id: userId,
+      stripe_subscription_id: `sub_${randomUUID()}`,
+      stripe_customer_id: `cus_${randomUUID()}`,
+      status,
+      price_id: "price_test_subscription",
+      trial_end: new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      current_period_end: new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      cancel_at_period_end: false,
+      metadata: {},
+    });
+
+  if (error) throw error;
 }
 
 async function insertMediaJob({
