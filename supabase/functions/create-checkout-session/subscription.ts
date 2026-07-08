@@ -48,7 +48,9 @@ function subscriptionRedirects({
 
   if (origin === "app") {
     return {
-      successUrl: `${baseUrl}/checkout/success`,
+      successUrl: trialUsed
+        ? `${baseUrl}/checkout/success?subscription=started&session_id={CHECKOUT_SESSION_ID}`
+        : `${baseUrl}/checkout/success?subscription=trialing&session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${baseUrl}/checkout/cancelled`,
     };
   }

@@ -2,11 +2,17 @@ import Link from "next/link";
 import { CheckCircle2Icon, InfoIcon } from "lucide-react";
 
 type CheckoutResultProps = {
-  variant: "success" | "cancelled";
+  variant: CheckoutResultVariant;
 };
 
+export type CheckoutResultVariant =
+  | "trial"
+  | "subscription"
+  | "generic"
+  | "cancelled";
+
 const COPY = {
-  success: {
+  trial: {
     Icon: CheckCircle2Icon,
     iconClass: "text-emerald-500",
     headline: "Your free trial is live.",
@@ -14,6 +20,24 @@ const COPY = {
       "You have full access to Woven for the next 7 days, and $5 in hosted credits have been added to your balance. You won't be charged until your trial ends.",
     backToApp:
       "Head back to the Woven app — it'll unlock automatically. You can close this tab.",
+  },
+  subscription: {
+    Icon: CheckCircle2Icon,
+    iconClass: "text-emerald-500",
+    headline: "Your subscription is active.",
+    body:
+      "Your Woven subscription is starting. Stripe may take a moment to sync your account status.",
+    backToApp:
+      "Head back to the Woven app — it'll unlock automatically. You can close this tab.",
+  },
+  generic: {
+    Icon: CheckCircle2Icon,
+    iconClass: "text-emerald-500",
+    headline: "Checkout complete.",
+    body:
+      "Your purchase is complete. Stripe may take a moment to sync your account status.",
+    backToApp:
+      "Head back to the Woven app — it'll update automatically. You can close this tab.",
   },
   cancelled: {
     Icon: InfoIcon,
@@ -24,8 +48,13 @@ const COPY = {
   },
 } as const;
 
+export function getCheckoutResultCopy(variant: CheckoutResultVariant) {
+  return COPY[variant];
+}
+
 export function CheckoutResult({ variant }: CheckoutResultProps) {
-  const { Icon, iconClass, headline, body, backToApp } = COPY[variant];
+  const { Icon, iconClass, headline, body, backToApp } =
+    getCheckoutResultCopy(variant);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-16">

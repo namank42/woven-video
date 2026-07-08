@@ -35,7 +35,8 @@ describe("subscription checkout helper", () => {
         purpose: "subscription",
         trial_eligible: "true",
       },
-      success_url: "https://woven.video/checkout/success",
+      success_url:
+        "https://woven.video/checkout/success?subscription=trialing&session_id={CHECKOUT_SESSION_ID}",
       cancel_url: "https://woven.video/checkout/cancelled",
     });
     expect(plan.params.subscription_data).toEqual({
@@ -74,6 +75,25 @@ describe("subscription checkout helper", () => {
         trial_eligible: "false",
       },
     });
+    expect(plan.params.subscription_data).not.toHaveProperty("trial_period_days");
+    expect(plan.params.subscription_data).not.toHaveProperty("trial_settings");
+  });
+
+  it("builds an immediate paid checkout return for trial-used app users", () => {
+    const plan = buildSubscriptionCheckoutSession({
+      customerId: "cus_789",
+      userId: "user_789",
+      priceId: "price_789",
+      siteUrl: "https://woven.video",
+      origin: "app",
+      trialUsed: true,
+    });
+
+    expect(plan.checkoutMode).toBe("subscription");
+    expect(plan.params.success_url).toBe(
+      "https://woven.video/checkout/success?subscription=started&session_id={CHECKOUT_SESSION_ID}",
+    );
+    expect(plan.params.cancel_url).toBe("https://woven.video/checkout/cancelled");
     expect(plan.params.subscription_data).not.toHaveProperty("trial_period_days");
     expect(plan.params.subscription_data).not.toHaveProperty("trial_settings");
   });
