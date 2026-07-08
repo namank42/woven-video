@@ -11,6 +11,10 @@ import {
   createServiceClient,
   requireAuthenticatedUser,
 } from "../_shared/supabase.ts";
+import {
+  buildSubscriptionCheckoutSession,
+  normalizeCheckoutOrigin,
+} from "./subscription.ts";
 
 const MIN_TOP_UP_CENTS = 500;
 const MAX_TOP_UP_CENTS = 10000;
@@ -112,7 +116,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ---- SUBSCRIPTION checkout (trial -> $99/yr) ----
+    // ---- SUBSCRIPTION checkout (trial -> $99/yr, or immediate paid after trial used) ----
     if (body.purpose === "subscription") {
       const { data: hasAccess, error: accessError } = await admin.rpc(
         "user_has_access",
@@ -124,41 +128,39 @@ Deno.serve(async (req) => {
       }
 
       if (hasAccess) {
-        return jsonResponse({ alreadySubscribed: true });
+        return jsonResponse({ alreadySubscribed: true, checkoutMode: "none" });
       }
 
-      const subMetadata = { user_id: user.id, purpose: "subscription" };
+      const { data: trialUsed, error: trialUsedError } = await admin.rpc(
+        "user_trial_used",
+        { p_user_id: user.id },
+      );
 
-      // Whitelisted redirect target (see LICENSE branch note). Never echo a raw URL.
-      const subOrigin = body.origin === "app" ? "app" : "web";
-      const subSuccessUrl = subOrigin === "app"
-        ? `${siteUrl}/checkout/success`
-        : `${siteUrl}/account?subscription=trialing&session_id={CHECKOUT_SESSION_ID}`;
-      const subCancelUrl = subOrigin === "app"
-        ? `${siteUrl}/checkout/cancelled`
-        : `${siteUrl}/account?subscription=cancelled`;
+      if (trialUsedError) {
+        throw new HttpError(
+          500,
+          "failed_to_check_trial_eligibility",
+          trialUsedError,
+        );
+      }
 
-      const subscriptionSession = await stripe.checkout.sessions.create({
-        mode: "subscription",
-        customer: customerId,
-        client_reference_id: user.id,
-        payment_method_collection: "always", // require the card up front
-        line_items: [
-          { price: requiredEnv("STRIPE_SUBSCRIPTION_PRICE_ID"), quantity: 1 },
-        ],
-        subscription_data: {
-          trial_period_days: 7,
-          trial_settings: {
-            end_behavior: { missing_payment_method: "cancel" },
-          },
-          metadata: subMetadata, // carried onto the Subscription object for the webhook
-        },
-        metadata: subMetadata,
-        success_url: subSuccessUrl,
-        cancel_url: subCancelUrl,
+      const checkoutPlan = buildSubscriptionCheckoutSession({
+        customerId,
+        userId: user.id,
+        priceId: requiredEnv("STRIPE_SUBSCRIPTION_PRICE_ID"),
+        siteUrl,
+        origin: normalizeCheckoutOrigin(body.origin),
+        trialUsed: trialUsed === true,
       });
 
-      return jsonResponse({ url: subscriptionSession.url });
+      const subscriptionSession = await stripe.checkout.sessions.create(
+        checkoutPlan.params,
+      );
+
+      return jsonResponse({
+        url: subscriptionSession.url,
+        checkoutMode: checkoutPlan.checkoutMode,
+      });
     }
 
     // ---- LICENSE checkout ----
