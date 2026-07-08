@@ -26,11 +26,6 @@ export type SubscriptionSummary = {
   cancel_at: string | null;
 } | null;
 
-const trialBullets = [
-  "$5 in Woven-hosted credits to try hosted models",
-  "Bring your own Anthropic and OpenAI keys, or sign in with ChatGPT",
-];
-
 function formatDay(value: string | null) {
   if (!value) return null;
   return new Intl.DateTimeFormat("en", {
@@ -149,7 +144,7 @@ export function SubscriptionCta({
           </span>
         </div>
         <ul className="flex flex-col gap-3 border-t pt-5 text-sm">
-          {trialBullets.map((b) => (
+          {offer.bullets.map((b) => (
             <li key={b} className="flex items-start gap-2.5">
               <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
                 <CheckIcon className="size-3" />

@@ -49,6 +49,39 @@ function formatUsd(cents: number) {
   return (cents / 100).toFixed(2);
 }
 
+type SubscriptionCheckoutReservation = {
+  reservation_id: string | null;
+  checkout_mode: "trial" | "subscription";
+  status: "open";
+  stripe_checkout_session_id: string | null;
+  stripe_checkout_url: string | null;
+  created: boolean;
+};
+
+function parseSubscriptionCheckoutReservation(
+  value: unknown,
+): SubscriptionCheckoutReservation {
+  if (!value || typeof value !== "object") {
+    throw new HttpError(500, "invalid_subscription_checkout_reservation");
+  }
+
+  const row = value as Record<string, unknown>;
+  if (
+    (row.checkout_mode !== "trial" && row.checkout_mode !== "subscription") ||
+    row.status !== "open" ||
+    typeof row.created !== "boolean" ||
+    (row.reservation_id !== null && typeof row.reservation_id !== "string") ||
+    (row.stripe_checkout_session_id !== null &&
+      typeof row.stripe_checkout_session_id !== "string") ||
+    (row.stripe_checkout_url !== null &&
+      typeof row.stripe_checkout_url !== "string")
+  ) {
+    throw new HttpError(500, "invalid_subscription_checkout_reservation");
+  }
+
+  return row as SubscriptionCheckoutReservation;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return optionsResponse();
@@ -127,6 +160,10 @@ Deno.serve(async (req) => {
         throw new HttpError(500, "failed_to_check_access", accessError);
       }
 
+      if (typeof hasAccess !== "boolean") {
+        throw new HttpError(500, "invalid_access_result");
+      }
+
       if (hasAccess) {
         return jsonResponse({ alreadySubscribed: true, checkoutMode: "none" });
       }
@@ -144,13 +181,96 @@ Deno.serve(async (req) => {
         );
       }
 
+      if (typeof trialUsed !== "boolean") {
+        throw new HttpError(500, "invalid_trial_eligibility_result");
+      }
+
+      if (!trialUsed) {
+        const { data: reservationData, error: reservationError } =
+          await admin.rpc("reserve_subscription_checkout_session", {
+            p_user_id: user.id,
+            p_stripe_customer_id: customerId,
+          });
+
+        if (reservationError) {
+          throw new HttpError(
+            500,
+            "failed_to_reserve_subscription_checkout",
+            reservationError,
+          );
+        }
+
+        const reservation = parseSubscriptionCheckoutReservation(
+          reservationData,
+        );
+
+        if (reservation.checkout_mode === "trial") {
+          if (reservation.stripe_checkout_url) {
+            return jsonResponse({
+              url: reservation.stripe_checkout_url,
+              checkoutMode: "trial",
+            });
+          }
+
+          if (!reservation.created || !reservation.reservation_id) {
+            throw new HttpError(409, "subscription_checkout_pending");
+          }
+
+          const checkoutPlan = buildSubscriptionCheckoutSession({
+            customerId,
+            userId: user.id,
+            priceId: requiredEnv("STRIPE_SUBSCRIPTION_PRICE_ID"),
+            siteUrl,
+            origin: normalizeCheckoutOrigin(body.origin),
+            trialUsed: false,
+          });
+
+          const subscriptionSession = await stripe.checkout.sessions.create(
+            checkoutPlan.params,
+          );
+
+          if (!subscriptionSession.url) {
+            throw new HttpError(500, "subscription_checkout_missing_url");
+          }
+
+          const { error: recordError } = await admin.rpc(
+            "record_subscription_checkout_session",
+            {
+              p_reservation_id: reservation.reservation_id,
+              p_user_id: user.id,
+              p_stripe_checkout_session_id: subscriptionSession.id,
+              p_stripe_checkout_url: subscriptionSession.url,
+              p_expires_at: subscriptionSession.expires_at
+                ? new Date(subscriptionSession.expires_at * 1000).toISOString()
+                : null,
+              p_metadata: {
+                checkout_mode: checkoutPlan.checkoutMode,
+              },
+            },
+          );
+
+          if (recordError) {
+            throw new HttpError(
+              500,
+              "failed_to_record_subscription_checkout",
+              recordError,
+            );
+          }
+
+          return jsonResponse({
+            url: subscriptionSession.url,
+            checkoutMode: checkoutPlan.checkoutMode,
+          });
+        }
+      }
+
       const checkoutPlan = buildSubscriptionCheckoutSession({
         customerId,
         userId: user.id,
         priceId: requiredEnv("STRIPE_SUBSCRIPTION_PRICE_ID"),
         siteUrl,
         origin: normalizeCheckoutOrigin(body.origin),
-        trialUsed: trialUsed === true,
+        trialUsed: true,
       });
 
       const subscriptionSession = await stripe.checkout.sessions.create(

@@ -67,6 +67,27 @@ Deno.serve(async (req) => {
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
 ) {
+  if (
+    session.mode === "subscription" &&
+    session.metadata?.purpose === "subscription"
+  ) {
+    const admin = createServiceClient();
+    const { error } = await admin.rpc(
+      "mark_subscription_checkout_session_completed",
+      { p_stripe_checkout_session_id: session.id },
+    );
+
+    if (error) {
+      throw new HttpError(
+        500,
+        "failed_to_mark_subscription_checkout_completed",
+        error,
+      );
+    }
+
+    return;
+  }
+
   if (session.mode !== "payment" || session.payment_status !== "paid") {
     return;
   }

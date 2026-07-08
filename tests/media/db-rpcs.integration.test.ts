@@ -63,6 +63,55 @@ describeDb("media SQL RPC integration", () => {
     expect(after.data).toBe(true);
   });
 
+  it("reports trial used after a completed trial checkout reservation", async () => {
+    const admin = getAdminClient();
+    const { userId } = await createUserAndAccount();
+
+    await insertSubscriptionCheckoutSession({
+      userId,
+      checkoutMode: "trial",
+      status: "completed",
+    });
+
+    const { data, error } = await admin.rpc("user_trial_used", {
+      p_user_id: userId,
+    });
+
+    expect(error).toBeNull();
+    expect(data).toBe(true);
+  });
+
+  it("reserves only one open trial checkout under concurrent requests", async () => {
+    const admin = getAdminClient();
+    const { userId } = await createUserAndAccount();
+    const args = {
+      p_user_id: userId,
+      p_stripe_customer_id: "cus_trial_race",
+    };
+
+    const [first, second] = await Promise.all([
+      admin.rpc("reserve_subscription_checkout_session", args),
+      admin.rpc("reserve_subscription_checkout_session", args),
+    ]);
+
+    expect(first.error).toBeNull();
+    expect(second.error).toBeNull();
+    const rows = [first.data, second.data].filter(Boolean);
+    expect(new Set(rows.map((row) => row.reservation_id)).size).toBe(1);
+    expect(rows.map((row) => row.checkout_mode)).toEqual(["trial", "trial"]);
+    expect(rows.map((row) => row.status)).toEqual(["open", "open"]);
+    expect(rows.filter((row) => row.created === true)).toHaveLength(1);
+
+    const { data: reservations, error } = await admin
+      .from("subscription_checkout_sessions")
+      .select("id, status, checkout_mode")
+      .eq("user_id", userId)
+      .eq("checkout_mode", "trial")
+      .eq("status", "open");
+    expect(error).toBeNull();
+    expect(reservations).toHaveLength(1);
+  });
+
   it.each([
     "trialing",
     "active",
@@ -631,6 +680,31 @@ async function insertSubscription({
       current_period_end: new Date(now + 365 * 24 * 60 * 60 * 1000).toISOString(),
       cancel_at_period_end: false,
       metadata: {},
+    });
+
+  if (error) throw error;
+}
+
+async function insertSubscriptionCheckoutSession({
+  userId,
+  checkoutMode,
+  status,
+}: {
+  userId: string;
+  checkoutMode: "trial" | "subscription";
+  status: "open" | "completed" | "expired" | "cancelled";
+}) {
+  const admin = getAdminClient();
+  const { error } = await admin
+    .from("subscription_checkout_sessions")
+    .insert({
+      user_id: userId,
+      stripe_checkout_session_id: `cs_${randomUUID()}`,
+      stripe_customer_id: `cus_${randomUUID()}`,
+      checkout_mode: checkoutMode,
+      status,
+      stripe_checkout_url: "https://checkout.stripe.test/session",
+      expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     });
 
   if (error) throw error;

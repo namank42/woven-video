@@ -353,7 +353,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         <Alert tone="info">You already have an active Woven plan.</Alert>
       ) : null}
       {subscriptionParam === "cancelled" ? (
-        <Alert tone="info">Trial checkout cancelled. No card was charged.</Alert>
+        <Alert tone="info">Subscription checkout cancelled. No card was charged.</Alert>
       ) : null}
       {subscriptionParam === "resumed" ? (
         <Alert tone="success">

@@ -10,5 +10,6 @@ describe("billing balance API source", () => {
     expect(source).toContain('supabase.rpc("trial_used")');
     expect(source).toContain("trial_used");
     expect(source).toContain("checkout_mode");
+    expect(source).toContain('typeof trialUsedData === "boolean"');
   });
 });

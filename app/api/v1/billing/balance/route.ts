@@ -32,8 +32,8 @@ export async function GET(request: Request) {
     "has_access",
   );
 
-  if (!licenseError) {
-    hasAccess = active === true;
+  if (!licenseError && typeof active === "boolean") {
+    hasAccess = active;
     let grantedAt: string | null = null;
     if (hasAccess) {
       const { data: licenseRow } = await supabase
@@ -50,8 +50,8 @@ export async function GET(request: Request) {
   const { data: trialUsedData, error: trialUsedError } =
     await supabase.rpc("trial_used");
 
-  if (!trialUsedError) {
-    trialUsed = trialUsedData === true;
+  if (!trialUsedError && typeof trialUsedData === "boolean") {
+    trialUsed = trialUsedData;
   }
 
   const checkoutMode =
