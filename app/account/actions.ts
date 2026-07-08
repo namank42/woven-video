@@ -167,6 +167,7 @@ export async function createTrialCheckoutSession() {
     const payload = (await response.json().catch(() => ({}))) as {
       url?: string;
       alreadySubscribed?: boolean;
+      checkoutMode?: "trial" | "subscription" | "none";
       error?: string;
       msg?: string;
       message?: string;
@@ -179,7 +180,7 @@ export async function createTrialCheckoutSession() {
         payload.error ??
         payload.msg ??
         payload.message ??
-        `Unable to start your free trial. (${response.status})`;
+        `Unable to start checkout. (${response.status})`;
     } else {
       checkoutUrl = payload.url;
     }

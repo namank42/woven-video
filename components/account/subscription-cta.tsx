@@ -5,6 +5,7 @@ import {
   createTrialCheckoutSession,
   resumeSubscription,
 } from "@/app/account/actions";
+import { getNoAccessSubscriptionOffer } from "@/components/account/subscription-offer";
 import { ManageBillingButton } from "@/components/account/manage-billing-button";
 import { ResumeSubscriptionButton } from "@/components/account/resume-subscription-button";
 import { StartTrialButton } from "@/components/account/start-trial-button";
@@ -15,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { CheckoutMode } from "@/lib/billing/subscription-eligibility";
 
 export type SubscriptionSummary = {
   status: string;
@@ -40,9 +42,11 @@ function formatDay(value: string | null) {
 export function SubscriptionCta({
   hasAccess,
   subscription,
+  checkoutMode,
 }: {
   hasAccess: boolean;
   subscription: SubscriptionSummary;
+  checkoutMode?: CheckoutMode;
 }) {
   // Active subscriber / trialing / past_due — show status + manage billing.
   if (hasAccess && subscription) {
@@ -120,11 +124,13 @@ export function SubscriptionCta({
   }
 
   // No access — start the trial.
+  const offer = getNoAccessSubscriptionOffer(checkoutMode);
+
   return (
     <Card className="ring-2 ring-foreground">
       <CardHeader>
         <div className="flex items-start justify-between gap-3">
-          <CardTitle>Start your free trial</CardTitle>
+          <CardTitle>{offer.title}</CardTitle>
           <span className="inline-flex shrink-0 items-center rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background">
             Required
           </span>
@@ -154,12 +160,13 @@ export function SubscriptionCta({
         </ul>
         <div className="flex flex-col gap-2">
           <form action={createTrialCheckoutSession}>
-            <StartTrialButton />
+            <StartTrialButton label={offer.buttonLabel} />
           </form>
           <p className="text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">$0 due today</span> ·
-            cancel anytime before day 7 · card required. We email you before
-            your trial ends.
+            <span className="font-medium text-foreground">
+              {offer.emphasizedFinePrint}
+            </span>{" "}
+            · {offer.finePrint}
           </p>
         </div>
       </CardContent>

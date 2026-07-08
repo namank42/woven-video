@@ -15,6 +15,7 @@ import {
 } from "@/components/account/subscription-cta";
 import { Badge } from "@/components/ui/badge";
 import { formatUsdFromMicros } from "@/lib/billing/money";
+import { resolveCheckoutMode } from "@/lib/billing/subscription-eligibility";
 import { firstSearchParam } from "@/lib/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
@@ -266,6 +267,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     { data: licenseRowsForActivity },
     { data: subscriptionRows },
     { data: hasAccessData },
+    { data: trialUsedData },
   ] = await Promise.all([
     supabase.rpc("get_billing_balance"),
     supabase
@@ -289,6 +291,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       .order("created_at", { ascending: false })
       .limit(1),
     supabase.rpc("has_access"),
+    supabase.rpc("trial_used"),
   ]);
   const balanceUsdMicros = Array.isArray(balanceRows)
     ? Number(balanceRows[0]?.balance_usd_micros ?? 0)
@@ -300,6 +303,11 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
   }).slice(0, 10);
 
   const hasAccess = hasAccessData === true;
+  const checkoutMode = resolveCheckoutMode({
+    hasAccess,
+    trialUsed:
+      trialUsedData === true ? true : trialUsedData === false ? false : undefined,
+  });
   const subscription = (Array.isArray(subscriptionRows)
     ? subscriptionRows[0] ?? null
     : null) as SubscriptionSummary;
@@ -334,6 +342,11 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         <Alert tone="success">
           Your free trial is starting. Welcome to Woven — your $5 in hosted
           credits is on its way. You won&apos;t be charged until day 7.
+        </Alert>
+      ) : null}
+      {subscriptionParam === "started" ? (
+        <Alert tone="success">
+          Your subscription is starting. Stripe may take a moment to sync.
         </Alert>
       ) : null}
       {subscriptionParam === "already" ? (
@@ -379,7 +392,11 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           <>
             {statsSection(false)}
             <section>
-              <SubscriptionCta hasAccess={hasAccess} subscription={subscription} />
+              <SubscriptionCta
+                hasAccess={hasAccess}
+                subscription={subscription}
+                checkoutMode={checkoutMode}
+              />
             </section>
             <section>
               <BalanceTopUpForm disabled={!canTopUp} />
@@ -388,7 +405,11 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
         ) : (
           <>
             <section>
-              <SubscriptionCta hasAccess={hasAccess} subscription={subscription} />
+              <SubscriptionCta
+                hasAccess={hasAccess}
+                subscription={subscription}
+                checkoutMode={checkoutMode}
+              />
             </section>
             {statsSection(true)}
             <section>
