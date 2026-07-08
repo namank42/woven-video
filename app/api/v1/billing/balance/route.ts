@@ -1,5 +1,6 @@
 import { requireApiAuth } from "@/lib/api/auth";
 import { apiError } from "@/lib/api/responses";
+import { resolveCheckoutMode } from "@/lib/billing/subscription-eligibility";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +27,15 @@ export async function GET(request: Request) {
   // users aren't walled. Omit the field on a read error so the client falls back
   // to its own cache (fail-open within its grace window).
   let license: { active: boolean; granted_at: string | null } | undefined;
+  let hasAccess: boolean | undefined;
   const { data: active, error: licenseError } = await supabase.rpc(
     "has_access",
   );
 
   if (!licenseError) {
+    hasAccess = active === true;
     let grantedAt: string | null = null;
-    if (active) {
+    if (hasAccess) {
       const { data: licenseRow } = await supabase
         .from("licenses")
         .select("granted_at")
@@ -40,13 +43,28 @@ export async function GET(request: Request) {
         .maybeSingle();
       grantedAt = licenseRow?.granted_at ?? null;
     }
-    license = { active: active === true, granted_at: grantedAt };
+    license = { active: hasAccess, granted_at: grantedAt };
   }
+
+  let trialUsed: boolean | undefined;
+  const { data: trialUsedData, error: trialUsedError } =
+    await supabase.rpc("trial_used");
+
+  if (!trialUsedError) {
+    trialUsed = trialUsedData === true;
+  }
+
+  const checkoutMode =
+    hasAccess === undefined
+      ? undefined
+      : resolveCheckoutMode({ hasAccess, trialUsed });
 
   return Response.json({
     currency: row?.currency ?? "usd",
     balance_usd_micros: balanceUsdMicros,
     balance_usd: balanceUsdMicros / 1_000_000,
     ...(license ? { license } : {}),
+    ...(trialUsed !== undefined ? { trial_used: trialUsed } : {}),
+    ...(checkoutMode ? { checkout_mode: checkoutMode } : {}),
   });
 }
