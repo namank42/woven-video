@@ -8,8 +8,10 @@ describe("SEO FAQs", () => {
 
     expect(answer).toContain("Claude Sonnet 4.6");
     expect(answer).toContain("Claude Opus 4.8");
-    expect(answer).toContain("GPT-5.5");
+    expect(answer).toContain("GPT-5.6 Sol");
+    expect(answer).toContain("GPT-5.6 Terra");
     expect(answer).toContain("Kimi K2.6");
+    expect(answer).not.toContain("GPT-5.5");
     expect(answer).not.toContain("Claude Haiku 4.5");
     expect(answer).not.toContain("Grok 4.3");
   });
