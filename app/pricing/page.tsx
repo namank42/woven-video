@@ -225,7 +225,7 @@ function ModelsTable() {
 
         <RateGroupHeader
           title="Chat models"
-          description="Token pricing for hosted text models."
+          description="Token pricing for hosted text models. Higher tiers apply when input exceeds 272K tokens."
         />
         <ChatModelsTable />
 
@@ -253,6 +253,27 @@ function RateGroupHeader({
       <h3 className="text-base font-semibold tracking-tight">{title}</h3>
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>
+  );
+}
+
+function ChatRateValue({
+  value,
+  higherTier,
+  threshold,
+}: {
+  value: string;
+  higherTier?: string;
+  threshold?: string;
+}) {
+  return (
+    <span className="flex flex-col items-end gap-0.5">
+      <span>{value}</span>
+      {higherTier && threshold ? (
+        <span className="text-xs text-muted-foreground">
+          {threshold}: {higherTier}
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -284,16 +305,32 @@ function ChatModelsTable() {
                   </div>
                 </td>
                 <td className="px-6 py-4 text-right tabular-nums">
-                  {model.input}
+                  <ChatRateValue
+                    value={model.input}
+                    higherTier={model.higherTier?.input}
+                    threshold={model.higherTier?.threshold}
+                  />
                 </td>
                 <td className="px-6 py-4 text-right tabular-nums">
-                  {model.output}
+                  <ChatRateValue
+                    value={model.output}
+                    higherTier={model.higherTier?.output}
+                    threshold={model.higherTier?.threshold}
+                  />
                 </td>
                 <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
-                  {model.cacheRead}
+                  <ChatRateValue
+                    value={model.cacheRead}
+                    higherTier={model.higherTier?.cacheRead}
+                    threshold={model.higherTier?.threshold}
+                  />
                 </td>
                 <td className="px-6 py-4 text-right tabular-nums text-muted-foreground">
-                  {model.cacheWrite}
+                  <ChatRateValue
+                    value={model.cacheWrite}
+                    higherTier={model.higherTier?.cacheWrite}
+                    threshold={model.higherTier?.threshold}
+                  />
                 </td>
               </tr>
             ))}
@@ -315,13 +352,37 @@ function ChatModelsTable() {
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <dt className="text-muted-foreground">Input</dt>
-              <dd className="text-right tabular-nums">{model.input}</dd>
+              <dd className="text-right tabular-nums">
+                <ChatRateValue
+                  value={model.input}
+                  higherTier={model.higherTier?.input}
+                  threshold={model.higherTier?.threshold}
+                />
+              </dd>
               <dt className="text-muted-foreground">Output</dt>
-              <dd className="text-right tabular-nums">{model.output}</dd>
+              <dd className="text-right tabular-nums">
+                <ChatRateValue
+                  value={model.output}
+                  higherTier={model.higherTier?.output}
+                  threshold={model.higherTier?.threshold}
+                />
+              </dd>
               <dt className="text-muted-foreground">Cache read</dt>
-              <dd className="text-right tabular-nums">{model.cacheRead}</dd>
+              <dd className="text-right tabular-nums">
+                <ChatRateValue
+                  value={model.cacheRead}
+                  higherTier={model.higherTier?.cacheRead}
+                  threshold={model.higherTier?.threshold}
+                />
+              </dd>
               <dt className="text-muted-foreground">Cache write</dt>
-              <dd className="text-right tabular-nums">{model.cacheWrite}</dd>
+              <dd className="text-right tabular-nums">
+                <ChatRateValue
+                  value={model.cacheWrite}
+                  higherTier={model.higherTier?.cacheWrite}
+                  threshold={model.higherTier?.threshold}
+                />
+              </dd>
             </dl>
           </div>
         ))}
