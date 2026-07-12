@@ -765,4 +765,3 @@ git commit -m "feat(models): publish exact reasoning efforts"
 - [ ] Confirm a temporary Gateway enrichment failure leaves reasoning fields present while returning `pricing: null`.
 - [ ] Ship the coordinated Harness patch that consumes `supported_reasoning_efforts` and `default_reasoning_effort` verbatim, removes its `[low, medium, high]` inference, adds Sol/Terra to static fallback, retires GPT-5.5, and maps a saved GPT-5.5 selection to Sol.
 - [ ] Do not enable backend request-time effort rejection until active Harness versions no longer infer unsupported tiers.
-

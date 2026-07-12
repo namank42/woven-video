@@ -7,7 +7,7 @@ const solMetadata = {
   default_reasoning_effort: "medium",
 };
 
-function model(metadata: Record<string, unknown> = solMetadata) {
+function model(metadata: unknown = solMetadata) {
   return {
     id: "rule_1",
     provider: "vercel-ai-gateway",
@@ -23,7 +23,7 @@ function model(metadata: Record<string, unknown> = solMetadata) {
 }
 
 async function loadRoute(
-  metadata: Record<string, unknown>,
+  metadata: unknown,
   gatewayCapabilities: Record<string, unknown> | null,
 ) {
   vi.doMock("@/lib/api/auth", () => ({
@@ -147,6 +147,32 @@ describe("hosted chat model catalog route", () => {
       {
         modelId: "openai/gpt-5.6-sol",
         reason: "supported_reasoning_efforts contains unsupported value: imaginary",
+      },
+    );
+  });
+
+  it("keeps models with null metadata in the catalog using the safe fallback", async () => {
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const response = await loadRoute(null, null);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: [
+        {
+          id: "openai/gpt-5.6-sol",
+          capabilities: {
+            supports_reasoning: false,
+            supported_reasoning_efforts: [],
+            default_reasoning_effort: null,
+          },
+        },
+      ],
+    });
+    expect(consoleWarn).toHaveBeenCalledWith(
+      "[model-catalog] invalid reasoning metadata",
+      {
+        modelId: "openai/gpt-5.6-sol",
+        reason: "metadata must be an object",
       },
     );
   });

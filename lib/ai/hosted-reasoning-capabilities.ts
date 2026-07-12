@@ -40,14 +40,19 @@ function isHostedReasoningEffort(value: unknown): value is HostedReasoningEffort
 }
 
 export function parseHostedReasoningCapabilities(
-  metadata: Record<string, unknown>,
+  metadata: unknown,
 ): HostedReasoningParseResult {
-  const supportsReasoning = metadata.supports_reasoning;
+  if (typeof metadata !== "object" || metadata === null || Array.isArray(metadata)) {
+    return failure("metadata must be an object");
+  }
+
+  const metadataObject = metadata as Record<string, unknown>;
+  const supportsReasoning = metadataObject.supports_reasoning;
   if (typeof supportsReasoning !== "boolean") {
     return failure("supports_reasoning must be a boolean");
   }
 
-  const rawEfforts = metadata.supported_reasoning_efforts;
+  const rawEfforts = metadataObject.supported_reasoning_efforts;
   if (!Array.isArray(rawEfforts)) {
     return failure("supported_reasoning_efforts must be an array");
   }
@@ -76,7 +81,7 @@ export function parseHostedReasoningCapabilities(
     priorOrder = order;
   }
 
-  const defaultEffort = metadata.default_reasoning_effort;
+  const defaultEffort = metadataObject.default_reasoning_effort;
 
   if (!supportsReasoning && (efforts.length > 0 || defaultEffort !== null)) {
     return failure("supports_reasoning false requires empty efforts and a null default");

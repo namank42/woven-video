@@ -54,6 +54,7 @@ describe("parseHostedReasoningCapabilities", () => {
   });
 
   it.each([
+    [null, "metadata must be an object"],
     [{}, "supports_reasoning must be a boolean"],
     [
       { supports_reasoning: true },
