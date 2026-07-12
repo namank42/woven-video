@@ -63,3 +63,16 @@ Live sources:
   input tokens without an additive contract change.
 - Gateway generation accounting remains the source for final provider cost, so actual settlement can
   reflect tiered provider billing even if the catalog response continues to show only base prices.
+
+## Next.js (context7: `/vercel/next.js/v16.2.2`) — v16.2.3 installed
+
+- App Router pages and layouts are Server Components by default. A page that synchronously renders
+  static typed data and uses no state, effects, event handlers, or browser APIs should remain a
+  Server Component and must not add `"use client"`.
+- Vitest supports unit tests for synchronous Server Components. Its limitation applies to async
+  Server Components, for which the Next.js guide recommends end-to-end coverage.
+- The Woven pricing page is synchronous and statically renders imported arrays, so the Sol/Terra
+  pricing work needs no Client Component boundary or runtime fetch.
+- Source: Context7 `/vercel/next.js/v16.2.2`; installed Next.js 16.2.3 guides
+  `node_modules/next/dist/docs/01-app/01-getting-started/05-server-and-client-components.md` and
+  `node_modules/next/dist/docs/01-app/02-guides/testing/vitest.md`.
