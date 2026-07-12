@@ -1,3 +1,11 @@
+export type ChatModelRateTier = {
+  threshold: string;
+  input: string;
+  output: string;
+  cacheRead: string;
+  cacheWrite: string;
+};
+
 export type ChatModelRate = {
   name: string;
   modelId: string;
@@ -5,6 +13,7 @@ export type ChatModelRate = {
   output: string;
   cacheRead: string;
   cacheWrite: string;
+  higherTier?: ChatModelRateTier;
 };
 
 export type FeatureRate = {
@@ -41,12 +50,34 @@ export const chatModelRates: ChatModelRate[] = [
     cacheWrite: "$7.50/M",
   },
   {
-    name: "GPT-5.5",
-    modelId: "openai/gpt-5.5",
+    name: "GPT-5.6 Sol",
+    modelId: "openai/gpt-5.6-sol",
     input: "$6.00/M",
     output: "$36.00/M",
     cacheRead: "$0.60/M",
-    cacheWrite: "—",
+    cacheWrite: "$7.50/M",
+    higherTier: {
+      threshold: ">272K",
+      input: "$12.00/M",
+      output: "$54.00/M",
+      cacheRead: "$1.20/M",
+      cacheWrite: "$15.00/M",
+    },
+  },
+  {
+    name: "GPT-5.6 Terra",
+    modelId: "openai/gpt-5.6-terra",
+    input: "$3.00/M",
+    output: "$18.00/M",
+    cacheRead: "$0.30/M",
+    cacheWrite: "$3.75/M",
+    higherTier: {
+      threshold: ">272K",
+      input: "$6.00/M",
+      output: "$27.00/M",
+      cacheRead: "$0.60/M",
+      cacheWrite: "$7.50/M",
+    },
   },
   {
     name: "Kimi K2.6",

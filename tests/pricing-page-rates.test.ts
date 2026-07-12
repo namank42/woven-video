@@ -13,26 +13,55 @@ describe("pricing page rates", () => {
     expect(chatModelRates.map((rate) => rate.name)).toEqual([
       "Claude Sonnet 4.6",
       "Claude Opus 4.8",
-      "GPT-5.5",
+      "GPT-5.6 Sol",
+      "GPT-5.6 Terra",
       "Kimi K2.6",
     ]);
 
+    expect(chatModelRates.map((rate) => rate.modelId)).not.toContain(
+      "openai/gpt-5.5",
+    );
     expect(chatModelRates.map((rate) => rate.modelId)).not.toContain(
       "anthropic/claude-haiku-4.5",
     );
     expect(chatModelRates.map((rate) => rate.modelId)).not.toContain(
       "xai/grok-4.3",
     );
+    expect(
+      chatModelRates.find((rate) => rate.name === "Claude Sonnet 4.6"),
+    ).not.toHaveProperty("higherTier");
 
-    expect(chatModelRates.find((rate) => rate.name === "GPT-5.5")).toMatchObject(
-      {
-        modelId: "openai/gpt-5.5",
-        input: "$6.00/M",
-        output: "$36.00/M",
-        cacheRead: "$0.60/M",
-        cacheWrite: "—",
+    expect(chatModelRates.find((rate) => rate.name === "GPT-5.6 Sol")).toEqual({
+      name: "GPT-5.6 Sol",
+      modelId: "openai/gpt-5.6-sol",
+      input: "$6.00/M",
+      output: "$36.00/M",
+      cacheRead: "$0.60/M",
+      cacheWrite: "$7.50/M",
+      higherTier: {
+        threshold: ">272K",
+        input: "$12.00/M",
+        output: "$54.00/M",
+        cacheRead: "$1.20/M",
+        cacheWrite: "$15.00/M",
       },
-    );
+    });
+
+    expect(chatModelRates.find((rate) => rate.name === "GPT-5.6 Terra")).toEqual({
+      name: "GPT-5.6 Terra",
+      modelId: "openai/gpt-5.6-terra",
+      input: "$3.00/M",
+      output: "$18.00/M",
+      cacheRead: "$0.30/M",
+      cacheWrite: "$3.75/M",
+      higherTier: {
+        threshold: ">272K",
+        input: "$6.00/M",
+        output: "$27.00/M",
+        cacheRead: "$0.60/M",
+        cacheWrite: "$7.50/M",
+      },
+    });
   });
 
   it("keeps feature rates available for the other features table", () => {
