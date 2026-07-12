@@ -2,6 +2,9 @@ import {
   parseHostedReasoningCapabilities,
 } from "@/lib/ai/hosted-reasoning-capabilities";
 import {
+  validateHostedModelSelectionPolicies,
+} from "@/lib/ai/hosted-model-selection-policy";
+import {
   applyMarkupToPriceUsd,
   getModelCapabilities,
 } from "@/lib/ai/model-capabilities";
@@ -20,9 +23,22 @@ export async function GET(request: Request) {
 
   try {
     const models = await listHostedChatModels();
+    const selectionPolicy = validateHostedModelSelectionPolicies(models);
+
+    if (!selectionPolicy.ok) {
+      console.error("[model-catalog] invalid selection policy", {
+        reason: selectionPolicy.reason,
+      });
+      return apiError(
+        "Hosted model catalog metadata is invalid.",
+        500,
+        "invalid_model_catalog",
+      );
+    }
 
     const enriched = await Promise.all(
       models.map(async (model) => {
+        const policy = selectionPolicy.policiesByModelId.get(model.model)!;
         const caps = await getModelCapabilities(model.model);
         const reasoning = parseHostedReasoningCapabilities(model.metadata);
 
@@ -39,6 +55,8 @@ export async function GET(request: Request) {
           created: 0,
           owned_by: "woven",
           display_name: model.display_name,
+          is_default: policy.is_default,
+          replaces_model_ids: policy.replaces_model_ids,
           capabilities: {
             context_length: caps?.context_length ?? null,
             input_modalities: caps?.input_modalities ?? [],

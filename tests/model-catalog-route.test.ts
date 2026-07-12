@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const solMetadata = {
   provider_model_id: "openai/gpt-5.6-sol",
+  is_default: true,
+  replaces_model_ids: ["openai/gpt-5.5"],
   supports_reasoning: true,
   supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
   default_reasoning_effort: "medium",
@@ -35,13 +37,15 @@ async function loadRoute(
   vi.doMock("@/lib/billing/model-pricing", () => ({
     listHostedChatModels: vi.fn(async () => [model(metadata)]),
   }));
+  const getModelCapabilities = vi.fn(async () => gatewayCapabilities);
   vi.doMock("@/lib/ai/model-capabilities", () => ({
-    getModelCapabilities: vi.fn(async () => gatewayCapabilities),
+    getModelCapabilities,
     applyMarkupToPriceUsd: vi.fn((price: number | null) => price),
   }));
 
   const { GET } = await import("@/app/api/v1/models/route");
-  return GET(new Request("https://example.test/api/v1/models"));
+  const response = await GET(new Request("https://example.test/api/v1/models"));
+  return { response, getModelCapabilities };
 }
 
 describe("hosted chat model catalog route", () => {
@@ -54,7 +58,7 @@ describe("hosted chat model catalog route", () => {
   });
 
   it("publishes the database effort contract instead of Gateway's generic flag", async () => {
-    const response = await loadRoute(solMetadata, {
+    const { response } = await loadRoute(solMetadata, {
       context_length: 1_000_000,
       input_modalities: ["text", "image"],
       output_modalities: ["text"],
@@ -73,6 +77,8 @@ describe("hosted chat model catalog route", () => {
       data: [
         {
           id: "openai/gpt-5.6-sol",
+          is_default: true,
+          replaces_model_ids: ["openai/gpt-5.5"],
           capabilities: {
             context_length: 1_000_000,
             supports_reasoning: true,
@@ -92,7 +98,7 @@ describe("hosted chat model catalog route", () => {
   });
 
   it("preserves backend reasoning controls when Gateway enrichment fails", async () => {
-    const response = await loadRoute(solMetadata, null);
+    const { response } = await loadRoute(solMetadata, null);
 
     await expect(response.json()).resolves.toEqual({
       object: "list",
@@ -103,6 +109,8 @@ describe("hosted chat model catalog route", () => {
           created: 0,
           owned_by: "woven",
           display_name: "GPT-5.6 Sol",
+          is_default: true,
+          replaces_model_ids: ["openai/gpt-5.5"],
           capabilities: {
             context_length: null,
             input_modalities: [],
@@ -122,8 +130,10 @@ describe("hosted chat model catalog route", () => {
 
   it("warns and publishes the safe fallback for invalid metadata", async () => {
     const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const response = await loadRoute(
+    const { response } = await loadRoute(
       {
+        is_default: true,
+        replaces_model_ids: ["openai/gpt-5.5"],
         supports_reasoning: true,
         supported_reasoning_efforts: ["low", "imaginary"],
         default_reasoning_effort: "low",
@@ -151,29 +161,22 @@ describe("hosted chat model catalog route", () => {
     );
   });
 
-  it("keeps models with null metadata in the catalog using the safe fallback", async () => {
-    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const response = await loadRoute(null, null);
+  it("rejects invalid selection policy before Gateway enrichment", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { response, getModelCapabilities } = await loadRoute(null, null);
 
-    expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
-      data: [
-        {
-          id: "openai/gpt-5.6-sol",
-          capabilities: {
-            supports_reasoning: false,
-            supported_reasoning_efforts: [],
-            default_reasoning_effort: null,
-          },
-        },
-      ],
-    });
-    expect(consoleWarn).toHaveBeenCalledWith(
-      "[model-catalog] invalid reasoning metadata",
-      {
-        modelId: "openai/gpt-5.6-sol",
-        reason: "metadata must be an object",
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        message: "Hosted model catalog metadata is invalid.",
+        type: "invalid_model_catalog",
+        code: "invalid_model_catalog",
       },
+    });
+    expect(getModelCapabilities).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "[model-catalog] invalid selection policy",
+      { reason: "openai/gpt-5.6-sol: metadata must be an object" },
     );
   });
 });
