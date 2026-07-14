@@ -1,5 +1,7 @@
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
+const HOSTED_CHAT_PROVIDER = "vercel-ai-gateway";
+
 export type ModelPricingRule = {
   id: string;
   provider: string;
@@ -34,6 +36,7 @@ export async function listHostedChatModels() {
     .select(
       "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, metadata",
     )
+    .eq("provider", HOSTED_CHAT_PROVIDER)
     .eq("operation", "chat")
     .eq("enabled", true)
     .order("display_name");
@@ -52,7 +55,7 @@ export async function getHostedChatModel(model: string) {
     .select(
       "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, metadata",
     )
-    .eq("provider", "vercel-ai-gateway")
+    .eq("provider", HOSTED_CHAT_PROVIDER)
     .eq("operation", "chat")
     .eq("model", model)
     .eq("enabled", true)

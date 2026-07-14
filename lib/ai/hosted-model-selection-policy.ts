@@ -36,8 +36,22 @@ export function validateHostedModelSelectionPolicies(
   models: HostedModelSelectionInput[],
 ): HostedModelSelectionValidation {
   const policiesByModelId = new Map<string, HostedModelSelectionPolicy>();
+  const seenModelIds = new Set<string>();
 
   for (const model of models) {
+    if (model.model.startsWith("woven:")) {
+      return failure(`${model.model}: model IDs must not use the woven: prefix`);
+    }
+    if (!isCanonicalBackendModelId(model.model)) {
+      return failure(
+        `${model.model}: model ID must be a non-empty canonical backend ID`,
+      );
+    }
+    if (seenModelIds.has(model.model)) {
+      return failure(`duplicate model ID ${model.model}`);
+    }
+    seenModelIds.add(model.model);
+
     if (!isMetadataObject(model.metadata)) {
       return failure(`${model.model}: metadata must be an object`);
     }
@@ -88,12 +102,11 @@ export function validateHostedModelSelectionPolicies(
     return failure(`expected exactly one default model, found ${defaultCount}`);
   }
 
-  const enabledModelIds = new Set(models.map((model) => model.model));
   const replacementOwners = new Map<string, string>();
 
   for (const [modelId, policy] of policiesByModelId) {
     for (const replacementId of policy.replaces_model_ids) {
-      if (enabledModelIds.has(replacementId)) {
+      if (seenModelIds.has(replacementId)) {
         return failure(`${modelId}: replacement ID ${replacementId} is enabled`);
       }
 

@@ -1,5 +1,7 @@
 # Hosted Model Selection Policy Implementation Plan
 
+> **Superseded default-policy warning (2026-07-14):** This document is retained as a historical implementation record. Its Sol-default instructions are superseded by [`2026-07-14-kimi-hosted-default-correction.md`](./2026-07-14-kimi-hosted-default-correction.md). Current production policy makes Kimi the sole default; Sol remains non-default and replaces `openai/gpt-5.5`. Do not use this plan to configure or verify the production default.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the live Woven model catalog the sole authority for the hosted default model and retired-model replacement claims, with Sol as the only default and GPT-5.5 successor.
@@ -783,6 +785,8 @@ git commit -m "feat(models): publish hosted selection policy"
 ---
 
 ## Production Verification and Coordinated Harness Rollout
+
+> **Historical checklist only:** Do not execute the Sol-default assertions below for the current rollout. Use the superseding Kimi correction plan linked at the top of this document; production must report Kimi, not Sol, as the sole default.
 
 - [ ] Apply the reasoning and selection-policy migrations before deploying the updated route.
 - [ ] Call authenticated `GET /api/v1/models`; verify exactly one model has `is_default: true`, that model is Sol, and only Sol declares `openai/gpt-5.5` in `replaces_model_ids`.

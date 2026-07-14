@@ -137,6 +137,36 @@ describe("validateHostedModelSelectionPolicies", () => {
     ).toEqual({ ok: false, reason });
   });
 
+  it("rejects a non-canonical enabled model ID", () => {
+    const catalog = validCatalog();
+    catalog[0] = { ...catalog[0], model: "gpt-5.6-sol" };
+
+    expect(validateHostedModelSelectionPolicies(catalog)).toEqual({
+      ok: false,
+      reason: "gpt-5.6-sol: model ID must be a non-empty canonical backend ID",
+    });
+  });
+
+  it("rejects an enabled model ID with the Harness woven prefix", () => {
+    const catalog = validCatalog();
+    catalog[0] = { ...catalog[0], model: "woven:openai/gpt-5.6-sol" };
+
+    expect(validateHostedModelSelectionPolicies(catalog)).toEqual({
+      ok: false,
+      reason: "woven:openai/gpt-5.6-sol: model IDs must not use the woven: prefix",
+    });
+  });
+
+  it("rejects duplicate enabled model IDs", () => {
+    const catalog = validCatalog();
+    catalog.push({ ...catalog[0] });
+
+    expect(validateHostedModelSelectionPolicies(catalog)).toEqual({
+      ok: false,
+      reason: "duplicate model ID openai/gpt-5.6-sol",
+    });
+  });
+
   it("rejects a catalog without a default", () => {
     const catalog = withMetadata(validCatalog(), "moonshotai/kimi-k2.6", {
       is_default: false,
