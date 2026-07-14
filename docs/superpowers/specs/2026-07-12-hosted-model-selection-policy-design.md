@@ -11,8 +11,8 @@
 
 Make the live Woven model catalog authoritative not only for available hosted models and reasoning
 tiers, but also for automatic default selection and retired-model migration. Harness must not need a
-hardcoded Woven model ID or a local Woven replacement table to select Sol or migrate a saved GPT-5.5
-selection.
+hardcoded Woven model ID or a local Woven replacement table to select Kimi by default or migrate a
+saved GPT-5.5 selection to Sol.
 
 BYOK remains intentionally independent. Its local GPT-5.5-to-Sol migration does not consult Woven's
 hosted catalog.
@@ -20,7 +20,7 @@ hosted catalog.
 ## Decisions
 
 - Store selection policy in each enabled hosted chat row's `model_pricing_rules.metadata`.
-- GPT-5.6 Sol is the sole Woven default.
+- Kimi K2.6 is the sole Woven default.
 - GPT-5.6 Sol is the sole declared successor to `openai/gpt-5.5`.
 - Every enabled hosted model explicitly declares both `is_default` and `replaces_model_ids`; absence
   is invalid rather than an implicit false or empty value.
@@ -42,15 +42,16 @@ The resulting enabled hosted chat metadata is:
 
 | Model | `is_default` | `replaces_model_ids` |
 | --- | --- | --- |
-| `openai/gpt-5.6-sol` | `true` | `["openai/gpt-5.5"]` |
+| `openai/gpt-5.6-sol` | `false` | `["openai/gpt-5.5"]` |
 | `openai/gpt-5.6-terra` | `false` | `[]` |
 | `anthropic/claude-sonnet-4.6` | `false` | `[]` |
 | `anthropic/claude-opus-4.8` | `false` | `[]` |
-| `moonshotai/kimi-k2.6` | `false` | `[]` |
+| `moonshotai/kimi-k2.6` | `true` | `[]` |
 
-Add a new immutable, idempotent migration after the reasoning-effort migration. It merges these two
-keys into existing metadata without replacing `provider_model_id`, reasoning fields, or any unrelated
-metadata.
+Before this unreleased branch ships, revise its pending immutable, idempotent selection-policy
+migration to seed the final policy above. It merges these two keys into existing metadata without
+replacing `provider_model_id`, reasoning fields, or any unrelated metadata. No follow-up corrective
+migration or runtime default override is needed because the pending migration has not shipped.
 
 Replacement IDs use the canonical backend model namespace:
 
@@ -92,11 +93,14 @@ Every successful model object adds:
 
 ```json
 {
-  "id": "openai/gpt-5.6-sol",
+  "id": "moonshotai/kimi-k2.6",
   "is_default": true,
-  "replaces_model_ids": ["openai/gpt-5.5"]
+  "replaces_model_ids": []
 }
 ```
+
+Sol is returned separately with `is_default: false` and
+`replaces_model_ids: ["openai/gpt-5.5"]`.
 
 The complete response remains an authenticated OpenAI-style list:
 
@@ -105,13 +109,13 @@ The complete response remains an authenticated OpenAI-style list:
   "object": "list",
   "data": [
     {
-      "id": "openai/gpt-5.6-sol",
+      "id": "moonshotai/kimi-k2.6",
       "object": "model",
       "created": 0,
       "owned_by": "woven",
-      "display_name": "GPT-5.6 Sol",
+      "display_name": "Kimi K2.6",
       "is_default": true,
-      "replaces_model_ids": ["openai/gpt-5.5"],
+      "replaces_model_ids": [],
       "capabilities": {},
       "pricing": {}
     }
@@ -182,8 +186,8 @@ For the current rollout:
 
 - a saved `openai/gpt-5.5` or internal `woven:openai/gpt-5.5` selection normalizes to the backend ID,
   matches Sol's replacement claim, and migrates to Sol;
-- a new Woven user selects Sol from the live `is_default` field;
-- an unknown missing Woven model with no successor selects the sole live backend default; and
+- a new Woven user selects Kimi from the live `is_default` field;
+- an unknown missing Woven model with no successor selects Kimi as the sole live backend default; and
 - BYOK keeps its local GPT-5.5-to-Sol migration and does not read Woven catalog policy.
 
 ## Data Flow
@@ -203,8 +207,8 @@ For the current rollout:
 
 Backend implementation proceeds test-first and includes:
 
-1. A migration source-contract test proving the exact five model rows, sole Sol default, sole GPT-5.5
-   replacement claim, metadata merge, and provider/operation scope.
+1. A migration source-contract test proving the exact five model rows, sole Kimi default, sole
+   GPT-5.5 replacement claim on Sol, metadata merge, and provider/operation scope.
 2. Catalog validator unit tests covering the exact valid catalog and every per-model and cross-catalog
    invalid case listed above.
 3. Model route tests proving successful top-level response fields, exactly one returned default,
@@ -218,7 +222,7 @@ Coordinated Harness acceptance tests cover:
 
 1. retaining an existing live Woven selection;
 2. migrating saved GPT-5.5 to Sol from the live replacement claim;
-3. selecting Sol for a new Woven user from the sole live default;
+3. selecting Kimi for a new Woven user from the sole live default;
 4. selecting the live default for an unclaimed missing Woven model;
 5. blocking selection for missing or contradictory policy;
 6. refusing to use static or cached policy for automatic selection;
@@ -229,7 +233,7 @@ Coordinated Harness acceptance tests cover:
 
 1. Apply the reasoning-effort migration and the new selection-policy migration.
 2. Deploy the backend route and validate the authenticated production catalog contains exactly one
-   default and Sol's GPT-5.5 replacement claim.
+   default, that the default is Kimi, and that Sol retains the GPT-5.5 replacement claim.
 3. Smoke-test Sol and Terra chat plus the existing billing settlement checks.
 4. Ship the coordinated Harness patch.
 5. Verify a saved Woven GPT-5.5 selection migrates to Sol after a successful live refresh and BYOK's
