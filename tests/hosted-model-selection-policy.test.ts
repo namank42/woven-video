@@ -20,12 +20,18 @@ function validCatalog(): CatalogModel[] {
       metadata: { is_default: false, replaces_model_ids: [] },
     },
     {
-      model: "anthropic/claude-sonnet-4.6",
-      metadata: { is_default: false, replaces_model_ids: [] },
+      model: "anthropic/claude-sonnet-5",
+      metadata: {
+        is_default: false,
+        replaces_model_ids: ["anthropic/claude-sonnet-4.6"],
+      },
     },
     {
       model: "anthropic/claude-opus-4.8",
-      metadata: { is_default: false, replaces_model_ids: [] },
+      metadata: {
+        is_default: false,
+        replaces_model_ids: ["anthropic/claude-opus-4.7"],
+      },
     },
     {
       model: "moonshotai/kimi-k2.6",
@@ -61,12 +67,18 @@ describe("validateHostedModelSelectionPolicies", () => {
       ],
       ["openai/gpt-5.6-terra", { is_default: false, replaces_model_ids: [] }],
       [
-        "anthropic/claude-sonnet-4.6",
-        { is_default: false, replaces_model_ids: [] },
+        "anthropic/claude-sonnet-5",
+        {
+          is_default: false,
+          replaces_model_ids: ["anthropic/claude-sonnet-4.6"],
+        },
       ],
       [
         "anthropic/claude-opus-4.8",
-        { is_default: false, replaces_model_ids: [] },
+        {
+          is_default: false,
+          replaces_model_ids: ["anthropic/claude-opus-4.7"],
+        },
       ],
       ["moonshotai/kimi-k2.6", { is_default: true, replaces_model_ids: [] }],
     ]);

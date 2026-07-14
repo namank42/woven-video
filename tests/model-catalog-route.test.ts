@@ -24,6 +24,19 @@ function model(metadata: unknown = solMetadata) {
   };
 }
 
+function catalogModel(
+  id: string,
+  displayName: string,
+  metadata: Record<string, unknown>,
+) {
+  return {
+    ...model(metadata),
+    id: `rule_${id.replaceAll(/[^a-z0-9]+/gi, "_")}`,
+    model: id,
+    display_name: displayName,
+  };
+}
+
 async function loadRoute(
   metadata: unknown,
   gatewayCapabilities: Record<string, unknown> | null,
@@ -58,13 +71,37 @@ describe("hosted chat model catalog route", () => {
     vi.restoreAllMocks();
   });
 
-  it("publishes Kimi as the sole default while Sol retains the GPT-5.5 replacement", async () => {
-    const sol = model({
-      ...solMetadata,
-      is_default: false,
-    });
-    const kimi = {
-      ...model({
+  it("publishes the exact default, successor, and Sonnet reasoning contract", async () => {
+    const catalog = [
+      catalogModel("openai/gpt-5.6-sol", "GPT-5.6 Sol", {
+        ...solMetadata,
+        is_default: false,
+      }),
+      catalogModel("openai/gpt-5.6-terra", "GPT-5.6 Terra", {
+        provider_model_id: "openai/gpt-5.6-terra",
+        is_default: false,
+        replaces_model_ids: [],
+        supports_reasoning: true,
+        supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
+        default_reasoning_effort: "medium",
+      }),
+      catalogModel("anthropic/claude-sonnet-5", "Claude Sonnet 5", {
+        provider_model_id: "anthropic/claude-sonnet-5",
+        is_default: false,
+        replaces_model_ids: ["anthropic/claude-sonnet-4.6"],
+        supports_reasoning: true,
+        supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
+        default_reasoning_effort: "high",
+      }),
+      catalogModel("anthropic/claude-opus-4.8", "Claude Opus 4.8", {
+        provider_model_id: "anthropic/claude-opus-4.8",
+        is_default: false,
+        replaces_model_ids: ["anthropic/claude-opus-4.7"],
+        supports_reasoning: true,
+        supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
+        default_reasoning_effort: "high",
+      }),
+      catalogModel("moonshotai/kimi-k2.6", "Kimi K2.6", {
         provider_model_id: "moonshotai/kimi-k2.6",
         is_default: true,
         replaces_model_ids: [],
@@ -72,12 +109,9 @@ describe("hosted chat model catalog route", () => {
         supported_reasoning_efforts: [],
         default_reasoning_effort: null,
       }),
-      id: "rule_kimi",
-      model: "moonshotai/kimi-k2.6",
-      display_name: "Kimi K2.6",
-    };
+    ];
 
-    const { response } = await loadRoute(solMetadata, null, [sol, kimi]);
+    const { response } = await loadRoute(solMetadata, null, catalog);
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -100,6 +134,21 @@ describe("hosted chat model catalog route", () => {
         replaces_model_ids: ["openai/gpt-5.5"],
       },
       {
+        id: "openai/gpt-5.6-terra",
+        is_default: false,
+        replaces_model_ids: [],
+      },
+      {
+        id: "anthropic/claude-sonnet-5",
+        is_default: false,
+        replaces_model_ids: ["anthropic/claude-sonnet-4.6"],
+      },
+      {
+        id: "anthropic/claude-opus-4.8",
+        is_default: false,
+        replaces_model_ids: ["anthropic/claude-opus-4.7"],
+      },
+      {
         id: "moonshotai/kimi-k2.6",
         is_default: true,
         replaces_model_ids: [],
@@ -108,6 +157,18 @@ describe("hosted chat model catalog route", () => {
     expect(
       body.data.filter((entry: { is_default: boolean }) => entry.is_default),
     ).toHaveLength(1);
+    expect(
+      body.data.find(
+        (entry: { id: string }) => entry.id === "anthropic/claude-sonnet-5",
+      )?.capabilities,
+    ).toMatchObject({
+      supports_reasoning: true,
+      supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
+      default_reasoning_effort: "high",
+    });
+    expect(body.data.map((entry: { id: string }) => entry.id)).not.toContain(
+      "anthropic/claude-sonnet-4.6",
+    );
   });
 
   it("publishes the database effort contract instead of Gateway's generic flag", async () => {
