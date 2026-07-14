@@ -11,7 +11,7 @@ function validCatalog(): CatalogModel[] {
     {
       model: "openai/gpt-5.6-sol",
       metadata: {
-        is_default: true,
+        is_default: false,
         replaces_model_ids: ["openai/gpt-5.5"],
       },
     },
@@ -29,7 +29,7 @@ function validCatalog(): CatalogModel[] {
     },
     {
       model: "moonshotai/kimi-k2.6",
-      metadata: { is_default: false, replaces_model_ids: [] },
+      metadata: { is_default: true, replaces_model_ids: [] },
     },
   ];
 }
@@ -55,7 +55,7 @@ describe("validateHostedModelSelectionPolicies", () => {
       [
         "openai/gpt-5.6-sol",
         {
-          is_default: true,
+          is_default: false,
           replaces_model_ids: ["openai/gpt-5.5"],
         },
       ],
@@ -68,7 +68,7 @@ describe("validateHostedModelSelectionPolicies", () => {
         "anthropic/claude-opus-4.8",
         { is_default: false, replaces_model_ids: [] },
       ],
-      ["moonshotai/kimi-k2.6", { is_default: false, replaces_model_ids: [] }],
+      ["moonshotai/kimi-k2.6", { is_default: true, replaces_model_ids: [] }],
     ]);
   });
 
@@ -126,9 +126,9 @@ describe("validateHostedModelSelectionPolicies", () => {
   });
 
   it("rejects a catalog without a default", () => {
-    const catalog = withMetadata(validCatalog(), "openai/gpt-5.6-sol", {
+    const catalog = withMetadata(validCatalog(), "moonshotai/kimi-k2.6", {
       is_default: false,
-      replaces_model_ids: ["openai/gpt-5.5"],
+      replaces_model_ids: [],
     });
 
     expect(validateHostedModelSelectionPolicies(catalog)).toEqual({
@@ -151,7 +151,7 @@ describe("validateHostedModelSelectionPolicies", () => {
 
   it("rejects replacing an enabled model", () => {
     const catalog = withMetadata(validCatalog(), "openai/gpt-5.6-sol", {
-      is_default: true,
+      is_default: false,
       replaces_model_ids: ["openai/gpt-5.6-terra"],
     });
 

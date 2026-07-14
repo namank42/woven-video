@@ -9,14 +9,14 @@ const migrationPath = join(
 );
 
 describe("hosted model selection policy migration", () => {
-  it("seeds Sol as the sole default and GPT-5.5 successor", () => {
+  it("seeds Kimi as the sole default and Sol as the GPT-5.5 successor", () => {
     expect(existsSync(migrationPath)).toBe(true);
 
     const sql = readFileSync(migrationPath, "utf8");
     const normalized = sql.replace(/\s+/g, " ");
 
     expect(normalized).toContain(
-      "('openai/gpt-5.6-sol', true, '[\"openai/gpt-5.5\"]'::jsonb)",
+      "('openai/gpt-5.6-sol', false, '[\"openai/gpt-5.5\"]'::jsonb)",
     );
     expect(normalized).toContain(
       "('openai/gpt-5.6-terra', false, '[]'::jsonb)",
@@ -28,7 +28,7 @@ describe("hosted model selection policy migration", () => {
       "('anthropic/claude-opus-4.8', false, '[]'::jsonb)",
     );
     expect(normalized).toContain(
-      "('moonshotai/kimi-k2.6', false, '[]'::jsonb)",
+      "('moonshotai/kimi-k2.6', true, '[]'::jsonb)",
     );
     expect(normalized.match(/, true, /g)).toHaveLength(1);
     expect(normalized).toContain("'is_default', policy.is_default");

@@ -27,6 +27,7 @@ function model(metadata: unknown = solMetadata) {
 async function loadRoute(
   metadata: unknown,
   gatewayCapabilities: Record<string, unknown> | null,
+  catalog = [model(metadata)],
 ) {
   vi.doMock("@/lib/api/auth", () => ({
     requireApiAuth: vi.fn(async () => ({
@@ -35,7 +36,7 @@ async function loadRoute(
     })),
   }));
   vi.doMock("@/lib/billing/model-pricing", () => ({
-    listHostedChatModels: vi.fn(async () => [model(metadata)]),
+    listHostedChatModels: vi.fn(async () => catalog),
   }));
   const getModelCapabilities = vi.fn(async () => gatewayCapabilities);
   vi.doMock("@/lib/ai/model-capabilities", () => ({
@@ -55,6 +56,58 @@ describe("hosted chat model catalog route", () => {
     vi.doUnmock("@/lib/ai/model-capabilities");
     vi.resetModules();
     vi.restoreAllMocks();
+  });
+
+  it("publishes Kimi as the sole default while Sol retains the GPT-5.5 replacement", async () => {
+    const sol = model({
+      ...solMetadata,
+      is_default: false,
+    });
+    const kimi = {
+      ...model({
+        provider_model_id: "moonshotai/kimi-k2.6",
+        is_default: true,
+        replaces_model_ids: [],
+        supports_reasoning: true,
+        supported_reasoning_efforts: [],
+        default_reasoning_effort: null,
+      }),
+      id: "rule_kimi",
+      model: "moonshotai/kimi-k2.6",
+      display_name: "Kimi K2.6",
+    };
+
+    const { response } = await loadRoute(solMetadata, null, [sol, kimi]);
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(
+      body.data.map(
+        (entry: {
+          id: string;
+          is_default: boolean;
+          replaces_model_ids: string[];
+        }) => ({
+          id: entry.id,
+          is_default: entry.is_default,
+          replaces_model_ids: entry.replaces_model_ids,
+        }),
+      ),
+    ).toEqual([
+      {
+        id: "openai/gpt-5.6-sol",
+        is_default: false,
+        replaces_model_ids: ["openai/gpt-5.5"],
+      },
+      {
+        id: "moonshotai/kimi-k2.6",
+        is_default: true,
+        replaces_model_ids: [],
+      },
+    ]);
+    expect(
+      body.data.filter((entry: { is_default: boolean }) => entry.is_default),
+    ).toHaveLength(1);
   });
 
   it("publishes the database effort contract instead of Gateway's generic flag", async () => {
