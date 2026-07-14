@@ -51,4 +51,11 @@ describe("pricing page source", () => {
 
     expect(pageSource).not.toMatch(/["']use client["']/);
   });
+
+  it("renders optional dated rate labels on desktop and mobile", async () => {
+    const pageSource = await readFile("app/pricing/page.tsx", "utf8");
+
+    expect(pageSource.split("model.rateLabel ?")).toHaveLength(3);
+    expect(pageSource.split("{model.rateLabel}")).toHaveLength(3);
+  });
 });

@@ -302,6 +302,11 @@ function ChatModelsTable() {
                     <code className="font-mono text-xs text-muted-foreground">
                       {model.modelId}
                     </code>
+                    {model.rateLabel ? (
+                      <span className="text-xs text-muted-foreground">
+                        {model.rateLabel}
+                      </span>
+                    ) : null}
                   </div>
                 </td>
                 <td className="px-6 py-4 text-right tabular-nums">
@@ -349,6 +354,11 @@ function ChatModelsTable() {
               <code className="font-mono text-xs text-muted-foreground">
                 {model.modelId}
               </code>
+              {model.rateLabel ? (
+                <span className="text-xs text-muted-foreground">
+                  {model.rateLabel}
+                </span>
+              ) : null}
             </div>
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <dt className="text-muted-foreground">Input</dt>
