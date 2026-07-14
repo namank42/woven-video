@@ -38,7 +38,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "Which models can I use?",
-    a: "Use Claude Sonnet 4.6, Claude Opus 4.8, GPT-5.6 Sol, GPT-5.6 Terra, and Kimi K2.6 with Woven-hosted credits. You can also bring your own Anthropic and OpenAI keys or sign in with ChatGPT for GPT-5+ on your existing plan. See the pricing page for per-model rates.",
+    a: "Use Claude Sonnet 5, Claude Opus 4.8, GPT-5.6 Sol, GPT-5.6 Terra, and Kimi K2.6 with Woven-hosted credits. You can also bring your own Anthropic and OpenAI keys or sign in with ChatGPT for GPT-5+ on your existing plan. See the pricing page for per-model rates.",
   },
   {
     q: "Can I use ChatGPT with Woven?",
@@ -54,7 +54,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "How much do hosted AI models cost?",
-    a: "Hosted models are billed per token from your prepaid balance — for example, Claude Sonnet 4.6 from $3.60/M input and $18.00/M output. Auto captions are $0.10/min. See woven.video/pricing for the full rate table.",
+    a: "Hosted models are billed per token from your prepaid balance — Claude Sonnet 5 is $2.40/M input and $12.00/M output through Aug 31, 2026, then $3.60/M input and $18.00/M output from Sep 1, 2026. Auto captions are $0.10/min. See woven.video/pricing for the full rate table.",
   },
   {
     q: "Can I bring my own provider keys?",
