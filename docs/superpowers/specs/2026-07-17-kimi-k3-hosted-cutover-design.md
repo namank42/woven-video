@@ -1,7 +1,7 @@
 # Kimi K3 Hosted Cutover Design
 
 **Date:** 2026-07-17
-**Status:** Approved design — pending written-spec review
+**Status:** Approved design
 **Backend scope:** `woven-video` hosted catalog, billing metadata, public pricing and SEO copy,
 migration tests, and production cutover verification.
 **Consumer scope:** Coordinated `woven-harness` hosted-catalog fixtures and Kimi capability fallback;
