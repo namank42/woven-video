@@ -34,8 +34,11 @@ function validCatalog(): CatalogModel[] {
       },
     },
     {
-      model: "moonshotai/kimi-k2.6",
-      metadata: { is_default: true, replaces_model_ids: [] },
+      model: "moonshotai/kimi-k3",
+      metadata: {
+        is_default: true,
+        replaces_model_ids: ["moonshotai/kimi-k2.6"],
+      },
     },
   ];
 }
@@ -80,7 +83,13 @@ describe("validateHostedModelSelectionPolicies", () => {
           replaces_model_ids: ["anthropic/claude-opus-4.7"],
         },
       ],
-      ["moonshotai/kimi-k2.6", { is_default: true, replaces_model_ids: [] }],
+      [
+        "moonshotai/kimi-k3",
+        {
+          is_default: true,
+          replaces_model_ids: ["moonshotai/kimi-k2.6"],
+        },
+      ],
     ]);
   });
 
@@ -168,7 +177,7 @@ describe("validateHostedModelSelectionPolicies", () => {
   });
 
   it("rejects a catalog without a default", () => {
-    const catalog = withMetadata(validCatalog(), "moonshotai/kimi-k2.6", {
+    const catalog = withMetadata(validCatalog(), "moonshotai/kimi-k3", {
       is_default: false,
       replaces_model_ids: [],
     });

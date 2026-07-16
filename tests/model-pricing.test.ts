@@ -8,7 +8,10 @@ vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: mocks.createSupabaseAdminClient,
 }));
 
-import { listHostedChatModels } from "@/lib/billing/model-pricing";
+import {
+  getHostedChatModel,
+  listHostedChatModels,
+} from "@/lib/billing/model-pricing";
 
 describe("listHostedChatModels", () => {
   afterEach(() => {
@@ -36,5 +39,29 @@ describe("listHostedChatModels", () => {
       ["enabled", true],
     ]);
     expect(order).toHaveBeenCalledWith("display_name");
+  });
+
+  it("requires an exact enabled row for a direct hosted model lookup", async () => {
+    const maybeSingle = vi.fn(async () => ({ data: null, error: null }));
+    const query = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      maybeSingle,
+    };
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    const from = vi.fn(() => query);
+    mocks.createSupabaseAdminClient.mockReturnValue({ from });
+
+    await expect(getHostedChatModel("moonshotai/kimi-k2.6")).resolves.toBeNull();
+
+    expect(from).toHaveBeenCalledWith("model_pricing_rules");
+    expect(query.eq.mock.calls).toEqual([
+      ["provider", "vercel-ai-gateway"],
+      ["operation", "chat"],
+      ["model", "moonshotai/kimi-k2.6"],
+      ["enabled", true],
+    ]);
+    expect(maybeSingle).toHaveBeenCalledOnce();
   });
 });

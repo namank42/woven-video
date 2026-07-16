@@ -101,10 +101,10 @@ describe("hosted chat model catalog route", () => {
         supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
         default_reasoning_effort: "high",
       }),
-      catalogModel("moonshotai/kimi-k2.6", "Kimi K2.6", {
-        provider_model_id: "moonshotai/kimi-k2.6",
+      catalogModel("moonshotai/kimi-k3", "Kimi K3", {
+        provider_model_id: "moonshotai/kimi-k3",
         is_default: true,
-        replaces_model_ids: [],
+        replaces_model_ids: ["moonshotai/kimi-k2.6"],
         supports_reasoning: true,
         supported_reasoning_efforts: [],
         default_reasoning_effort: null,
@@ -149,9 +149,9 @@ describe("hosted chat model catalog route", () => {
         replaces_model_ids: ["anthropic/claude-opus-4.7"],
       },
       {
-        id: "moonshotai/kimi-k2.6",
+        id: "moonshotai/kimi-k3",
         is_default: true,
-        replaces_model_ids: [],
+        replaces_model_ids: ["moonshotai/kimi-k2.6"],
       },
     ]);
     expect(
@@ -169,6 +169,63 @@ describe("hosted chat model catalog route", () => {
     expect(body.data.map((entry: { id: string }) => entry.id)).not.toContain(
       "anthropic/claude-sonnet-4.6",
     );
+  });
+
+  it("publishes K3 live capabilities with fixed reasoning controls", async () => {
+    const kimiMetadata = {
+      provider_model_id: "moonshotai/kimi-k3",
+      is_default: true,
+      replaces_model_ids: ["moonshotai/kimi-k2.6"],
+      supports_reasoning: true,
+      supported_reasoning_efforts: [],
+      default_reasoning_effort: null,
+    };
+    const kimi = catalogModel("moonshotai/kimi-k3", "Kimi K3", kimiMetadata);
+    const { response } = await loadRoute(
+      kimiMetadata,
+      {
+        context_length: 1_000_000,
+        input_modalities: ["text", "image", "file"],
+        output_modalities: ["text"],
+        supports_reasoning: true,
+        supports_tools: true,
+        supports_vision: true,
+        supports_files: true,
+        pricing_input_per_mtok_usd: 3,
+        pricing_output_per_mtok_usd: 15,
+        pricing_cached_input_per_mtok_usd: 0.3,
+      },
+      [kimi],
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      data: [
+        {
+          id: "moonshotai/kimi-k3",
+          display_name: "Kimi K3",
+          is_default: true,
+          replaces_model_ids: ["moonshotai/kimi-k2.6"],
+          capabilities: {
+            context_length: 1_000_000,
+            input_modalities: ["text", "image", "file"],
+            output_modalities: ["text"],
+            supports_reasoning: true,
+            supported_reasoning_efforts: [],
+            default_reasoning_effort: null,
+            supports_tools: true,
+            supports_vision: true,
+            supports_files: true,
+          },
+          pricing: {
+            input_per_mtok_usd: 3,
+            output_per_mtok_usd: 15,
+            cached_input_per_mtok_usd: 0.3,
+            markup_bps: 2_000,
+          },
+        },
+      ],
+    });
   });
 
   it("publishes the database effort contract instead of Gateway's generic flag", async () => {
