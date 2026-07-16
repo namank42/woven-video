@@ -54,7 +54,7 @@ Current hosted chat models:
 - `anthropic/claude-opus-4.8`
 - `openai/gpt-5.6-sol`
 - `openai/gpt-5.6-terra`
-- `moonshotai/kimi-k2.6`
+- `moonshotai/kimi-k3`
 
 `ledger_entries` is the append-only ledger. Every balance-changing operation writes an entry with `amount_usd_micros` and `balance_after_usd_micros`. The unique `(source, source_id, kind)` constraint is the idempotency boundary for Stripe webhooks and job accounting.
 

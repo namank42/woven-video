@@ -38,7 +38,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "Which models can I use?",
-    a: "Use Claude Sonnet 5, Claude Opus 4.8, GPT-5.6 Sol, GPT-5.6 Terra, and Kimi K2.6 with Woven-hosted credits. You can also bring your own Anthropic and OpenAI keys or sign in with ChatGPT for GPT-5+ on your existing plan. See the pricing page for per-model rates.",
+    a: "Use Claude Sonnet 5, Claude Opus 4.8, GPT-5.6 Sol, GPT-5.6 Terra, and Kimi K3 with Woven-hosted credits. You can also bring your own Anthropic and OpenAI keys or sign in with ChatGPT for GPT-5+ on your existing plan. See the pricing page for per-model rates.",
   },
   {
     q: "Can I use ChatGPT with Woven?",
