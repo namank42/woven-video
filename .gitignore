@@ -26,6 +26,7 @@
 .superpowers/
 .trigger/
 /.worktrees/
+/.pnpm-store/
 
 # debug
 npm-debug.log*
