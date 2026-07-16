@@ -15,7 +15,7 @@ describe("pricing page rates", () => {
       "Claude Opus 4.8",
       "GPT-5.6 Sol",
       "GPT-5.6 Terra",
-      "Kimi K2.6",
+      "Kimi K3",
     ]);
 
     expect(chatModelRates.map((rate) => rate.modelId)).not.toContain(
@@ -78,6 +78,17 @@ describe("pricing page rates", () => {
         cacheWrite: "$7.50/M",
       },
     });
+    expect(chatModelRates.find((rate) => rate.name === "Kimi K3")).toEqual({
+      name: "Kimi K3",
+      modelId: "moonshotai/kimi-k3",
+      input: "$3.60/M",
+      output: "$18.00/M",
+      cacheRead: "$0.36/M",
+      cacheWrite: "—",
+    });
+    expect(chatModelRates.map((rate) => rate.modelId)).not.toContain(
+      "moonshotai/kimi-k2.6",
+    );
   });
 
   it("keeps feature rates available for the other features table", () => {

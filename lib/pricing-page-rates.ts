@@ -89,11 +89,11 @@ export const chatModelRates: ChatModelRate[] = [
     },
   },
   {
-    name: "Kimi K2.6",
-    modelId: "moonshotai/kimi-k2.6",
-    input: "$1.14/M",
-    output: "$4.80/M",
-    cacheRead: "$0.19/M",
+    name: "Kimi K3",
+    modelId: "moonshotai/kimi-k3",
+    input: "$3.60/M",
+    output: "$18.00/M",
+    cacheRead: "$0.36/M",
     cacheWrite: "—",
   },
 ];
