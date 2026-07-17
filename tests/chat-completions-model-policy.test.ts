@@ -30,7 +30,10 @@ vi.mock("@/lib/supabase/admin", () => ({
   createSupabaseAdminClient: mocks.createSupabaseAdminClient,
 }));
 
-import { POST } from "@/app/api/v1/chat/completions/route";
+import {
+  maxDuration,
+  POST,
+} from "@/app/api/v1/chat/completions/route";
 
 const kimiK3Rule = {
   id: "rule_kimi_k3",
@@ -91,6 +94,10 @@ function request(model: string) {
 }
 
 describe("hosted chat model policy", () => {
+  it("allows hosted chat streams to run up to Vercel's Pro limit", () => {
+    expect(maxDuration).toBe(800);
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("fetch", mocks.fetch);
