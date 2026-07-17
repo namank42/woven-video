@@ -16,6 +16,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const maxDuration = 800;
 
 type ChatBody = Record<string, unknown> & {
   model?: unknown;
