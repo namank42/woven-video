@@ -12,4 +12,14 @@ describe("billing balance API source", () => {
     expect(source).toContain("checkout_mode");
     expect(source).toContain('typeof trialUsedData === "boolean"');
   });
+
+  it("publishes a trial-only offline access expiry", async () => {
+    const source = await readFile("app/api/v1/billing/balance/route.ts", "utf8");
+
+    expect(source).toContain("resolveOfflineAccessExpiry");
+    expect(source).toContain('supabase.rpc("has_active_license")');
+    expect(source).toContain('.from("subscriptions")');
+    expect(source).toContain("offline_access_expires_at");
+    expect(source).toContain("accessSourceResolution.ok");
+  });
 });

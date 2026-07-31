@@ -1,5 +1,9 @@
 import { requireApiAuth } from "@/lib/api/auth";
 import { apiError } from "@/lib/api/responses";
+import {
+  resolveOfflineAccessExpiry,
+  type LiveSubscriptionAccess,
+} from "@/lib/billing/offline-access-expiry";
 import { resolveCheckoutMode } from "@/lib/billing/subscription-eligibility";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +30,13 @@ export async function GET(request: Request) {
   // legacy license OR a live subscription: trialing/active/past_due) so trialing
   // users aren't walled. Omit the field on a read error so the client falls back
   // to its own cache (fail-open within its grace window).
-  let license: { active: boolean; granted_at: string | null } | undefined;
+  let license:
+    | {
+        active: boolean;
+        granted_at: string | null;
+        offline_access_expires_at?: string;
+      }
+    | undefined;
   let hasAccess: boolean | undefined;
   const { data: active, error: licenseError } = await supabase.rpc(
     "has_access",
@@ -43,7 +53,56 @@ export async function GET(request: Request) {
         .maybeSingle();
       grantedAt = licenseRow?.granted_at ?? null;
     }
-    license = { active: hasAccess, granted_at: grantedAt };
+
+    if (!hasAccess) {
+      license = { active: false, granted_at: grantedAt };
+    } else {
+      const [
+        { data: perpetualAccess, error: perpetualAccessError },
+        { data: subscriptionRows, error: subscriptionError },
+      ] = await Promise.all([
+        supabase.rpc("has_active_license"),
+        supabase
+          .from("subscriptions")
+          .select("status, trial_end")
+          .in("status", ["trialing", "active", "past_due"])
+          .order("created_at", { ascending: false }),
+      ]);
+
+      if (
+        perpetualAccessError ||
+        subscriptionError ||
+        typeof perpetualAccess !== "boolean"
+      ) {
+        console.error("billing balance: failed to resolve access source", {
+          perpetualAccessError: perpetualAccessError?.message,
+          subscriptionError: subscriptionError?.message,
+        });
+      } else {
+        const accessSourceResolution = resolveOfflineAccessExpiry({
+          hasAccess,
+          hasPerpetualAccess: perpetualAccess,
+          liveSubscriptions: (subscriptionRows ??
+            []) as LiveSubscriptionAccess[],
+        });
+
+        if (!accessSourceResolution.ok) {
+          console.error(
+            "billing balance: active access has no valid offline expiry source",
+          );
+        } else {
+          license = {
+            active: true,
+            granted_at: grantedAt,
+            ...(accessSourceResolution.expiresAt
+              ? {
+                  offline_access_expires_at: accessSourceResolution.expiresAt,
+                }
+              : {}),
+          };
+        }
+      }
+    }
   }
 
   let trialUsed: boolean | undefined;
