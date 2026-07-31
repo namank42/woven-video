@@ -56,7 +56,7 @@ export function softwareApplicationSchema(): JsonLd {
     operatingSystem: "macOS",
     applicationCategory: "MultimediaApplication",
     description:
-      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. Try free for 7 days, then $99/year.",
+      "Woven is the AI Video Editor. A native macOS app to script, edit, and assemble short-form video by asking. Try free for 3 days, then $99/year.",
     url: SITE_URL,
     downloadUrl: DOWNLOAD_URL,
     offers: {
@@ -65,7 +65,7 @@ export function softwareApplicationSchema(): JsonLd {
       priceCurrency: "USD",
       priceValidUntil: "2027-12-31",
       availability: "https://schema.org/InStock",
-      description: "7-day free trial, then $99/year billed annually",
+      description: "3-day free trial, then $99/year billed annually",
     },
     publisher: { "@id": `${SITE_URL}/#organization` },
   };
@@ -179,7 +179,7 @@ export function pricingPageGraph(faqs: FaqItem[]) {
       path: "/pricing",
       name: "Woven Pricing",
       description:
-        "Woven pricing — 7-day free trial, then $99/year. Hosted AI model rates and optional prepaid credits.",
+        "Woven pricing — 3-day free trial, then $99/year. Hosted AI model rates and optional prepaid credits.",
     }),
     faqPageSchema(faqs, `${SITE_URL}/pricing#faq`),
   );
@@ -228,4 +228,3 @@ export function changelogPageGraph(
     },
   );
 }
-

@@ -29,7 +29,7 @@ export const compareHub: HubPageContent = {
       href: "/vs/capcut",
       title: "Woven vs CapCut",
       description:
-        "CapCut alternative for Mac — free 7-day trial, then create new Reels and TikToks with AI instead of template editing.",
+        "CapCut alternative for Mac — free 3-day trial, then create new Reels and TikToks with AI instead of template editing.",
     },
     {
       href: "/vs/descript",

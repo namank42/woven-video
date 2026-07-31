@@ -184,7 +184,7 @@ export function RoundupTable({ entries }: { entries: RoundupEntry[] }) {
 }
 
 export function MarketingCta({
-  heading = "Try Woven free for 7 days",
+  heading = "Try Woven free for 3 days",
   body = "Then $99/year. Native Mac app for short-form video.",
 }: {
   heading?: string;

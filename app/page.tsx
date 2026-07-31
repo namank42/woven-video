@@ -93,7 +93,7 @@ const featureCards: FeatureCard[] = [
     icon: KeyIcon,
     eyebrow: "Your keys, or ours",
     title: "Your keys, ChatGPT, or Woven-hosted.",
-    body: "Try Woven free for 7 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance.",
+    body: "Try Woven free for 3 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Bring your own Anthropic and OpenAI keys, sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance.",
   },
   {
     icon: LayersIcon,
@@ -387,7 +387,7 @@ function Pricing() {
         <div className="flex flex-col items-center gap-4 text-center">
           <SectionLabel>Pricing</SectionLabel>
           <h2 className="max-w-3xl text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-            Try it free for 7 days.
+            Try it free for 3 days.
           </h2>
         </div>
         <div className="mx-auto mt-14 w-full max-w-xl text-left">
@@ -403,7 +403,7 @@ function Pricing() {
                   Woven
                 </h3>
                 <p className="text-xs text-background/70">
-                  7-day free trial
+                  3-day free trial
                 </p>
               </div>
               <span className="inline-flex items-center rounded-full bg-background px-3 py-1 text-xs font-medium text-foreground">
@@ -422,7 +422,7 @@ function Pricing() {
               </p>
             </div>
             <p className="relative text-sm text-background/80">
-              The full Woven app on your Mac, free for 7 days. Includes $5 in
+              The full Woven app on your Mac, free for 3 days. Includes $5 in
               hosted credits to start.
             </p>
             <ul className="relative flex flex-col gap-3 border-t border-background/15 pt-6 text-sm text-background/90">
@@ -447,8 +447,7 @@ function Pricing() {
               <BadgeCheckIcon className="mt-0.5 size-4 shrink-0 text-green-400" />
               <p className="max-w-xs text-xs text-background/70">
                 <span className="font-medium text-background">$0 due today</span>{" "}
-                · cancel anytime before day 7 · card required. We email you
-                before your trial ends.
+                · cancel anytime before day 3 · card required.
               </p>
             </div>
           </div>

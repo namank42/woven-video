@@ -89,7 +89,7 @@ export function ContactForm({ prefillEmail }: { prefillEmail?: string }) {
             <FieldError>{errors.message[0]}</FieldError>
           ) : (
             <FieldDescription>
-              For a refund within your 7-day window, include your account email.
+              Include your account email so we can find your billing history.
             </FieldDescription>
           )}
         </Field>
