@@ -10,11 +10,11 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "How much does Woven cost?",
-    a: "Woven is a 7-day free trial, then $8.25/mo, billed annually ($99/yr) — cancel anytime, card required. It includes $5 in hosted credits. Bring your own provider keys, sign in with ChatGPT (GPT-5+ on your existing plan), or top up a prepaid balance for Woven-hosted models.",
+    a: "Woven is a 3-day free trial, then $8.25/mo, billed annually ($99/yr) — cancel anytime, card required. It includes $5 in hosted credits. Bring your own provider keys, sign in with ChatGPT (GPT-5+ on your existing plan), or top up a prepaid balance for Woven-hosted models.",
   },
   {
     q: "What is the best AI video editor for Mac?",
-    a: "Woven is built natively for macOS with full file system access, local projects, and chat-driven editing for short-form video. Unlike web-based editors, your assets stay on your Mac. Try it free for 7 days at woven.video.",
+    a: "Woven is built natively for macOS with full file system access, local projects, and chat-driven editing for short-form video. Unlike web-based editors, your assets stay on your Mac. Try it free for 3 days at woven.video.",
   },
   {
     q: "Is Woven a desktop app or a web app?",
@@ -26,7 +26,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "Do I need a Woven account to use the app?",
-    a: "Yes. Sign in once with Google and start a 7-day free trial ($8.25/mo, billed annually — $99/yr after). Then run with your own Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
+    a: "Yes. Sign in once with Google and start a 3-day free trial ($8.25/mo, billed annually — $99/yr after). Then run with your own Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
   },
   {
     q: "Can Woven make TikTok videos or Reels?",
@@ -62,7 +62,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "What is included in the free trial?",
-    a: "The full Woven app for 7 days, plus $5 in Woven-hosted credits. Bring your own keys, sign in with ChatGPT, or use the included credits. $0 due today — cancel anytime before day 7.",
+    a: "The full Woven app for 3 days, plus $5 in Woven-hosted credits. Bring your own keys, sign in with ChatGPT, or use the included credits. $0 due today — cancel anytime before day 3.",
   },
   {
     q: "Who makes Woven?",
@@ -73,11 +73,11 @@ export const homepageFaqs: FaqItem[] = [
 export const pricingFaqs: FaqItem[] = [
   {
     q: "How much does Woven cost after the trial?",
-    a: "Woven is $99/year ($8.25/month billed annually) after a 7-day free trial. Cancel anytime before day 7 to avoid being charged.",
+    a: "Woven is $99/year ($8.25/month billed annually) after a 3-day free trial. Cancel anytime before day 3 to avoid being charged.",
   },
   {
     q: "What is included in the free trial?",
-    a: "The full Mac app for 7 days plus $5 in Woven-hosted credits. Bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or use the included credits.",
+    a: "The full Mac app for 3 days plus $5 in Woven-hosted credits. Bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or use the included credits.",
   },
   {
     q: "Do I need hosted credits?",

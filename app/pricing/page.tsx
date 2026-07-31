@@ -25,7 +25,7 @@ import { pricingPageGraph } from "@/lib/seo/schema";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Woven is a native macOS AI video editor. Try free for 7 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Includes $5 in hosted credits. Run any model your way: bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
+    "Woven is a native macOS AI video editor. Try free for 3 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Includes $5 in hosted credits. Run any model your way: bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -102,7 +102,7 @@ function PricingHero() {
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center px-6 pt-16 pb-10 text-center md:pt-20">
         <SectionLabel>Pricing</SectionLabel>
         <h1 className="mt-6 max-w-2xl text-4xl font-semibold tracking-[-0.03em] leading-[1.05] md:text-6xl">
-          Try Woven free for 7 days.
+          Try Woven free for 3 days.
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
           {ANSWER_FIRST_PRICING}
@@ -127,7 +127,7 @@ function Plans() {
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
               <h2 className="text-lg font-semibold tracking-tight">Woven</h2>
-              <p className="text-xs text-muted-foreground">7-day free trial</p>
+              <p className="text-xs text-muted-foreground">3-day free trial</p>
             </div>
             <span className="inline-flex items-center rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background">
               Required
@@ -143,7 +143,7 @@ function Plans() {
             </p>
           </div>
           <p className="text-sm text-muted-foreground">
-            The full Woven app, free for 7 days. Includes $5 in hosted credits to
+            The full Woven app, free for 3 days. Includes $5 in hosted credits to
             start.
           </p>
           <ul className="mt-2 flex flex-col gap-3 border-t border-border pt-6 text-sm">
@@ -168,8 +168,7 @@ function Plans() {
             <BadgeCheckIcon className="mt-0.5 size-4 shrink-0 text-green-600" />
             <p className="max-w-xs text-xs text-muted-foreground">
               <span className="font-medium text-foreground">$0 due today</span> ·
-              cancel anytime before day 7 · card required. We email you before
-              your trial ends.
+              cancel anytime before day 3 · card required.
             </p>
           </div>
         </div>
@@ -582,7 +581,7 @@ function CtaBand() {
     <section className="border-t border-border/60">
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-6 px-6 py-20 text-center">
         <h2 className="max-w-2xl text-3xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-          Try it free for 7 days.
+          Try it free for 3 days.
         </h2>
         <p className="max-w-xl text-base text-muted-foreground md:text-lg">
           Then $8.25/mo, billed annually ($99/yr). Cancel anytime. $5 in hosted credits to start.

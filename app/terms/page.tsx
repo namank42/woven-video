@@ -51,7 +51,7 @@ export default function TermsPage() {
               <section className="flex flex-col gap-3">
                 <h2 className="text-xl font-semibold text-foreground">Accounts & trials</h2>
                 <p>
-                  You need a Woven account to use the app. We offer a 7-day free trial,
+                  You need a Woven account to use the app. We offer a 3-day free trial,
                   then a paid subscription as described on our{" "}
                   <Link href="/pricing" className="text-foreground underline underline-offset-4">
                     pricing page

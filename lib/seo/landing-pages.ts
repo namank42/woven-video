@@ -63,7 +63,7 @@ export const capcutComparison: ComparisonPageContent = {
   path: "/vs/capcut",
   title: "CapCut Alternative for Mac",
   description:
-    "Looking for a CapCut alternative or alternative to CapCut on Mac? Woven is a native AI video editor for short-form video — a strong CapCut alternative free to try for 7 days. Script, generate, and assemble Reels and TikToks by chatting.",
+    "Looking for a CapCut alternative or alternative to CapCut on Mac? Woven is a native AI video editor for short-form video — a strong CapCut alternative free to try for 3 days. Script, generate, and assemble Reels and TikToks by chatting.",
   h1: "CapCut Alternative for Mac",
   verdict:
     "CapCut is a capable free mobile editor; Woven is a native Mac app for creating short-form video with AI from a script — not just editing clips you already have.",
@@ -76,7 +76,7 @@ export const capcutComparison: ComparisonPageContent = {
     { feature: "AI generation", woven: "Script, footage, voice in one flow", competitor: "Templates, effects, some AI tools" },
     { feature: "File access", woven: "Full local file system", competitor: "Upload/cloud-centric" },
     { feature: "Best for", woven: "Creating new short-form cuts on Mac", competitor: "Quick mobile edits and templates" },
-    { feature: "Pricing", woven: "7-day trial, then $99/yr", competitor: "Free tier + Pro subscription" },
+    { feature: "Pricing", woven: "3-day trial, then $99/yr", competitor: "Free tier + Pro subscription" },
   ],
   chooseWoven: [
     "You work on a Mac and want local projects",
@@ -100,7 +100,7 @@ export const capcutComparison: ComparisonPageContent = {
     },
     {
       q: "How much does Woven cost vs CapCut?",
-      a: "Woven is a 7-day free trial, then $99/year. CapCut has a popular free tier and optional Pro plans. See woven.video/pricing for Woven's full pricing.",
+      a: "Woven is a 3-day free trial, then $99/year. CapCut has a popular free tier and optional Pro plans. See woven.video/pricing for Woven's full pricing.",
     },
     {
       q: "Can Woven export vertical video for TikTok and Reels?",
@@ -108,7 +108,7 @@ export const capcutComparison: ComparisonPageContent = {
     },
     {
       q: "Is Woven a free CapCut alternative?",
-      a: "Woven offers a 7-day free trial — so you can try it as a CapCut alternative free before paying. After the trial, Woven is $99/year. CapCut has a popular free tier for mobile template edits; Woven is built for Mac creators who want AI-driven scripting and assembly.",
+      a: "Woven offers a 3-day free trial — so you can try it as a CapCut alternative free before paying. After the trial, Woven is $99/year. CapCut has a popular free tier for mobile template edits; Woven is built for Mac creators who want AI-driven scripting and assembly.",
     },
     {
       q: "What is the best CapCut alternative for Mac?",
@@ -120,7 +120,7 @@ export const capcutComparison: ComparisonPageContent = {
     },
     {
       q: "Is there a CapCut alternative for Mac with a free trial?",
-      a: "Yes. Woven is a CapCut alternative for Mac with a 7-day free trial and full app access. Your projects stay local on your Mac. See woven.video/pricing for details after the trial.",
+      a: "Yes. Woven is a CapCut alternative for Mac with a 3-day free trial and full app access. Your projects stay local on your Mac. See woven.video/pricing for details after the trial.",
     },
   ],
 };
@@ -231,7 +231,7 @@ export const macEditorPage: FeaturePageContent = {
   path: "/ai-video-editor-mac",
   title: "AI Video Editor for Mac",
   description:
-    "Woven is the AI video editor for Mac. Native app, local projects, chat-driven editing for Reels, TikTok, and YouTube Shorts. Try free for 7 days.",
+    "Woven is the AI video editor for Mac. Native app, local projects, chat-driven editing for Reels, TikTok, and YouTube Shorts. Try free for 3 days.",
   h1: "AI Video Editor for Mac",
   answerFirst:
     "Woven is a native AI video editor for Mac. Your projects and media stay local, you script and generate short-form video by chatting, and you export vertical cuts for Reels, TikTok, and YouTube Shorts.",
@@ -256,7 +256,7 @@ export const macEditorPage: FeaturePageContent = {
   faqs: [
     {
       q: "What is the best AI video editor for Mac?",
-      a: "Woven is built natively for macOS with local projects and chat-driven short-form editing. Unlike web-based tools, your assets stay on your Mac. Try it free for 7 days.",
+      a: "Woven is built natively for macOS with local projects and chat-driven short-form editing. Unlike web-based tools, your assets stay on your Mac. Try it free for 3 days.",
     },
     {
       q: "Does Woven work on Windows?",
@@ -273,7 +273,7 @@ export const reelsUseCase: UseCasePageContent = {
   path: "/for/reels",
   title: "AI Reels Maker & Generator for Mac",
   description:
-    "AI Reels maker and AI Reels generator for Mac. Make Instagram Reels with AI — script, generate footage and voice, and assemble vertical video by chatting. Free to try for 7 days.",
+    "AI Reels maker and AI Reels generator for Mac. Make Instagram Reels with AI — script, generate footage and voice, and assemble vertical video by chatting. Free to try for 3 days.",
   h1: "AI Reels Maker & Generator for Mac",
   answerFirst:
     "Woven is an AI Reels maker and AI Reels generator for Mac. Describe the reel you want — or say make Reels with AI — and Woven writes the script, generates footage and voice, and assembles a vertical cut ready for Instagram Reels.",
@@ -298,7 +298,7 @@ export const reelsUseCase: UseCasePageContent = {
     },
     {
       q: "Is there a free AI Reels generator?",
-      a: "Woven offers a 7-day free trial with full app access — try it as a free AI Reels generator before subscribing. After the trial, Woven is $99/year. See woven.video/pricing for details.",
+      a: "Woven offers a 3-day free trial with full app access — try it as a free AI Reels generator before subscribing. After the trial, Woven is $99/year. See woven.video/pricing for details.",
     },
     {
       q: "Is Woven an AI Reels editor?",
@@ -315,7 +315,7 @@ export const tiktokUseCase: UseCasePageContent = {
   path: "/for/tiktok",
   title: "AI TikTok Video Editor for Mac",
   description:
-    "Create TikTok videos with AI on Mac. Woven scripts, generates footage and voice, and assembles vertical cuts by chatting. 7-day free trial.",
+    "Create TikTok videos with AI on Mac. Woven scripts, generates footage and voice, and assembles vertical cuts by chatting. 3-day free trial.",
   h1: "AI TikTok Video Editor for Mac",
   answerFirst:
     "Woven is an AI TikTok video editor for Mac. Script your video, generate footage and voice, and assemble a vertical cut by chatting — built for TikTok's format.",
@@ -341,7 +341,7 @@ export const shortsUseCase: UseCasePageContent = {
   path: "/for/youtube-shorts",
   title: "AI YouTube Shorts Editor for Mac",
   description:
-    "Make YouTube Shorts with AI on Mac. Woven scripts, generates, and assembles vertical video by chatting. 7-day free trial.",
+    "Make YouTube Shorts with AI on Mac. Woven scripts, generates, and assembles vertical video by chatting. 3-day free trial.",
   h1: "AI YouTube Shorts Editor for Mac",
   answerFirst:
     "Woven is an AI YouTube Shorts editor for Mac. Describe the short you want, generate footage and voice, and assemble a vertical cut by chatting.",
@@ -379,7 +379,7 @@ export const bestEditorRoundup: RoundupPageContent = {
       name: "Woven",
       bestFor: "Clipping podcasts and creating shorts on Mac",
       platform: "macOS (native)",
-      pricing: "7-day trial, then $99/yr",
+      pricing: "3-day trial, then $99/yr",
       highlight: "Chat-driven clip, create, and assemble",
     },
     {
@@ -411,7 +411,7 @@ export const bestEditorRoundup: RoundupPageContent = {
     },
     {
       q: "What is the best free AI video editor?",
-      a: "CapCut offers a capable free tier for mobile template editing. Woven offers a 7-day free trial for Mac creators who want AI-driven short-form assembly.",
+      a: "CapCut offers a capable free tier for mobile template editing. Woven offers a 3-day free trial for Mac creators who want AI-driven short-form assembly.",
     },
     {
       q: "Which AI video editor is best for TikTok and Reels?",
