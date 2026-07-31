@@ -6,14 +6,13 @@ describe("getNoAccessSubscriptionOffer", () => {
   it("uses free-trial copy only for explicit trial checkout mode", () => {
     expect(getNoAccessSubscriptionOffer("trial")).toEqual({
       title: "Start your free trial",
-      buttonLabel: "Start your 7-day free trial",
+      buttonLabel: "Start your 3-day free trial",
       bullets: [
         "$5 in Woven-hosted credits to try hosted models",
         "Bring your own Anthropic and OpenAI keys, or sign in with ChatGPT",
       ],
       emphasizedFinePrint: "$0 due today",
-      finePrint:
-        "cancel anytime before day 7 · card required. We email you before your trial ends.",
+      finePrint: "cancel anytime before day 3 · card required.",
     });
   });
 

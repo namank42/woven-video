@@ -341,7 +341,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
       {subscriptionParam === "trialing" ? (
         <Alert tone="success">
           Your free trial is starting. Welcome to Woven — your $5 in hosted
-          credits is on its way. You won&apos;t be charged until day 7.
+          credits is on its way. You won&apos;t be charged until day 3.
         </Alert>
       ) : null}
       {subscriptionParam === "started" ? (

@@ -7,7 +7,9 @@ describe("checkout result copy", () => {
     const copy = getCheckoutResultCopy("trial");
 
     expect(copy.headline).toBe("Your free trial is live.");
-    expect(copy.body).toMatch(/\$5 in hosted credits/);
+    expect(copy.body).toBe(
+      "You have full access to Woven for the next 3 days, and $5 in hosted credits have been added to your balance. You won't be charged until your trial ends.",
+    );
   });
 
   it("uses paid subscription copy for subscription success", () => {

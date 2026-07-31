@@ -40,7 +40,7 @@ describe("subscription checkout helper", () => {
       cancel_url: "https://woven.video/checkout/cancelled",
     });
     expect(plan.params.subscription_data).toEqual({
-      trial_period_days: 7,
+      trial_period_days: 3,
       trial_settings: {
         end_behavior: { missing_payment_method: "cancel" },
       },

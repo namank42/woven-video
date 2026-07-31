@@ -17,7 +17,7 @@ const COPY = {
     iconClass: "text-emerald-500",
     headline: "Your free trial is live.",
     body:
-      "You have full access to Woven for the next 7 days, and $5 in hosted credits have been added to your balance. You won't be charged until your trial ends.",
+      "You have full access to Woven for the next 3 days, and $5 in hosted credits have been added to your balance. You won't be charged until your trial ends.",
     backToApp:
       "Head back to the Woven app — it'll unlock automatically. You can close this tab.",
   },

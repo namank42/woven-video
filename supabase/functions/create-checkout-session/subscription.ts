@@ -93,7 +93,7 @@ export function buildSubscriptionCheckoutSession({
   };
 
   if (!trialUsed) {
-    subscriptionData.trial_period_days = 7;
+    subscriptionData.trial_period_days = 3;
     subscriptionData.trial_settings = {
       end_behavior: { missing_payment_method: "cancel" },
     };
