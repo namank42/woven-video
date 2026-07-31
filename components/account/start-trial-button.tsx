@@ -5,7 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 
 export function StartTrialButton({
-  label = "Start your 7-day free trial",
+  label = "Start your 3-day free trial",
 }: {
   label?: string;
 }) {

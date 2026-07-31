@@ -17,14 +17,13 @@ export function getNoAccessSubscriptionOffer(
   if (checkoutMode === "trial") {
     return {
       title: "Start your free trial",
-      buttonLabel: "Start your 7-day free trial",
+      buttonLabel: "Start your 3-day free trial",
       bullets: [
         "$5 in Woven-hosted credits to try hosted models",
         bringYourOwnKeysBullet,
       ],
       emphasizedFinePrint: "$0 due today",
-      finePrint:
-        "cancel anytime before day 7 · card required. We email you before your trial ends.",
+      finePrint: "cancel anytime before day 3 · card required.",
     };
   }
 
