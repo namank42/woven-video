@@ -28,8 +28,13 @@ export function resolveOfflineAccessExpiry({
     return { ok: true, expiresAt: null };
   }
 
-  const trial = liveSubscriptions.find(({ status }) => status === "trialing");
-  if (!trial?.trial_end || Number.isNaN(Date.parse(trial.trial_end))) {
+  const trials = liveSubscriptions.filter(({ status }) => status === "trialing");
+  if (trials.length !== 1) {
+    return { ok: false };
+  }
+
+  const [trial] = trials;
+  if (!trial.trial_end || Number.isNaN(Date.parse(trial.trial_end))) {
     return { ok: false };
   }
 

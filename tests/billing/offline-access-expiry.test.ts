@@ -51,6 +51,22 @@ describe("resolveOfflineAccessExpiry", () => {
     ).toEqual({ ok: true, expiresAt: trialEnd });
   });
 
+  it("rejects multiple trialing access sources with divergent ends", () => {
+    expect(
+      resolveOfflineAccessExpiry({
+        hasAccess: true,
+        hasPerpetualAccess: false,
+        liveSubscriptions: [
+          { status: "trialing", trial_end: trialEnd },
+          {
+            status: "trialing",
+            trial_end: "2026-08-04T10:00:00.000Z",
+          },
+        ],
+      }),
+    ).toEqual({ ok: false });
+  });
+
   it.each([null, "not-a-date"])(
     "rejects a trial with invalid end %s",
     (invalidEnd) => {
