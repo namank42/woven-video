@@ -2,6 +2,7 @@ import { requireApiAuth } from "@/lib/api/auth";
 import { licenseGateResponse } from "@/lib/api/license";
 import { apiError } from "@/lib/api/responses";
 import { createInputAssetUpload } from "@/lib/media/assets";
+import { getMediaEnv } from "@/lib/media/env";
 import {
   chargeUsdMicrosForDuration,
   DEFAULT_MINIMUM_CHARGE_USD_MICROS,
@@ -180,6 +181,13 @@ export async function POST(request: Request) {
     return apiError("Unable to update caption job.", 500, "caption_job_update_failed");
   }
 
+  const completion = getMediaEnv().uploadCompletionMode === "manual"
+    ? {
+        method: "POST",
+        url: `/api/v1/media/uploads/${upload.asset.id}/complete`,
+      }
+    : undefined;
+
   return Response.json(
     {
       id: jobId,
@@ -190,6 +198,7 @@ export async function POST(request: Request) {
         url: upload.uploadUrl,
         expiresAt: upload.expiresAt,
         contentType: uploadContentType,
+        ...(completion ? { completion } : {}),
       },
       estimatedCostUsdMicros: amountUsdMicros,
       pricing: {

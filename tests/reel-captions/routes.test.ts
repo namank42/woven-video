@@ -95,7 +95,8 @@ describe("reel captions routes", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    await expect(response.json()).resolves.toMatchObject({
+    const body = await response.json();
+    expect(body).toMatchObject({
       id: JOB_ID,
       status: "queued",
       upload: {
@@ -111,6 +112,7 @@ describe("reel captions routes", () => {
         minimumUsdMicros: 100_000,
       },
     });
+    expect(body.upload.completion).toBeUndefined();
 
     expect(createInputAssetUpload).toHaveBeenCalledWith({
       userId: USER_ID,
@@ -134,6 +136,41 @@ describe("reel captions routes", () => {
       },
     });
     expect(admin.storage.from).not.toHaveBeenCalled();
+  });
+
+  it("returns completion instructions for caption uploads in manual mode", async () => {
+    const createInputAssetUpload = vi.fn(async () => ({
+      asset: { id: ASSET_ID },
+      uploadUrl: `https://media-dev.woven.video/uploads/${ASSET_ID}?token=upload-token`,
+      expiresAt: "2026-07-01T12:15:00.000Z",
+    }));
+    const admin = mockCreateJobAdmin();
+
+    mockCaptionRouteDependencies({
+      admin,
+      createInputAssetUpload,
+      uploadCompletionMode: "manual",
+    });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/route");
+    const response = await POST(jsonRequest("/api/v1/reel-captions/jobs", {
+      durationSeconds: 90,
+      filename: "voice.wav",
+      contentType: "audio/wav",
+      sizeBytes: 123_456,
+    }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      upload: {
+        assetId: ASSET_ID,
+        url: `https://media-dev.woven.video/uploads/${ASSET_ID}?token=upload-token`,
+        completion: {
+          method: "POST",
+          url: `/api/v1/media/uploads/${ASSET_ID}/complete`,
+        },
+      },
+    });
   });
 
   it("makes caption upload cleanup-claimable when attaching it to the job fails", async () => {
@@ -735,12 +772,14 @@ function mockCaptionRouteDependencies({
   signMediaToken = vi.fn(async () => "download-token"),
   transcribeWithElevenLabs = vi.fn(),
   getReelCaptionPricing = vi.fn(async () => pricingRule),
+  uploadCompletionMode = "callback",
 }: {
   admin: unknown;
   createInputAssetUpload?: ReturnType<typeof vi.fn>;
   signMediaToken?: ReturnType<typeof vi.fn>;
   transcribeWithElevenLabs?: ReturnType<typeof vi.fn>;
   getReelCaptionPricing?: ReturnType<typeof vi.fn>;
+  uploadCompletionMode?: "callback" | "manual";
 }) {
   vi.doMock("@/lib/api/auth", () => ({
     requireApiAuth: vi.fn(async () => ({
@@ -762,6 +801,7 @@ function mockCaptionRouteDependencies({
       maxUploadBytes: 1_000_000,
       uploadUrlTtlSeconds: 900,
       downloadUrlTtlSeconds: 600,
+      uploadCompletionMode,
     })),
   }));
   vi.doMock("@/lib/media/tokens", () => ({
