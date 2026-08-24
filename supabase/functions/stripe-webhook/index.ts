@@ -8,6 +8,7 @@ import {
 } from "../_shared/http.ts";
 import { createServiceClient } from "../_shared/supabase.ts";
 import { sendLoopsEvent } from "../_shared/loops.ts";
+import { createInvoiceEventHandlers } from "./invoice-handlers.ts";
 
 const USD_MICROS_PER_CENT = 10_000;
 const LICENSE_BONUS_USD_MICROS = 5_000_000; // $5 starter credits bundled with a paid license
@@ -34,6 +35,12 @@ Deno.serve(async (req) => {
       signature,
       requiredEnv("STRIPE_WEBHOOK_SECRET"),
     );
+    const invoiceHandlers = createInvoiceEventHandlers({
+      retrieveSubscription: (id) => stripe.subscriptions.retrieve(id),
+      recordSubscription: handleSubscriptionEvent,
+      notifyPaid: notifyInvoicePaid,
+      notifyPaymentFailed: notifyInvoicePaymentFailed,
+    });
 
     if (event.type === "checkout.session.completed") {
       await handleCheckoutCompleted(
@@ -53,9 +60,15 @@ Deno.serve(async (req) => {
     } else if (event.type === "customer.subscription.trial_will_end") {
       await handleTrialWillEnd(event.data.object as Stripe.Subscription);
     } else if (event.type === "invoice.paid") {
-      await handleInvoicePaid(event.data.object as Stripe.Invoice);
+      await invoiceHandlers.paid(
+        event.data.object as Stripe.Invoice,
+        event.created,
+      );
     } else if (event.type === "invoice.payment_failed") {
-      await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+      await invoiceHandlers.paymentFailed(
+        event.data.object as Stripe.Invoice,
+        event.created,
+      );
     }
 
     return jsonResponse({ received: true });
@@ -254,7 +267,10 @@ async function resolveProfile(
   return { userId: data?.id ?? null, email: data?.email ?? null };
 }
 
-async function handleSubscriptionEvent(sub: Stripe.Subscription, eventCreated: number) {
+async function handleSubscriptionEvent(
+  sub: Stripe.Subscription,
+  eventCreated: number,
+) {
   const admin = createServiceClient();
   const customerId = customerIdOf(sub.customer);
 
@@ -334,7 +350,7 @@ async function handleTrialWillEnd(sub: Stripe.Subscription) {
   }
 }
 
-async function handleInvoicePaid(invoice: Stripe.Invoice) {
+async function notifyInvoicePaid(invoice: Stripe.Invoice) {
   // Only real charges (trial conversion + annual renewals); skip $0 trial-start invoices.
   if ((invoice.amount_paid ?? 0) <= 0) {
     return;
@@ -348,7 +364,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   }
 }
 
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+async function notifyInvoicePaymentFailed(invoice: Stripe.Invoice) {
   const admin = createServiceClient();
   const customerId = customerIdOf(invoice.customer);
   const { userId, email } = await resolveProfile(admin, customerId);

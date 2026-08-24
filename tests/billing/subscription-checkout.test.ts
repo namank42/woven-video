@@ -2,10 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildSubscriptionCheckoutSession,
+  hasPaymentRequiredSubscription,
   normalizeCheckoutOrigin,
 } from "../../supabase/functions/create-checkout-session/subscription";
 
 describe("subscription checkout helper", () => {
+  it("identifies subscriptions that require payment recovery", () => {
+    expect(hasPaymentRequiredSubscription(["past_due"])).toBe(true);
+    expect(hasPaymentRequiredSubscription(["unpaid"])).toBe(true);
+    expect(hasPaymentRequiredSubscription(["active"])).toBe(false);
+    expect(hasPaymentRequiredSubscription(["canceled", "paused"])).toBe(false);
+  });
+
   it("normalizes only the app origin as app", () => {
     expect(normalizeCheckoutOrigin("app")).toBe("app");
     expect(normalizeCheckoutOrigin("web")).toBe("web");

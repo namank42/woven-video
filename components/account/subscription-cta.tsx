@@ -9,6 +9,7 @@ import { getNoAccessSubscriptionOffer } from "@/components/account/subscription-
 import { ManageBillingButton } from "@/components/account/manage-billing-button";
 import { ResumeSubscriptionButton } from "@/components/account/resume-subscription-button";
 import { StartTrialButton } from "@/components/account/start-trial-button";
+import { resolveSubscriptionPresentation } from "@/components/account/subscription-presentation";
 import {
   Card,
   CardContent,
@@ -38,13 +39,58 @@ export function SubscriptionCta({
   hasAccess,
   subscription,
   checkoutMode,
+  subscriptionUnavailable = false,
 }: {
   hasAccess: boolean;
   subscription: SubscriptionSummary;
   checkoutMode?: CheckoutMode;
+  subscriptionUnavailable?: boolean;
 }) {
-  // Active subscriber / trialing / past_due — show status + manage billing.
-  if (hasAccess && subscription) {
+  const presentation = resolveSubscriptionPresentation({
+    hasAccess,
+    subscription,
+    subscriptionUnavailable,
+  });
+
+  if (presentation === "unavailable") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle role="heading" aria-level={2}>
+            Billing status unavailable
+          </CardTitle>
+          <CardDescription>
+            We couldn&apos;t load your subscription status. Refresh the page to try
+            again.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (presentation === "payment_required") {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle role="heading" aria-level={2}>
+            Payment needs attention
+          </CardTitle>
+          <CardDescription>
+            We couldn&apos;t charge your card. Update your payment method and access
+            will return after payment.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={createPortalSession}>
+            <ManageBillingButton />
+          </form>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Active subscriber / trialing — show status + manage billing.
+  if (presentation === "managed" && subscription) {
     const { status, trial_end, current_period_end, cancel_at_period_end, cancel_at } =
       subscription;
     // Stripe schedules trial cancellations via cancel_at (a timestamp), NOT
@@ -54,9 +100,7 @@ export function SubscriptionCta({
     const title =
       status === "trialing"
         ? "Free trial active"
-        : status === "past_due"
-          ? "Payment needs attention"
-          : "Subscription active";
+        : "Subscription active";
 
     const trialDay = formatDay(trial_end);
     const renewDay = formatDay(current_period_end);
@@ -65,11 +109,9 @@ export function SubscriptionCta({
         ? willCancel
           ? `Your trial ends ${trialDay ?? "soon"} and won't renew.`
           : `Free until ${trialDay ?? "soon"}, then $8.25/mo, billed annually ($99/yr). Cancel anytime before then.`
-        : status === "past_due"
-          ? "We couldn't charge your card. Update your payment method to keep access."
-          : willCancel
-            ? `Active until ${renewDay ?? "the period end"} — set to cancel.`
-            : `$99/year · renews ${renewDay ?? "annually"}.`;
+        : willCancel
+          ? `Active until ${renewDay ?? "the period end"} — set to cancel.`
+          : `$99/year · renews ${renewDay ?? "annually"}.`;
 
     return (
       <Card>
@@ -101,7 +143,7 @@ export function SubscriptionCta({
   }
 
   // Grandfathered free access (has access, no subscription row) — nothing to sell.
-  if (hasAccess) {
+  if (presentation === "grandfathered") {
     return (
       <Card>
         <CardHeader>

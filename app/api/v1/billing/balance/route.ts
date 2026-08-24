@@ -4,6 +4,7 @@ import {
   resolveOfflineAccessExpiry,
   type LiveSubscriptionAccess,
 } from "@/lib/billing/offline-access-expiry";
+import { resolvePaymentRequired } from "@/lib/billing/payment-required";
 import { resolveCheckoutMode } from "@/lib/billing/subscription-eligibility";
 
 export const dynamic = "force-dynamic";
@@ -38,12 +39,25 @@ export async function GET(request: Request) {
       }
     | undefined;
   let hasAccess: boolean | undefined;
+  let paymentRequired: boolean | undefined;
   const { data: active, error: licenseError } = await supabase.rpc(
     "has_access",
   );
 
   if (!licenseError && typeof active === "boolean") {
     hasAccess = active;
+    const { data: subscriptionRows, error: subscriptionError } = await supabase
+      .from("subscriptions")
+      .select("status, trial_end")
+      .order("created_at", { ascending: false });
+
+    if (!subscriptionError) {
+      paymentRequired = resolvePaymentRequired(
+        hasAccess,
+        (subscriptionRows ?? []).map(({ status }) => status),
+      );
+    }
+
     let grantedAt: string | null = null;
     if (hasAccess) {
       const { data: licenseRow } = await supabase
@@ -57,17 +71,8 @@ export async function GET(request: Request) {
     if (!hasAccess) {
       license = { active: false, granted_at: grantedAt };
     } else {
-      const [
-        { data: perpetualAccess, error: perpetualAccessError },
-        { data: subscriptionRows, error: subscriptionError },
-      ] = await Promise.all([
-        supabase.rpc("has_active_license"),
-        supabase
-          .from("subscriptions")
-          .select("status, trial_end")
-          .in("status", ["trialing", "active", "past_due"])
-          .order("created_at", { ascending: false }),
-      ]);
+      const { data: perpetualAccess, error: perpetualAccessError } =
+        await supabase.rpc("has_active_license");
 
       if (
         perpetualAccessError ||
@@ -79,11 +84,16 @@ export async function GET(request: Request) {
           subscriptionError: subscriptionError?.message,
         });
       } else {
+        const liveSubscriptions = (subscriptionRows ?? []).filter(
+          (subscription): subscription is LiveSubscriptionAccess =>
+            subscription.status === "trialing" ||
+            subscription.status === "active" ||
+            subscription.status === "past_due",
+        );
         const accessSourceResolution = resolveOfflineAccessExpiry({
           hasAccess,
           hasPerpetualAccess: perpetualAccess,
-          liveSubscriptions: (subscriptionRows ??
-            []) as LiveSubscriptionAccess[],
+          liveSubscriptions,
         });
 
         if (!accessSourceResolution.ok) {
@@ -116,7 +126,7 @@ export async function GET(request: Request) {
   const checkoutMode =
     hasAccess === undefined
       ? undefined
-      : resolveCheckoutMode({ hasAccess, trialUsed });
+      : resolveCheckoutMode({ hasAccess, paymentRequired, trialUsed });
 
   return Response.json({
     currency: row?.currency ?? "usd",
@@ -124,6 +134,9 @@ export async function GET(request: Request) {
     balance_usd: balanceUsdMicros / 1_000_000,
     ...(license ? { license } : {}),
     ...(trialUsed !== undefined ? { trial_used: trialUsed } : {}),
+    ...(paymentRequired === undefined
+      ? {}
+      : { payment_required: paymentRequired }),
     ...(checkoutMode ? { checkout_mode: checkoutMode } : {}),
   });
 }

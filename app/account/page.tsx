@@ -13,6 +13,7 @@ import {
   SubscriptionCta,
   type SubscriptionSummary,
 } from "@/components/account/subscription-cta";
+import { selectAccountSubscription } from "@/components/account/subscription-presentation";
 import { Badge } from "@/components/ui/badge";
 import { formatUsdFromMicros } from "@/lib/billing/money";
 import { resolveCheckoutMode } from "@/lib/billing/subscription-eligibility";
@@ -265,7 +266,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     { data: transactions },
     { data: usageEvents },
     { data: licenseRowsForActivity },
-    { data: subscriptionRows },
+    { data: subscriptionRows, error: subscriptionError },
     { data: hasAccessData },
     { data: trialUsedData },
   ] = await Promise.all([
@@ -287,9 +288,8 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     supabase
       .from("subscriptions")
       .select("status, trial_end, current_period_end, cancel_at_period_end, cancel_at")
-      .in("status", ["trialing", "active", "past_due"])
-      .order("created_at", { ascending: false })
-      .limit(1),
+      .in("status", ["trialing", "active", "past_due", "unpaid"])
+      .order("created_at", { ascending: false }),
     supabase.rpc("has_access"),
     supabase.rpc("trial_used"),
   ]);
@@ -308,9 +308,12 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
     trialUsed:
       trialUsedData === true ? true : trialUsedData === false ? false : undefined,
   });
-  const subscription = (Array.isArray(subscriptionRows)
-    ? subscriptionRows[0] ?? null
-    : null) as SubscriptionSummary;
+  const subscriptionRowsAvailable = Array.isArray(subscriptionRows);
+  const subscription = selectAccountSubscription(
+    subscriptionRowsAvailable ? subscriptionRows : [],
+  ) as SubscriptionSummary;
+  const subscriptionUnavailable =
+    subscriptionError != null || !subscriptionRowsAvailable;
   // No top-up without access once enforcement is on (same flag as the API gate).
   const enforceLicense = process.env.WOVEN_ENFORCE_LICENSE === "true";
   const canTopUp = !enforceLicense || hasAccess;
@@ -396,6 +399,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                 hasAccess={hasAccess}
                 subscription={subscription}
                 checkoutMode={checkoutMode}
+                subscriptionUnavailable={subscriptionUnavailable}
               />
             </section>
             <section>
@@ -409,6 +413,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
                 hasAccess={hasAccess}
                 subscription={subscription}
                 checkoutMode={checkoutMode}
+                subscriptionUnavailable={subscriptionUnavailable}
               />
             </section>
             {statsSection(true)}

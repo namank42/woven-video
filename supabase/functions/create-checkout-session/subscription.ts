@@ -31,6 +31,12 @@ export function normalizeCheckoutOrigin(value: unknown): CheckoutOrigin {
   return value === "app" ? "app" : "web";
 }
 
+export function hasPaymentRequiredSubscription(statuses: readonly string[]) {
+  return statuses.some((status) =>
+    status === "past_due" || status === "unpaid"
+  );
+}
+
 function normalizeSiteUrl(siteUrl: string) {
   return siteUrl.replace(/\/+$/, "");
 }
