@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:billing-db": "supabase test db",
     "trigger:dev": "node scripts/trigger-dev.mjs",
     "trigger:deploy": "pnpm exec trigger deploy",
     "media:edge:local": "npx wrangler dev --config workers/media/wrangler.jsonc --port 8787",

@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 type BalanceRouteScenario = {
   hasAccess?: boolean;
   hasPerpetualAccess?: boolean;
-  liveSubscriptions?: Array<{
-    status: "trialing" | "active" | "past_due";
+  subscriptionRows?: Array<{
+    status: "trialing" | "active" | "past_due" | "unpaid" | "canceled";
     trial_end: string | null;
   }>;
   subscriptionError?: { message: string } | null;
@@ -16,12 +16,12 @@ type BalanceRouteScenario = {
 async function callBalanceRoute({
   hasAccess = true,
   hasPerpetualAccess = false,
-  liveSubscriptions = [],
+  subscriptionRows = [],
   subscriptionError = null,
   trialUsed = false,
 }: BalanceRouteScenario = {}) {
   const subscriptionOrder = vi.fn(async () => ({
-    data: liveSubscriptions,
+    data: subscriptionRows,
     error: subscriptionError,
   }));
   const subscriptionsQuery = {
@@ -98,6 +98,8 @@ describe("billing balance API source", () => {
     expect(source).toContain('supabase.rpc("trial_used")');
     expect(source).toContain("trial_used");
     expect(source).toContain("checkout_mode");
+    expect(source).toContain("payment_required");
+    expect(source).toContain("resolvePaymentRequired");
     expect(source).toContain('typeof trialUsedData === "boolean"');
   });
 
@@ -120,6 +122,7 @@ describe("billing balance API source", () => {
 
     expect(response.status).toBe(200);
     expect(body).not.toHaveProperty("license");
+    expect(body).not.toHaveProperty("payment_required");
     expect(body).toMatchObject({
       trial_used: false,
       checkout_mode: "none",
@@ -130,7 +133,7 @@ describe("billing balance API source", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const { body, response } = await callBalanceRoute({
-      liveSubscriptions: [
+      subscriptionRows: [
         {
           status: "trialing",
           trial_end: "2026-08-03T10:00:00.000Z",
@@ -154,7 +157,7 @@ describe("billing balance API source", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const { body, response } = await callBalanceRoute({
-      liveSubscriptions: [
+      subscriptionRows: [
         {
           status: "trialing",
           trial_end: "not-a-date",
@@ -170,8 +173,8 @@ describe("billing balance API source", () => {
     });
   });
 
-  it("serializes inactive access without querying active access sources", async () => {
-    const { body, from, response } = await callBalanceRoute({
+  it("serializes ordinary inactive access with no payment recovery", async () => {
+    const { body, from, response, subscriptionOrder } = await callBalanceRoute({
       hasAccess: false,
     });
 
@@ -185,16 +188,61 @@ describe("billing balance API source", () => {
         granted_at: null,
       },
       trial_used: false,
+      payment_required: false,
       checkout_mode: "trial",
     });
-    expect(from).not.toHaveBeenCalled();
+    expect(from).toHaveBeenCalledOnce();
+    expect(from).toHaveBeenCalledWith("subscriptions");
+    expect(subscriptionOrder).toHaveBeenCalledOnce();
+  });
+
+  it.each(["past_due", "unpaid"] as const)(
+    "requires payment recovery for inactive %s subscriptions",
+    async (status) => {
+      const { body, response, subscriptionOrder } = await callBalanceRoute({
+        hasAccess: false,
+        subscriptionRows: [{ status, trial_end: null }],
+        trialUsed: true,
+      });
+
+      expect(response.status).toBe(200);
+      expect(body.license).toEqual({ active: false, granted_at: null });
+      expect(body.payment_required).toBe(true);
+      expect(body.checkout_mode).toBe("none");
+      expect(subscriptionOrder).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("does not require payment recovery while past-due access remains active", async () => {
+    const { body, response } = await callBalanceRoute({
+      subscriptionRows: [{ status: "past_due", trial_end: null }],
+      trialUsed: true,
+    });
+
+    expect(response.status).toBe(200);
+    expect(body.license).toEqual({ active: true, granted_at: null });
+    expect(body.payment_required).toBe(false);
+    expect(body.checkout_mode).toBe("none");
+  });
+
+  it("does not require payment recovery for grandfathered access with a delinquent row", async () => {
+    const { body, response } = await callBalanceRoute({
+      hasPerpetualAccess: true,
+      subscriptionRows: [{ status: "unpaid", trial_end: null }],
+      trialUsed: true,
+    });
+
+    expect(response.status).toBe(200);
+    expect(body.license).toEqual({ active: true, granted_at: null });
+    expect(body.payment_required).toBe(false);
+    expect(body.checkout_mode).toBe("none");
   });
 
   it("serializes the exact expiry for trial-only active access", async () => {
     const trialEnd = "2026-08-03T10:00:00.000Z";
 
     const { body, response } = await callBalanceRoute({
-      liveSubscriptions: [
+      subscriptionRows: [
         {
           status: "trialing",
           trial_end: trialEnd,
@@ -213,6 +261,7 @@ describe("billing balance API source", () => {
         offline_access_expires_at: trialEnd,
       },
       trial_used: false,
+      payment_required: false,
       checkout_mode: "none",
     });
   });

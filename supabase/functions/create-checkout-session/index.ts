@@ -13,6 +13,7 @@ import {
 } from "../_shared/supabase.ts";
 import {
   buildSubscriptionCheckoutSession,
+  hasPaymentRequiredSubscription,
   normalizeCheckoutOrigin,
 } from "./subscription.ts";
 
@@ -151,6 +152,29 @@ Deno.serve(async (req) => {
 
     // ---- SUBSCRIPTION checkout (trial -> $99/yr, or immediate paid after trial used) ----
     if (body.purpose === "subscription") {
+      const { data: delinquentSubscriptions, error: delinquentError } =
+        await admin
+          .from("subscriptions")
+          .select("status")
+          .eq("user_id", user.id)
+          .in("status", ["past_due", "unpaid"]);
+
+      if (delinquentError || !Array.isArray(delinquentSubscriptions)) {
+        throw new HttpError(
+          500,
+          "failed_to_check_subscription_status",
+          delinquentError ?? { data: delinquentSubscriptions },
+        );
+      }
+
+      if (
+        hasPaymentRequiredSubscription(
+          delinquentSubscriptions.map((subscription) => subscription.status),
+        )
+      ) {
+        throw new HttpError(409, "subscription_payment_required");
+      }
+
       const { data: hasAccess, error: accessError } = await admin.rpc(
         "user_has_access",
         { p_user_id: user.id },
