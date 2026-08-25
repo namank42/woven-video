@@ -27,10 +27,9 @@ export async function GET(request: Request) {
   const row = Array.isArray(data) ? data[0] : null;
   const balanceUsdMicros = Number(row?.balance_usd_micros ?? 0);
 
-  // Additive license object. `active` now reflects has_access (grandfathered OR
-  // legacy license OR a live subscription: trialing/active/past_due) so trialing
-  // users aren't walled. Omit the field on a read error so the client falls back
-  // to its own cache (fail-open within its grace window).
+  // Additive license object. `active` reflects has_access (grandfathered OR
+  // legacy license OR a trialing/active subscription). Omit the field on a read
+  // error so the client falls back to its own cache within its grace window.
   let license:
     | {
         active: boolean;
@@ -87,8 +86,7 @@ export async function GET(request: Request) {
         const liveSubscriptions = (subscriptionRows ?? []).filter(
           (subscription): subscription is LiveSubscriptionAccess =>
             subscription.status === "trialing" ||
-            subscription.status === "active" ||
-            subscription.status === "past_due",
+            subscription.status === "active",
         );
         const accessSourceResolution = resolveOfflineAccessExpiry({
           hasAccess,

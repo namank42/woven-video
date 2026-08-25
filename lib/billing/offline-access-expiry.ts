@@ -1,5 +1,5 @@
 export type LiveSubscriptionAccess = {
-  status: "trialing" | "active" | "past_due";
+  status: "trialing" | "active";
   trial_end: string | null;
 };
 
@@ -20,11 +20,7 @@ export function resolveOfflineAccessExpiry({
     return { ok: true, expiresAt: null };
   }
 
-  if (
-    liveSubscriptions.some(
-      ({ status }) => status === "active" || status === "past_due",
-    )
-  ) {
+  if (liveSubscriptions.some(({ status }) => status === "active")) {
     return { ok: true, expiresAt: null };
   }
 
