@@ -25,21 +25,27 @@ describe("resolveOfflineAccessExpiry", () => {
     ).toEqual({ ok: true, expiresAt: null });
   });
 
-  it.each(["active", "past_due"] as const)(
-    "does not cap %s subscription access",
-    (status) => {
-      expect(
-        resolveOfflineAccessExpiry({
-          hasAccess: true,
-          hasPerpetualAccess: false,
-          liveSubscriptions: [
-            { status: "trialing", trial_end: trialEnd },
-            { status, trial_end: trialEnd },
-          ],
-        }),
-      ).toEqual({ ok: true, expiresAt: null });
-    },
-  );
+  it("does not cap active subscription access", () => {
+    expect(
+      resolveOfflineAccessExpiry({
+        hasAccess: true,
+        hasPerpetualAccess: false,
+        liveSubscriptions: [{ status: "active", trial_end: trialEnd }],
+      }),
+    ).toEqual({ ok: true, expiresAt: null });
+  });
+
+  it("does not treat past-due as an offline access source", () => {
+    expect(
+      resolveOfflineAccessExpiry({
+        hasAccess: true,
+        hasPerpetualAccess: false,
+        liveSubscriptions: [
+          { status: "past_due" as never, trial_end: trialEnd },
+        ],
+      }),
+    ).toEqual({ ok: false });
+  });
 
   it("returns the mirrored trial end when trialing is the only access source", () => {
     expect(

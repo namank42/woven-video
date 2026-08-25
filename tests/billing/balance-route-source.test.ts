@@ -113,6 +113,13 @@ describe("billing balance API source", () => {
     expect(source).toContain("accessSourceResolution.ok");
   });
 
+  it("does not use delinquent subscriptions as offline access sources", async () => {
+    const source = await readFile("app/api/v1/billing/balance/route.ts", "utf8");
+
+    expect(source).not.toContain('subscription.status === "past_due"');
+    expect(source).not.toContain('subscription.status === "unpaid"');
+  });
+
   it("omits license serialization when the access-source query fails", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
 
@@ -212,18 +219,6 @@ describe("billing balance API source", () => {
       expect(subscriptionOrder).toHaveBeenCalledOnce();
     },
   );
-
-  it("does not require payment recovery while past-due access remains active", async () => {
-    const { body, response } = await callBalanceRoute({
-      subscriptionRows: [{ status: "past_due", trial_end: null }],
-      trialUsed: true,
-    });
-
-    expect(response.status).toBe(200);
-    expect(body.license).toEqual({ active: true, granted_at: null });
-    expect(body.payment_required).toBe(false);
-    expect(body.checkout_mode).toBe("none");
-  });
 
   it("does not require payment recovery for grandfathered access with a delinquent row", async () => {
     const { body, response } = await callBalanceRoute({

@@ -88,6 +88,36 @@ Authenticated users can read their own profile, account, ledger, jobs, and usage
 
 `stripe-webhook` is unauthenticated but verifies the Stripe signature. On `checkout.session.completed`, it calls `grant_balance` with the PaymentIntent ID as the idempotency key so duplicate webhook delivery cannot double-grant funds.
 
+## Subscription Access And Recovery
+
+Stripe is the source of truth for subscriptions. The `subscriptions` table mirrors
+each Stripe subscription through `customer.subscription.created`,
+`customer.subscription.updated`, `customer.subscription.deleted`,
+`invoice.payment_failed`, and `invoice.paid` webhook events. Invoice events
+retrieve the current Stripe subscription before writing the mirror so a failed
+payment and a later recovery cannot leave a stale status behind.
+
+`user_has_access(user_id)` grants subscription access only while a subscription
+is `trialing` or `active`. A grandfathered account or an active legacy license
+continues to grant access independently of a subscription row. `past_due`,
+`unpaid`, terminal, and unknown subscription statuses do not grant access, but
+they remain mirrored so the product can direct the user to recovery.
+
+`subscriptions` is published to Supabase Realtime. A status change invalidates
+the desktop entitlement cache; the desktop fetches the balance route again
+rather than deriving access from the Realtime payload. The final status cutover
+touches existing delinquent rows so already-open compatible desktops receive an
+invalidation as well. Realtime accelerates revocation, while server-side
+authorization remains authoritative for hosted requests.
+
+`GET /api/v1/billing/balance` includes `payment_required=true` only when the
+account lacks access and has a `past_due` or `unpaid` subscription. It returns
+`license.active=false` and `checkout_mode="none"` for that state. The desktop
+uses this to open a Stripe Billing Portal session through
+`create-portal-session`, where the existing subscription's payment method can
+be updated. It never creates a second subscription. Subscription checkout also
+rejects a delinquent account rather than offering duplicate checkout.
+
 ## Hosted LLM Flow
 
 The Woven backend exposes an OpenAI-compatible surface for desktop-hosted usage:
