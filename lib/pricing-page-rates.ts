@@ -89,6 +89,21 @@ export const chatModelRates: ChatModelRate[] = [
     },
   },
   {
+    name: "GPT-5.6 Luna",
+    modelId: "openai/gpt-5.6-luna",
+    input: "$0.24/M",
+    output: "$1.44/M",
+    cacheRead: "$0.024/M",
+    cacheWrite: "$0.30/M",
+    higherTier: {
+      threshold: ">272K",
+      input: "$0.48/M",
+      output: "$2.16/M",
+      cacheRead: "$0.048/M",
+      cacheWrite: "$0.60/M",
+    },
+  },
+  {
     name: "Kimi K3",
     modelId: "moonshotai/kimi-k3",
     input: "$3.60/M",

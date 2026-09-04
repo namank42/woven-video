@@ -85,6 +85,14 @@ describe("hosted chat model catalog route", () => {
         supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
         default_reasoning_effort: "medium",
       }),
+      catalogModel("openai/gpt-5.6-luna", "GPT-5.6 Luna", {
+        provider_model_id: "openai/gpt-5.6-luna",
+        is_default: true,
+        replaces_model_ids: [],
+        supports_reasoning: true,
+        supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
+        default_reasoning_effort: "medium",
+      }),
       catalogModel("anthropic/claude-sonnet-5", "Claude Sonnet 5", {
         provider_model_id: "anthropic/claude-sonnet-5",
         is_default: false,
@@ -103,7 +111,7 @@ describe("hosted chat model catalog route", () => {
       }),
       catalogModel("moonshotai/kimi-k3", "Kimi K3", {
         provider_model_id: "moonshotai/kimi-k3",
-        is_default: true,
+        is_default: false,
         replaces_model_ids: ["moonshotai/kimi-k2.6"],
         supports_reasoning: true,
         supported_reasoning_efforts: [],
@@ -139,6 +147,11 @@ describe("hosted chat model catalog route", () => {
         replaces_model_ids: [],
       },
       {
+        id: "openai/gpt-5.6-luna",
+        is_default: true,
+        replaces_model_ids: [],
+      },
+      {
         id: "anthropic/claude-sonnet-5",
         is_default: false,
         replaces_model_ids: ["anthropic/claude-sonnet-4.6"],
@@ -150,7 +163,7 @@ describe("hosted chat model catalog route", () => {
       },
       {
         id: "moonshotai/kimi-k3",
-        is_default: true,
+        is_default: false,
         replaces_model_ids: ["moonshotai/kimi-k2.6"],
       },
     ]);

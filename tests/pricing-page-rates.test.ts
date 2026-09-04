@@ -15,6 +15,7 @@ describe("pricing page rates", () => {
       "Claude Opus 4.8",
       "GPT-5.6 Sol",
       "GPT-5.6 Terra",
+      "GPT-5.6 Luna",
       "Kimi K3",
     ]);
 
@@ -76,6 +77,21 @@ describe("pricing page rates", () => {
         output: "$27.00/M",
         cacheRead: "$0.60/M",
         cacheWrite: "$7.50/M",
+      },
+    });
+    expect(chatModelRates.find((rate) => rate.name === "GPT-5.6 Luna")).toEqual({
+      name: "GPT-5.6 Luna",
+      modelId: "openai/gpt-5.6-luna",
+      input: "$0.24/M",
+      output: "$1.44/M",
+      cacheRead: "$0.024/M",
+      cacheWrite: "$0.30/M",
+      higherTier: {
+        threshold: ">272K",
+        input: "$0.48/M",
+        output: "$2.16/M",
+        cacheRead: "$0.048/M",
+        cacheWrite: "$0.60/M",
       },
     });
     expect(chatModelRates.find((rate) => rate.name === "Kimi K3")).toEqual({
