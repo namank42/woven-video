@@ -20,6 +20,7 @@ function model(metadata: unknown = solMetadata) {
     minimum_charge_usd_micros: 1,
     reserve_amount_usd_micros: 100_000,
     enabled: true,
+    catalog_visible: true,
     metadata,
   };
 }
@@ -71,7 +72,7 @@ describe("hosted chat model catalog route", () => {
     vi.restoreAllMocks();
   });
 
-  it("publishes the exact default, successor, and Sonnet reasoning contract", async () => {
+  it("publishes the visible production catalog with Luna as the sole default", async () => {
     const catalog = [
       catalogModel("openai/gpt-5.6-sol", "GPT-5.6 Sol", {
         ...solMetadata,
@@ -80,6 +81,14 @@ describe("hosted chat model catalog route", () => {
       catalogModel("openai/gpt-5.6-terra", "GPT-5.6 Terra", {
         provider_model_id: "openai/gpt-5.6-terra",
         is_default: false,
+        replaces_model_ids: [],
+        supports_reasoning: true,
+        supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
+        default_reasoning_effort: "medium",
+      }),
+      catalogModel("openai/gpt-5.6-luna", "GPT-5.6 Luna", {
+        provider_model_id: "openai/gpt-5.6-luna",
+        is_default: true,
         replaces_model_ids: [],
         supports_reasoning: true,
         supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
@@ -100,14 +109,6 @@ describe("hosted chat model catalog route", () => {
         supports_reasoning: true,
         supported_reasoning_efforts: ["low", "medium", "high", "xhigh", "max"],
         default_reasoning_effort: "high",
-      }),
-      catalogModel("moonshotai/kimi-k3", "Kimi K3", {
-        provider_model_id: "moonshotai/kimi-k3",
-        is_default: true,
-        replaces_model_ids: ["moonshotai/kimi-k2.6"],
-        supports_reasoning: true,
-        supported_reasoning_efforts: [],
-        default_reasoning_effort: null,
       }),
     ];
 
@@ -139,6 +140,11 @@ describe("hosted chat model catalog route", () => {
         replaces_model_ids: [],
       },
       {
+        id: "openai/gpt-5.6-luna",
+        is_default: true,
+        replaces_model_ids: [],
+      },
+      {
         id: "anthropic/claude-sonnet-5",
         is_default: false,
         replaces_model_ids: ["anthropic/claude-sonnet-4.6"],
@@ -147,11 +153,6 @@ describe("hosted chat model catalog route", () => {
         id: "anthropic/claude-opus-4.8",
         is_default: false,
         replaces_model_ids: ["anthropic/claude-opus-4.7"],
-      },
-      {
-        id: "moonshotai/kimi-k3",
-        is_default: true,
-        replaces_model_ids: ["moonshotai/kimi-k2.6"],
       },
     ]);
     expect(
@@ -168,6 +169,9 @@ describe("hosted chat model catalog route", () => {
     });
     expect(body.data.map((entry: { id: string }) => entry.id)).not.toContain(
       "anthropic/claude-sonnet-4.6",
+    );
+    expect(body.data.map((entry: { id: string }) => entry.id)).not.toContain(
+      "moonshotai/kimi-k3",
     );
   });
 

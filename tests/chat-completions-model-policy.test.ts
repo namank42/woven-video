@@ -45,8 +45,9 @@ const kimiK3Rule = {
   minimum_charge_usd_micros: 1,
   reserve_amount_usd_micros: 50_000,
   enabled: true,
+  catalog_visible: false,
   metadata: {
-    is_default: true,
+    is_default: false,
     replaces_model_ids: ["moonshotai/kimi-k2.6"],
   },
 };
@@ -119,62 +120,70 @@ describe("hosted chat model policy", () => {
     vi.restoreAllMocks();
   });
 
-  it("executes K3 under its exact ID and settles Gateway cost", async () => {
-    const admin = createAdmin();
-    mocks.createSupabaseAdminClient.mockReturnValue(admin.admin);
-    mocks.getHostedChatModel.mockResolvedValue(kimiK3Rule);
-    mocks.fetch.mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          id: "generation_1",
-          model: "moonshotai/kimi-k3",
-          choices: [
-            {
-              finish_reason: "stop",
-              message: { role: "assistant", content: "ok" },
+  it.each(["moonshotai/kimi-k3", "woven:moonshotai/kimi-k3"])(
+    "executes hidden K3 requested as %s under its exact ID and settles Gateway cost",
+    async (requestedModel) => {
+      const admin = createAdmin();
+      mocks.createSupabaseAdminClient.mockReturnValue(admin.admin);
+      mocks.getHostedChatModel.mockResolvedValue(kimiK3Rule);
+      mocks.fetch.mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            id: "generation_1",
+            model: "moonshotai/kimi-k3",
+            choices: [
+              {
+                finish_reason: "stop",
+                message: { role: "assistant", content: "ok" },
+              },
+            ],
+            usage: {
+              prompt_tokens: 10,
+              completion_tokens: 2,
+              total_cost: "0.0001",
             },
-          ],
-          usage: {
-            prompt_tokens: 10,
-            completion_tokens: 2,
-            total_cost: "0.0001",
-          },
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    );
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      );
 
-    const response = await POST(request("moonshotai/kimi-k3"));
-    const body = await response.json();
+      const response = await POST(request(requestedModel));
+      const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("x-woven-job-id")).toBe("job_1");
-    expect(body.model).toBe("moonshotai/kimi-k3");
-    expect(mocks.getHostedChatModel).toHaveBeenCalledWith("moonshotai/kimi-k3");
-    expect(mocks.fetch).toHaveBeenCalledOnce();
-    const gatewayBody = JSON.parse(String(mocks.fetch.mock.calls[0]?.[1]?.body));
-    expect(gatewayBody).toMatchObject({
-      model: "moonshotai/kimi-k3",
-      providerOptions: { gateway: { sort: "ttft" } },
-    });
-    expect(admin.generationJobInsert).toHaveBeenCalledOnce();
-    expect(admin.usageInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        job_id: "job_1",
+      expect(response.status).toBe(200);
+      expect(response.headers.get("x-woven-job-id")).toBe("job_1");
+      expect(body.model).toBe("moonshotai/kimi-k3");
+      expect(mocks.getHostedChatModel).toHaveBeenCalledWith("moonshotai/kimi-k3");
+      expect(mocks.fetch).toHaveBeenCalledOnce();
+      const gatewayBody = JSON.parse(String(mocks.fetch.mock.calls[0]?.[1]?.body));
+      expect(gatewayBody).toMatchObject({
         model: "moonshotai/kimi-k3",
-        raw_provider_cost: 0.0001,
-        charged_amount_usd_micros: 120,
-      }),
-    );
-    expect(admin.rpc.mock.calls.map(([name]) => name)).toEqual([
-      "reserve_balance",
-      "settle_balance_reservation",
-    ]);
-    expect(admin.rpc.mock.calls[1]?.[1]).toMatchObject({
-      p_job_id: "job_1",
-      p_final_cost_usd_micros: 120,
-    });
-  });
+        providerOptions: { gateway: { sort: "ttft" } },
+      });
+      expect(admin.generationJobInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "vercel-ai-gateway",
+          model: "moonshotai/kimi-k3",
+        }),
+      );
+      expect(admin.usageInsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          job_id: "job_1",
+          model: "moonshotai/kimi-k3",
+          raw_provider_cost: 0.0001,
+          charged_amount_usd_micros: 120,
+        }),
+      );
+      expect(admin.rpc.mock.calls.map(([name]) => name)).toEqual([
+        "reserve_balance",
+        "settle_balance_reservation",
+      ]);
+      expect(admin.rpc.mock.calls[1]?.[1]).toMatchObject({
+        p_job_id: "job_1",
+        p_final_cost_usd_micros: 120,
+      });
+    },
+  );
 
   it("rejects disabled K2.6 before Gateway, job creation, or billing", async () => {
     mocks.getHostedChatModel.mockResolvedValue(null);

@@ -29,7 +29,7 @@ export async function getReelCaptionPricing(): Promise<ModelPricingRule | null> 
   const { data, error } = await admin
     .from("model_pricing_rules")
     .select(
-      "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, metadata",
+      "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, catalog_visible, metadata",
     )
     .eq("provider", REEL_CAPTION_PROVIDER)
     .eq("model", REEL_CAPTION_MODEL)

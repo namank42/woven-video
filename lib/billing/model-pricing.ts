@@ -12,6 +12,7 @@ export type ModelPricingRule = {
   minimum_charge_usd_micros: number;
   reserve_amount_usd_micros: number;
   enabled: boolean;
+  catalog_visible: boolean;
   metadata: Record<string, unknown>;
 };
 
@@ -34,11 +35,12 @@ export async function listHostedChatModels() {
   const { data, error } = await admin
     .from("model_pricing_rules")
     .select(
-      "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, metadata",
+      "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, catalog_visible, metadata",
     )
     .eq("provider", HOSTED_CHAT_PROVIDER)
     .eq("operation", "chat")
     .eq("enabled", true)
+    .eq("catalog_visible", true)
     .order("display_name");
 
   if (error) {
@@ -53,7 +55,7 @@ export async function getHostedChatModel(model: string) {
   const { data, error } = await admin
     .from("model_pricing_rules")
     .select(
-      "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, metadata",
+      "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, catalog_visible, metadata",
     )
     .eq("provider", HOSTED_CHAT_PROVIDER)
     .eq("operation", "chat")

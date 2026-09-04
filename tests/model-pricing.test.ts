@@ -18,7 +18,7 @@ describe("listHostedChatModels", () => {
     vi.clearAllMocks();
   });
 
-  it("scopes the model catalog query to the hosted Gateway provider", async () => {
+  it("lists only enabled, visible hosted Gateway chat models", async () => {
     const order = vi.fn(async () => ({ data: [], error: null }));
     const query = {
       select: vi.fn(),
@@ -33,10 +33,14 @@ describe("listHostedChatModels", () => {
     await expect(listHostedChatModels()).resolves.toEqual([]);
 
     expect(from).toHaveBeenCalledWith("model_pricing_rules");
+    expect(query.select).toHaveBeenCalledWith(
+      "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, catalog_visible, metadata",
+    );
     expect(query.eq.mock.calls).toEqual([
       ["provider", "vercel-ai-gateway"],
       ["operation", "chat"],
       ["enabled", true],
+      ["catalog_visible", true],
     ]);
     expect(order).toHaveBeenCalledWith("display_name");
   });
@@ -53,13 +57,16 @@ describe("listHostedChatModels", () => {
     const from = vi.fn(() => query);
     mocks.createSupabaseAdminClient.mockReturnValue({ from });
 
-    await expect(getHostedChatModel("moonshotai/kimi-k2.6")).resolves.toBeNull();
+    await expect(getHostedChatModel("moonshotai/kimi-k3")).resolves.toBeNull();
 
     expect(from).toHaveBeenCalledWith("model_pricing_rules");
+    expect(query.select).toHaveBeenCalledWith(
+      "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, catalog_visible, metadata",
+    );
     expect(query.eq.mock.calls).toEqual([
       ["provider", "vercel-ai-gateway"],
       ["operation", "chat"],
-      ["model", "moonshotai/kimi-k2.6"],
+      ["model", "moonshotai/kimi-k3"],
       ["enabled", true],
     ]);
     expect(maybeSingle).toHaveBeenCalledOnce();
