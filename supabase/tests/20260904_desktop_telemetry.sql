@@ -1,6 +1,6 @@
 begin;
 
-select plan(35);
+select plan(37);
 
 create function pg_temp.telemetry_event(
   p_event_id uuid,
@@ -317,6 +317,87 @@ select is(
   ),
   0,
   'a signed-out sign-out event closes the active account interval'
+);
+
+do $$
+begin
+  perform public.telemetry_admit_and_insert(
+    pg_temp.telemetry_batch(jsonb_build_array(
+      pg_temp.telemetry_event(
+        '30000000-0000-4000-8000-000000000080',
+        'product',
+        'app_lifecycle',
+        'foregrounded',
+        '30000000-0000-4000-8000-000000000081',
+        2
+      )
+    )),
+    '30000000-0000-4000-8000-000000000010',
+    now() + interval '10 seconds'
+  );
+  perform public.telemetry_admit_and_insert(
+    pg_temp.telemetry_batch(jsonb_build_array(
+      pg_temp.telemetry_event(
+        '30000000-0000-4000-8000-000000000082',
+        'product',
+        'sign_out',
+        'succeeded',
+        '30000000-0000-4000-8000-000000000081',
+        2
+      )
+    )),
+    null,
+    now() + interval '11 seconds'
+  );
+  perform public.telemetry_admit_and_insert(
+    pg_temp.telemetry_batch(jsonb_build_array(
+      pg_temp.telemetry_event(
+        '30000000-0000-4000-8000-000000000083',
+        'product',
+        'app_lifecycle',
+        'foregrounded',
+        '30000000-0000-4000-8000-000000000081',
+        2
+      )
+    )),
+    '30000000-0000-4000-8000-000000000011',
+    now() + interval '12 seconds'
+  );
+end;
+$$;
+
+select is(
+  jsonb_array_length(
+    public.telemetry_admit_and_insert(
+      pg_temp.telemetry_batch(jsonb_build_array(
+        pg_temp.telemetry_event(
+          '30000000-0000-4000-8000-000000000082',
+          'product',
+          'sign_out',
+          'succeeded',
+          '30000000-0000-4000-8000-000000000081',
+          2
+        )
+      )),
+      null,
+      now() + interval '13 seconds'
+    ) -> 'accepted'
+  ),
+  1,
+  'retrying the historical sign-out idempotently accepts its event ID'
+);
+
+select ok(
+  (
+    select count(*) = 1
+      and count(*) filter (
+        where user_id = '30000000-0000-4000-8000-000000000011'
+      ) = 1
+    from public.telemetry_installation_account_links
+    where installation_id = '30000000-0000-4000-8000-000000000081'
+      and unlinked_at is null
+  ),
+  'retrying an old sign-out cannot close a newer active account link'
 );
 
 do $$

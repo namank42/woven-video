@@ -8,6 +8,21 @@ import type {
   TelemetryIngestDependencies,
 } from "../../supabase/functions/_shared/telemetry/types.ts";
 
+const indexMocks = vi.hoisted(() => ({
+  requiredEnv: vi.fn(),
+  requireAuthenticatedUser: vi.fn(),
+  rpc: vi.fn(),
+}));
+
+vi.mock("../../supabase/functions/_shared/http.ts", () => ({
+  requiredEnv: indexMocks.requiredEnv,
+}));
+
+vi.mock("../../supabase/functions/_shared/supabase.ts", () => ({
+  createServiceClient: () => ({ rpc: indexMocks.rpc }),
+  requireAuthenticatedUser: indexMocks.requireAuthenticatedUser,
+}));
+
 const USER_ID = "20000000-0000-4000-8000-000000000001";
 const EVENT_ID = "20000000-0000-4000-8000-000000000002";
 
@@ -71,6 +86,54 @@ function dependencies(
 }
 
 describe("telemetry ingest handler", () => {
+  it("wires the real index branch for anonymous and authenticated JWTs", async () => {
+    vi.resetModules();
+    indexMocks.requiredEnv.mockReturnValue("public-anon-key");
+    indexMocks.requireAuthenticatedUser.mockResolvedValue({ id: USER_ID });
+    indexMocks.rpc.mockResolvedValue({
+      data: { accepted: [EVENT_ID], rejected: [], retry_after_ms: null },
+      error: null,
+    });
+    const serve = vi.fn();
+    vi.stubGlobal("Deno", { serve });
+
+    try {
+      await import("../../supabase/functions/telemetry-ingest/index.ts");
+      expect(serve).toHaveBeenCalledOnce();
+      const registeredHandler = serve.mock.calls[0]?.[0] as (
+        request: Request,
+      ) => Promise<Response>;
+
+      const anonymousResponse = await registeredHandler(
+        request(validBatch(), "Bearer public-anon-key"),
+      );
+      expect(anonymousResponse.status).toBe(200);
+      expect(indexMocks.requireAuthenticatedUser).not.toHaveBeenCalled();
+      expect(indexMocks.rpc).toHaveBeenLastCalledWith(
+        "telemetry_admit_and_insert",
+        expect.objectContaining({ p_user_id: null }),
+      );
+
+      const authenticatedRequest = request(
+        validBatch(),
+        "Bearer gateway-verified-user-token",
+      );
+      const authenticatedResponse = await registeredHandler(
+        authenticatedRequest,
+      );
+      expect(authenticatedResponse.status).toBe(200);
+      expect(indexMocks.requireAuthenticatedUser).toHaveBeenCalledWith(
+        authenticatedRequest,
+      );
+      expect(indexMocks.rpc).toHaveBeenLastCalledWith(
+        "telemetry_admit_and_insert",
+        expect.objectContaining({ p_user_id: USER_ID }),
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("requires a bearer credential before resolving identity", async () => {
     const deps = dependencies();
     const response = await handleTelemetryIngest(

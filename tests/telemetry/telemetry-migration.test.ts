@@ -46,6 +46,8 @@ describe("desktop telemetry migration contract", () => {
     );
     expect(sql).toContain("security definer");
     expect(sql).toContain("pg_advisory_xact_lock");
+    expect(sql).toContain("'installation:' || v_installation_hash");
+    expect(sql).toContain("'account:' || v_account_hash");
     expect(sql).toContain("600");
     expect(sql).toContain("1200");
     expect(sql).toContain("interval '10 minutes'");

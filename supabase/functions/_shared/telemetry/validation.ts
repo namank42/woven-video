@@ -14,11 +14,27 @@ export const TELEMETRY_MAX_STRING_LENGTH = 128;
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const timestampPattern =
-  /^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?Z$/;
+  /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?Z$/;
 const hashPattern = /^[0-9a-f]{64}$/;
 const macOSPattern = /^\d{1,2}\.\d{1,2}$/;
 const safeTextPattern = /^[\x20-\x7e]+$/;
-const taxonomyTextPattern = /^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$/;
+const taxonomyTextPattern = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+const appVersionPattern =
+  /^\d{1,4}(?:\.\d{1,4}){1,3}(?:-[a-z0-9]+(?:[.-][a-z0-9]+)*)?$/;
+const appBuildPattern = /^\d{1,18}(?:\.\d{1,18}){0,3}$/;
+const pathOrUrlPattern = /(?:[\\/]|%2f|%5c|^[a-z][a-z0-9+.-]*:)/i;
+const hostPattern =
+  /^(?:[a-z0-9-]+\.)+(?:ai|app|cloud|com|dev|io|local|net|org|test)$/i;
+const fileNamePattern =
+  /\.(?:aac|aiff|avi|csv|docx?|gif|heic|jpe?g|json|log|m4a|mov|mp3|mp4|pdf|png|sqlite|txt|wav|webm|xml|ya?ml)$/i;
+const credentialPatterns = [
+  /^bearer\s+/i,
+  /^(?:sk|pk|rk)-(?:live|proj|test)-?[a-z0-9_-]{8,}$/i,
+  /^(?:gh[pousr]|github_pat)_[a-z0-9_]{8,}$/i,
+  /^xox[baprs]-[a-z0-9-]{8,}$/i,
+  /^akia[0-9a-z]{12,}$/i,
+  /^eyj[a-z0-9_-]+\.[a-z0-9_-]+(?:\.[a-z0-9_-]+)?$/i,
+];
 
 const batchKeys = ["batch_id", "catalog_version", "events"];
 const eventRequiredKeys = [
@@ -130,31 +146,84 @@ function isBoundedString(
     safeTextPattern.test(value);
 }
 
-function validProperty(value: unknown, rule: TelemetryPropertyRule) {
+function hasPrivacySensitiveContent(value: string) {
+  return pathOrUrlPattern.test(value) || hostPattern.test(value) ||
+    fileNamePattern.test(value) ||
+    credentialPatterns.some((pattern) => pattern.test(value));
+}
+
+function isValidTimestamp(value: string) {
+  const match = timestampPattern.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (year < 1) return false;
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [
+    31,
+    leapYear ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ];
+  return day <= daysInMonth[month - 1];
+}
+
+function propertyRejection(
+  value: unknown,
+  rule: TelemetryPropertyRule,
+): TelemetryRejectionReason | null {
   if (rule.type === "string") {
-    if (!isBoundedString(value) || !taxonomyTextPattern.test(value as string)) {
-      return false;
+    if (typeof value === "string" && hasPrivacySensitiveContent(value)) {
+      return "privacy_violation";
     }
-    if (rule.hash && !hashPattern.test(value as string)) return false;
-    return !rule.enum || rule.enum.includes(value as string);
+    if (!isBoundedString(value) || !taxonomyTextPattern.test(value as string)) {
+      return "invalid_schema";
+    }
+    if (rule.hash && !hashPattern.test(value as string)) {
+      return "invalid_schema";
+    }
+    return !rule.enum || rule.enum.includes(value as string)
+      ? null
+      : "invalid_schema";
   }
-  if (rule.type === "boolean") return typeof value === "boolean";
+  if (rule.type === "boolean") {
+    return typeof value === "boolean" ? null : "invalid_schema";
+  }
   if (rule.type === "number") {
-    if (typeof value !== "number" || !Number.isFinite(value)) return false;
-    if (rule.integer && !Number.isSafeInteger(value)) return false;
-    if (rule.min !== undefined && value < rule.min) return false;
-    if (rule.max !== undefined && value > rule.max) return false;
-    return true;
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return "invalid_schema";
+    }
+    if (rule.integer && !Number.isSafeInteger(value)) return "invalid_schema";
+    if (rule.min !== undefined && value < rule.min) return "invalid_schema";
+    if (rule.max !== undefined && value > rule.max) return "invalid_schema";
+    return null;
   }
   if (!Array.isArray(value) || value.length > TELEMETRY_MAX_ARRAY_ITEMS) {
-    return false;
+    return "invalid_schema";
   }
   if (rule.type === "string_array") {
-    return value.every((item) =>
-      isBoundedString(item) && taxonomyTextPattern.test(item as string)
-    );
+    for (const item of value) {
+      if (typeof item === "string" && hasPrivacySensitiveContent(item)) {
+        return "privacy_violation";
+      }
+      if (!isBoundedString(item) || !taxonomyTextPattern.test(item as string)) {
+        return "invalid_schema";
+      }
+    }
+    return null;
   }
-  return value.every((item) => Number.isSafeInteger(item) && item >= 0);
+  return value.every((item) => Number.isSafeInteger(item) && item >= 0)
+    ? null
+    : "invalid_schema";
 }
 
 function validateEvent(value: unknown): TelemetryRejectionReason | null {
@@ -186,8 +255,7 @@ function validateEvent(value: unknown): TelemetryRejectionReason | null {
   }
   if (
     typeof value.occurred_at !== "string" ||
-    !timestampPattern.test(value.occurred_at) ||
-    !Number.isFinite(Date.parse(value.occurred_at))
+    !isValidTimestamp(value.occurred_at)
   ) {
     return "invalid_schema";
   }
@@ -206,8 +274,18 @@ function validateEvent(value: unknown): TelemetryRejectionReason | null {
     return "invalid_schema";
   }
   if (
+    typeof value.app.version === "string" &&
+      hasPrivacySensitiveContent(value.app.version) ||
+    typeof value.app.build === "string" &&
+      hasPrivacySensitiveContent(value.app.build)
+  ) {
+    return "privacy_violation";
+  }
+  if (
     !isBoundedString(value.app.version, 64) ||
-    !isBoundedString(value.app.build, 32) ||
+    !appVersionPattern.test(value.app.version as string) ||
+    !isBoundedString(value.app.build, 64) ||
+    !appBuildPattern.test(value.app.build as string) ||
     !["development", "beta", "production"].includes(
       value.app.environment as string,
     ) ||
@@ -241,7 +319,8 @@ function validateEvent(value: unknown): TelemetryRejectionReason | null {
     if (!Object.hasOwn(rules, key)) {
       return "invalid_schema";
     }
-    if (!validProperty(properties[key], rules[key])) return "invalid_schema";
+    const rejection = propertyRejection(properties[key], rules[key]);
+    if (rejection) return rejection;
   }
   if (
     !Object.keys(catalog.requiredProperties).every((key) =>
@@ -286,15 +365,15 @@ export function validateTelemetryBatch(
   for (const event of value.events) {
     const eventId = safeEventId(event);
     if (seen.has(eventId)) {
-      return rejectedResult(400, [event], "invalid_schema");
+      return rejectedResult(400, value.events, "invalid_schema");
     }
     seen.add(eventId);
     const reason = validateEvent(event);
-    if (reason) return rejectedResult(400, [event], reason);
+    if (reason) return rejectedResult(400, value.events, reason);
     const candidateInstallationId = (event as Record<string, unknown>)
       .installation_id as string;
     if (installationId !== null && installationId !== candidateInstallationId) {
-      return rejectedResult(400, [event], "invalid_schema");
+      return rejectedResult(400, value.events, "invalid_schema");
     }
     installationId = candidateInstallationId;
   }

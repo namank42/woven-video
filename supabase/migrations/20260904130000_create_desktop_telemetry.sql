@@ -328,6 +328,11 @@ begin
     where event ->> 'stream' = 'product'
       and event ->> 'event_name' = 'sign_out'
       and event ->> 'stage' = 'succeeded'
+      and not exists (
+        select 1
+        from public.telemetry_product_events stored
+        where stored.event_id = (event ->> 'event_id')::uuid
+      )
   ) into v_has_sign_out;
 
   if p_user_id is not null then

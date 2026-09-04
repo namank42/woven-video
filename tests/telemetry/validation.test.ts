@@ -117,6 +117,34 @@ describe("desktop telemetry v1 validation", () => {
     );
   });
 
+  it("returns a permanent disposition for every event when a batch is invalid", () => {
+    const validPeer = productEvent();
+    const privacyInvalidPeer = operationalEvent({
+      properties: {
+        ...operationalEvent().properties,
+        output: "must never be stored",
+      },
+    });
+
+    const result = validate(batch([validPeer, privacyInvalidPeer]));
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.response.accepted).toEqual([]);
+    expect(result.response.rejected).toEqual([
+      {
+        event_id: validPeer.event_id,
+        reason: "privacy_violation",
+        permanent: true,
+      },
+      {
+        event_id: privacyInvalidPeer.event_id,
+        reason: "privacy_violation",
+        permanent: true,
+      },
+    ]);
+  });
+
   it("rejects batches spanning more than one installation", () => {
     expectRejected(
       batch([
@@ -198,6 +226,76 @@ describe("desktop telemetry v1 validation", () => {
       "privacy_violation",
     );
   });
+
+  it.each(
+    [
+      ["file path", "file:///Users/private/secret.txt", "privacy_violation"],
+      ["URL", "https://private.example.test/project", "privacy_violation"],
+      ["host name", "api.private.example.com", "privacy_violation"],
+      ["file name", "private-project.json", "privacy_violation"],
+      ["workspace name", "Confidential Client Launch", "invalid_schema"],
+      ["token-shaped secret", "sk-proj-1234567890abcdef", "privacy_violation"],
+    ] as const,
+  )(
+    "rejects %s submitted as an arbitrary taxonomy value",
+    (_label, value, reason) => {
+      expectRejected(
+        batch([productEvent({ properties: { launch_reason: value } })]),
+        reason,
+      );
+    },
+  );
+
+  it("requires arbitrary setting values to be irreversibly content-free", () => {
+    expectRejected(
+      batch([
+        productEvent({
+          event_name: "setting_change",
+          stage: "committed",
+          priority: 3,
+          properties: {
+            setting_id: "default_workspace",
+            selected_value: "client_launch_workspace",
+          },
+        }),
+      ]),
+      "invalid_schema",
+    );
+  });
+
+  it("applies content safety to taxonomy arrays", () => {
+    expectRejected(
+      batch([
+        operationalEvent({
+          event_name: "turn_summary",
+          stage: "succeeded",
+          priority: 1,
+          properties: { tool_sequence: ["read", "file:///private/input"] },
+        }),
+      ]),
+      "privacy_violation",
+    );
+  });
+
+  it.each(
+    [
+      ["version", "file:///Users/private/Woven.app", "privacy_violation"],
+      ["version", "Confidential Client Build", "invalid_schema"],
+      ["build", "sk-proj-1234567890abcdef", "privacy_violation"],
+    ] as const,
+  )(
+    "rejects content-bearing app %s values",
+    (field, value, reason) => {
+      expectRejected(
+        batch([
+          productEvent({
+            app: { ...productEvent().app, [field]: value },
+          }),
+        ]),
+        reason,
+      );
+    },
+  );
 
   it("rejects oversized scalars, arrays, and individual events", () => {
     expectRejected(
@@ -284,6 +382,10 @@ describe("desktop telemetry v1 validation", () => {
       "invalid_schema",
     );
     expectRejected(
+      batch([productEvent({ occurred_at: "2026-02-31T00:00:00Z" })]),
+      "invalid_schema",
+    );
+    expectRejected(
       batch([productEvent({ source_sequence: -1 })]),
       "invalid_schema",
     );
@@ -312,7 +414,14 @@ describe("desktop telemetry v1 validation", () => {
   });
 
   it("exports every catalog entry to the canonical fixture exactly", () => {
-    expect(Object.keys(TELEMETRY_CATALOG_V1).length).toBeGreaterThan(40);
+    const entries = Object.values(TELEMETRY_CATALOG_V1);
+    expect(entries).toHaveLength(57);
+    expect(entries.filter((entry) => entry.stream === "product")).toHaveLength(
+      46,
+    );
+    expect(
+      entries.filter((entry) => entry.stream === "operational"),
+    ).toHaveLength(11);
     const fixturePath = join(
       process.cwd(),
       "tests/fixtures/telemetry/catalog-v1.json",

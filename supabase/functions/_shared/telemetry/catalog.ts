@@ -432,8 +432,8 @@ export const TELEMETRY_CATALOG_V1: Readonly<
   ),
   setting_change: product(["committed", "reported"], 3, {
     setting_id: string(),
-    previous_value: string(),
-    selected_value: string(),
+    previous_value: hash(),
+    selected_value: hash(),
     change_count: integer(),
   }),
   feedback_submission: product(
