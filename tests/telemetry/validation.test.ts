@@ -272,6 +272,31 @@ describe("desktop telemetry v1 validation", () => {
     },
   );
 
+  it.each([
+    "1.2.3-secret.swift",
+    "1.2.3-api.private.xyz",
+    "1.2.3-192.168.1.1",
+    "1.2.3-client-launch-workspace",
+    "1.2.3-sk-live-1234567890abcdef",
+  ])("rejects reviewer privacy value wrapped as app version %s", (version) => {
+    expectRejected(
+      batch([
+        productEvent({ app: { ...productEvent().app, version } }),
+      ]),
+      "invalid_schema",
+    );
+  });
+
+  it.each(["0.1.79", "1.2.3", "2026.9.4"])(
+    "accepts supported numeric app version %s",
+    (version) => {
+      const value = batch([
+        productEvent({ app: { ...productEvent().app, version } }),
+      ]);
+      expect(validate(value)).toEqual({ ok: true, batch: value });
+    },
+  );
+
   it("requires arbitrary setting values to be irreversibly content-free", () => {
     expectRejected(
       batch([

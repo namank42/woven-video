@@ -18,8 +18,7 @@ const timestampPattern =
 const hashPattern = /^[0-9a-f]{64}$/;
 const macOSPattern = /^\d{1,2}\.\d{1,2}$/;
 const safeTextPattern = /^[\x20-\x7e]+$/;
-const appVersionPattern =
-  /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[a-z0-9]+(?:[.-][a-z0-9]+)*)?$/;
+const appVersionPattern = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
 const appBuildPattern = /^\d{1,32}$/;
 
 const batchKeys = ["batch_id", "catalog_version", "events"];
