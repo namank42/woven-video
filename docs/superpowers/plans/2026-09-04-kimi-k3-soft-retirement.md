@@ -437,9 +437,23 @@ Expected: both records identify `vercel-ai-gateway` and `moonshotai/kimi-k3`; th
 Run:
 
 ```bash
-curl -sS https://www.woven.video/pricing | rg -n 'GPT-5.6 Luna|Kimi K3|Legacy compatibility only'
-curl -sS https://www.woven.video | rg -n 'GPT-5.6 Luna'
-curl -sS https://www.woven.video | rg -n 'Kimi K3' && false || true
+(
+  set -euo pipefail
+
+  PRICING_RESPONSE="/var/folders/h4/j2nb67f945l_jhyzw0qx0tbw0000gn/T/opencode/woven-phase1-pricing.html"
+  HOMEPAGE_RESPONSE="/var/folders/h4/j2nb67f945l_jhyzw0qx0tbw0000gn/T/opencode/woven-phase1-homepage.html"
+
+  curl -fsS -o "$PRICING_RESPONSE" https://www.woven.video/pricing
+  curl -fsS -o "$HOMEPAGE_RESPONSE" https://www.woven.video
+
+  rg -q 'GPT-5\.6 Luna' "$PRICING_RESPONSE"
+  rg -q 'Kimi K3' "$PRICING_RESPONSE"
+  rg -q 'Legacy compatibility only' "$PRICING_RESPONSE"
+  rg -q 'GPT-5\.6 Luna' "$HOMEPAGE_RESPONSE"
+  if rg -q 'Kimi K3' "$HOMEPAGE_RESPONSE"; then
+    exit 1
+  fi
+)
 ```
 
 Expected: pricing contains Luna and the labeled legacy Kimi rate; selectable-model copy contains Luna and omits Kimi.
