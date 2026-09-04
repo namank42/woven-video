@@ -97,6 +97,7 @@ describe("pricing page rates", () => {
     expect(chatModelRates.find((rate) => rate.name === "Kimi K3")).toEqual({
       name: "Kimi K3",
       modelId: "moonshotai/kimi-k3",
+      rateLabel: "Legacy compatibility only",
       input: "$3.60/M",
       output: "$18.00/M",
       cacheRead: "$0.36/M",
