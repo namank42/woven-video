@@ -15,7 +15,7 @@ import {
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 const SELECT_COLUMNS =
-  "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, metadata";
+  "id, provider, model, operation, display_name, markup_bps, minimum_charge_usd_micros, reserve_amount_usd_micros, enabled, catalog_visible, metadata";
 const PARAMETER_TYPES = ["string", "number", "integer", "boolean", "object", "array", "null"] as const;
 const PRICING_FORMULA_TYPES = [
   "static",

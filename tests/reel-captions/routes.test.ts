@@ -10,6 +10,7 @@ const pricingRule = {
   minimum_charge_usd_micros: 100_000,
   reserve_amount_usd_micros: 100_000,
   enabled: true,
+  catalog_visible: true,
   metadata: {},
 };
 

@@ -187,6 +187,7 @@ function validRule(overrides: Partial<ModelPricingRule> & { metadata?: Record<st
     minimum_charge_usd_micros: 100000,
     reserve_amount_usd_micros: 500000,
     enabled: true,
+    catalog_visible: true,
     ...overrides,
     metadata,
   };
