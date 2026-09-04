@@ -18,23 +18,9 @@ const timestampPattern =
 const hashPattern = /^[0-9a-f]{64}$/;
 const macOSPattern = /^\d{1,2}\.\d{1,2}$/;
 const safeTextPattern = /^[\x20-\x7e]+$/;
-const taxonomyTextPattern = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const appVersionPattern =
-  /^\d{1,4}(?:\.\d{1,4}){1,3}(?:-[a-z0-9]+(?:[.-][a-z0-9]+)*)?$/;
-const appBuildPattern = /^\d{1,18}(?:\.\d{1,18}){0,3}$/;
-const pathOrUrlPattern = /(?:[\\/]|%2f|%5c|^[a-z][a-z0-9+.-]*:)/i;
-const hostPattern =
-  /^(?:[a-z0-9-]+\.)+(?:ai|app|cloud|com|dev|io|local|net|org|test)$/i;
-const fileNamePattern =
-  /\.(?:aac|aiff|avi|csv|docx?|gif|heic|jpe?g|json|log|m4a|mov|mp3|mp4|pdf|png|sqlite|txt|wav|webm|xml|ya?ml)$/i;
-const credentialPatterns = [
-  /^bearer\s+/i,
-  /^(?:sk|pk|rk)-(?:live|proj|test)-?[a-z0-9_-]{8,}$/i,
-  /^(?:gh[pousr]|github_pat)_[a-z0-9_]{8,}$/i,
-  /^xox[baprs]-[a-z0-9-]{8,}$/i,
-  /^akia[0-9a-z]{12,}$/i,
-  /^eyj[a-z0-9_-]+\.[a-z0-9_-]+(?:\.[a-z0-9_-]+)?$/i,
-];
+  /^\d{1,4}\.\d{1,4}\.\d{1,4}(?:-[a-z0-9]+(?:[.-][a-z0-9]+)*)?$/;
+const appBuildPattern = /^\d{1,32}$/;
 
 const batchKeys = ["batch_id", "catalog_version", "events"];
 const eventRequiredKeys = [
@@ -146,12 +132,6 @@ function isBoundedString(
     safeTextPattern.test(value);
 }
 
-function hasPrivacySensitiveContent(value: string) {
-  return pathOrUrlPattern.test(value) || hostPattern.test(value) ||
-    fileNamePattern.test(value) ||
-    credentialPatterns.some((pattern) => pattern.test(value));
-}
-
 function isValidTimestamp(value: string) {
   const match = timestampPattern.exec(value);
   if (!match) return false;
@@ -182,18 +162,11 @@ function propertyRejection(
   rule: TelemetryPropertyRule,
 ): TelemetryRejectionReason | null {
   if (rule.type === "string") {
-    if (typeof value === "string" && hasPrivacySensitiveContent(value)) {
-      return "privacy_violation";
+    if (!isBoundedString(value)) return "invalid_schema";
+    if (rule.hash) {
+      return hashPattern.test(value as string) ? null : "invalid_schema";
     }
-    if (!isBoundedString(value) || !taxonomyTextPattern.test(value as string)) {
-      return "invalid_schema";
-    }
-    if (rule.hash && !hashPattern.test(value as string)) {
-      return "invalid_schema";
-    }
-    return !rule.enum || rule.enum.includes(value as string)
-      ? null
-      : "invalid_schema";
+    return rule.enum?.includes(value as string) ? null : "invalid_schema";
   }
   if (rule.type === "boolean") {
     return typeof value === "boolean" ? null : "invalid_schema";
@@ -211,11 +184,9 @@ function propertyRejection(
     return "invalid_schema";
   }
   if (rule.type === "string_array") {
+    if (!rule.enum) return "invalid_schema";
     for (const item of value) {
-      if (typeof item === "string" && hasPrivacySensitiveContent(item)) {
-        return "privacy_violation";
-      }
-      if (!isBoundedString(item) || !taxonomyTextPattern.test(item as string)) {
+      if (!isBoundedString(item) || !rule.enum.includes(item as string)) {
         return "invalid_schema";
       }
     }
@@ -274,17 +245,9 @@ function validateEvent(value: unknown): TelemetryRejectionReason | null {
     return "invalid_schema";
   }
   if (
-    typeof value.app.version === "string" &&
-      hasPrivacySensitiveContent(value.app.version) ||
-    typeof value.app.build === "string" &&
-      hasPrivacySensitiveContent(value.app.build)
-  ) {
-    return "privacy_violation";
-  }
-  if (
     !isBoundedString(value.app.version, 64) ||
     !appVersionPattern.test(value.app.version as string) ||
-    !isBoundedString(value.app.build, 64) ||
+    !isBoundedString(value.app.build, 32) ||
     !appBuildPattern.test(value.app.build as string) ||
     !["development", "beta", "production"].includes(
       value.app.environment as string,

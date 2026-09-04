@@ -229,12 +229,12 @@ describe("desktop telemetry v1 validation", () => {
 
   it.each(
     [
-      ["file path", "file:///Users/private/secret.txt", "privacy_violation"],
-      ["URL", "https://private.example.test/project", "privacy_violation"],
-      ["host name", "api.private.example.com", "privacy_violation"],
-      ["file name", "private-project.json", "privacy_violation"],
+      ["file path", "file:///Users/private/secret.txt", "invalid_schema"],
+      ["URL", "https://private.example.test/project", "invalid_schema"],
+      ["host name", "api.private.example.com", "invalid_schema"],
+      ["file name", "private-project.json", "invalid_schema"],
       ["workspace name", "Confidential Client Launch", "invalid_schema"],
-      ["token-shaped secret", "sk-proj-1234567890abcdef", "privacy_violation"],
+      ["token-shaped secret", "sk-proj-1234567890abcdef", "invalid_schema"],
     ] as const,
   )(
     "rejects %s submitted as an arbitrary taxonomy value",
@@ -242,6 +242,32 @@ describe("desktop telemetry v1 validation", () => {
       expectRejected(
         batch([productEvent({ properties: { launch_reason: value } })]),
         reason,
+      );
+    },
+  );
+
+  it.each([
+    "secret.swift",
+    "api.private.xyz",
+    "192.168.1.1",
+    "client_launch_workspace",
+    "sk_live_1234567890abcdef",
+  ])(
+    "rejects reviewer privacy value %s from every open string surface",
+    (value) => {
+      expectRejected(
+        batch([productEvent({ properties: { launch_reason: value } })]),
+        "invalid_schema",
+      );
+      expectRejected(
+        batch([
+          productEvent({ app: { ...productEvent().app, version: value } }),
+        ]),
+        "invalid_schema",
+      );
+      expectRejected(
+        batch([productEvent({ app: { ...productEvent().app, build: value } })]),
+        "invalid_schema",
       );
     },
   );
@@ -254,7 +280,7 @@ describe("desktop telemetry v1 validation", () => {
           stage: "committed",
           priority: 3,
           properties: {
-            setting_id: "default_workspace",
+            setting_id: "workspace",
             selected_value: "client_launch_workspace",
           },
         }),
@@ -270,18 +296,25 @@ describe("desktop telemetry v1 validation", () => {
           event_name: "turn_summary",
           stage: "succeeded",
           priority: 1,
-          properties: { tool_sequence: ["read", "file:///private/input"] },
+          properties: {
+            tool_sequence: ["filesystem", "file:///private/input"],
+          },
         }),
       ]),
-      "privacy_violation",
+      "invalid_schema",
     );
   });
 
   it.each(
     [
-      ["version", "file:///Users/private/Woven.app", "privacy_violation"],
+      ["version", "file:///Users/private/Woven.app", "invalid_schema"],
       ["version", "Confidential Client Build", "invalid_schema"],
-      ["build", "sk-proj-1234567890abcdef", "privacy_violation"],
+      ["build", "sk-proj-1234567890abcdef", "invalid_schema"],
+      [
+        "build",
+        "123456789012345678.123456789012345678",
+        "invalid_schema",
+      ],
     ] as const,
   )(
     "rejects content-bearing app %s values",
@@ -335,6 +368,21 @@ describe("desktop telemetry v1 validation", () => {
       ]),
       "invalid_schema",
     );
+  });
+
+  it("accepts explicit enum values and irreversible identifiers", () => {
+    const value = batch([
+      productEvent({
+        event_name: "checkout",
+        stage: "attempted",
+        properties: {
+          reason_code: "none",
+          offer_id: "d".repeat(64),
+        },
+      }),
+    ]);
+
+    expect(validate(value)).toEqual({ ok: true, batch: value });
   });
 
   it("enforces the event count and encoded batch byte limits", () => {
@@ -399,7 +447,7 @@ describe("desktop telemetry v1 validation", () => {
           properties: {
             error_domain: "storage",
             error_code: "write_failed",
-            component: "chat_store",
+            component: "storage",
             phase: "persist",
             severity: "error",
             user_visible: true,
@@ -429,5 +477,64 @@ describe("desktop telemetry v1 validation", () => {
     expect(existsSync(fixturePath)).toBe(true);
     const expected = `${JSON.stringify(catalogFixtureV1)}\n`;
     expect(readFileSync(fixturePath, "utf8")).toBe(expected);
+  });
+
+  it("requires every catalog string value to be closed or irreversibly hashed", () => {
+    const openRules = Object.entries(TELEMETRY_CATALOG_V1).flatMap(
+      ([eventName, entry]) =>
+        Object.entries({
+          ...entry.requiredProperties,
+          ...entry.optionalProperties,
+        }).flatMap(([propertyName, rule]) => {
+          if (rule.type === "string" && !rule.enum && !rule.hash) {
+            return [`${eventName}.${propertyName}`];
+          }
+          if (rule.type === "string_array" && !rule.enum) {
+            return [`${eventName}.${propertyName}[]`];
+          }
+          return [];
+        }),
+    );
+
+    expect(openRules).toEqual([]);
+  });
+
+  it("limits hashes to design-approved custom identifiers and fingerprints", () => {
+    const approvedHashedProperties = new Set([
+      "error_fingerprint",
+      "integration_hash",
+      "model_hash",
+      "model_id",
+      "offer_id",
+      "plan_id",
+      "previous_model_hash",
+      "previous_model_id",
+      "selected_model_hash",
+      "selected_model_id",
+      "tool_hash",
+      "tool_name",
+    ]);
+    const hashedRules = Object.entries(TELEMETRY_CATALOG_V1).flatMap(
+      ([eventName, entry]) =>
+        Object.entries({
+          ...entry.requiredProperties,
+          ...entry.optionalProperties,
+        }).flatMap(([propertyName, rule]) =>
+          rule.type === "string" && rule.hash
+            ? [{ eventName, propertyName }]
+            : []
+        ),
+    );
+
+    expect(
+      hashedRules
+        .filter(({ propertyName }) =>
+          !approvedHashedProperties.has(propertyName)
+        )
+        .map(({ eventName, propertyName }) => `${eventName}.${propertyName}`),
+    ).toEqual([]);
+    expect(
+      [...new Set(hashedRules.map(({ propertyName }) => propertyName))].sort(),
+    ).toEqual([...approvedHashedProperties].sort());
   });
 });

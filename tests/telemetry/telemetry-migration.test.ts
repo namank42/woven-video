@@ -96,6 +96,13 @@ describe("desktop telemetry migration contract", () => {
     expect(sql).toContain("telemetry_operational_error_idx");
   });
 
+  it("matches the validator's 32-character app build boundary in both streams", () => {
+    const sql = readFileSync(migrationPath, "utf8");
+    expect(
+      sql.match(/char_length\(app_build\) between 1 and 32/g),
+    ).toHaveLength(2);
+  });
+
   it("installs exact retention cutoffs and the named daily cron job", () => {
     const sql = readFileSync(migrationPath, "utf8");
     expect(sql).toContain(
