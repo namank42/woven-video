@@ -1,0 +1,324 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { describe, expect, it } from "vitest";
+
+import {
+  catalogFixtureV1,
+  TELEMETRY_CATALOG_V1,
+} from "../../supabase/functions/_shared/telemetry/catalog.ts";
+import type {
+  TelemetryBatchRequestV1,
+  TelemetryEnvelopeV1,
+  TelemetryRejectionReason,
+} from "../../supabase/functions/_shared/telemetry/types.ts";
+import {
+  TELEMETRY_MAX_BATCH_BYTES,
+  TELEMETRY_MAX_BATCH_EVENTS,
+  TELEMETRY_MAX_EVENT_BYTES,
+  validateTelemetryBatch,
+} from "../../supabase/functions/_shared/telemetry/validation.ts";
+
+const UUIDS = {
+  batch: "10000000-0000-4000-8000-000000000001",
+  product: "10000000-0000-4000-8000-000000000002",
+  operational: "10000000-0000-4000-8000-000000000003",
+  installation: "10000000-0000-4000-8000-000000000004",
+  launch: "10000000-0000-4000-8000-000000000005",
+  operation: "10000000-0000-4000-8000-000000000006",
+  incident: "10000000-0000-4000-8000-000000000007",
+};
+
+function productEvent(
+  overrides: Partial<TelemetryEnvelopeV1> = {},
+): TelemetryEnvelopeV1 {
+  return {
+    event_id: UUIDS.product,
+    catalog_version: 1,
+    stream: "product",
+    event_name: "app_lifecycle",
+    occurred_at: "2026-09-04T06:03:21.125Z",
+    source: "desktop",
+    source_sequence: 1,
+    host_observed_sequence: 1,
+    installation_id: UUIDS.installation,
+    app_launch_id: UUIDS.launch,
+    operation_id: UUIDS.operation,
+    stage: "foregrounded",
+    priority: 2,
+    app: {
+      version: "0.1.82",
+      build: "182",
+      environment: "production",
+      release_channel: "stable",
+    },
+    system: { macos_major_minor: "15.6", architecture: "arm64" },
+    properties: {},
+    ...overrides,
+  };
+}
+
+function operationalEvent(
+  overrides: Partial<TelemetryEnvelopeV1> = {},
+): TelemetryEnvelopeV1 {
+  return productEvent({
+    event_id: UUIDS.operational,
+    stream: "operational",
+    event_name: "telemetry_delivery_summary",
+    stage: "reported",
+    priority: 3,
+    properties: {
+      recorded_count: 12,
+      accepted_count: 10,
+      permanently_rejected_count: 1,
+      dropped_count: 1,
+    },
+    ...overrides,
+  });
+}
+
+function batch(events: TelemetryEnvelopeV1[]): TelemetryBatchRequestV1 {
+  return { catalog_version: 1, batch_id: UUIDS.batch, events };
+}
+
+function validate(value: unknown, bytes?: number) {
+  return validateTelemetryBatch(
+    value,
+    bytes ?? new TextEncoder().encode(JSON.stringify(value)).byteLength,
+  );
+}
+
+function expectRejected(
+  value: unknown,
+  reason: TelemetryRejectionReason,
+  status: 400 | 413 = 400,
+  bytes?: number,
+) {
+  const result = validate(value, bytes);
+  expect(result.ok).toBe(false);
+  if (result.ok) return;
+  expect(result.status).toBe(status);
+  expect(result.response.accepted).toEqual([]);
+  expect(result.response.rejected[0]?.reason).toBe(reason);
+  expect(result.response.rejected[0]?.permanent).toBe(true);
+  expect(result.response.retry_after_ms).toBeNull();
+}
+
+describe("desktop telemetry v1 validation", () => {
+  it("accepts a valid mixed product and operational batch", () => {
+    const value = batch([productEvent(), operationalEvent()]);
+    expect(validate(value)).toEqual({ ok: true, batch: value });
+  });
+
+  it("rejects duplicate event IDs within one batch", () => {
+    expectRejected(
+      batch([productEvent(), operationalEvent({ event_id: UUIDS.product })]),
+      "invalid_schema",
+    );
+  });
+
+  it("rejects batches spanning more than one installation", () => {
+    expectRejected(
+      batch([
+        productEvent(),
+        operationalEvent({
+          installation_id: "10000000-0000-4000-8000-000000000099",
+        }),
+      ]),
+      "invalid_schema",
+    );
+  });
+
+  it("rejects unknown event names and wrong-stream event names", () => {
+    expectRejected(
+      batch([productEvent({ event_name: "not_catalogued" })]),
+      "unknown_event",
+    );
+    expectRejected(
+      batch([productEvent({ stream: "operational" })]),
+      "unknown_event",
+    );
+  });
+
+  it("rejects unknown envelope, app, system, and property keys", () => {
+    expectRejected(
+      batch([{ ...productEvent(), surprise: true } as TelemetryEnvelopeV1]),
+      "invalid_schema",
+    );
+    expectRejected(
+      batch([
+        productEvent({
+          app: {
+            ...productEvent().app,
+            surprise: "x",
+          } as TelemetryEnvelopeV1["app"],
+        }),
+      ]),
+      "invalid_schema",
+    );
+    expectRejected(
+      batch([
+        productEvent({
+          system: {
+            ...productEvent().system,
+            surprise: "x",
+          } as TelemetryEnvelopeV1["system"],
+        }),
+      ]),
+      "invalid_schema",
+    );
+    expectRejected(
+      batch([productEvent({ properties: { surprise: true } })]),
+      "invalid_schema",
+    );
+  });
+
+  it.each([
+    "prompt",
+    "response",
+    "reasoning",
+    "feedback",
+    "transcript",
+    "path",
+    "url",
+    "host",
+    "args",
+    "output",
+    "error_message",
+    "stack",
+    "log",
+    "command",
+    "cookie",
+    "api_key",
+    "authorization_header",
+    "attachment_base64",
+  ])("rejects privacy-sensitive property key %s", (key) => {
+    expectRejected(
+      batch([productEvent({ properties: { [key]: "secret-value" } })]),
+      "privacy_violation",
+    );
+  });
+
+  it("rejects oversized scalars, arrays, and individual events", () => {
+    expectRejected(
+      batch([
+        productEvent({
+          app: { ...productEvent().app, version: "x".repeat(65) },
+        }),
+      ]),
+      "invalid_schema",
+    );
+    expectRejected(
+      batch([
+        operationalEvent({
+          properties: {
+            ...operationalEvent().properties,
+            dropped_priorities: Array.from({ length: 33 }, (_, index) => index),
+          },
+        }),
+      ]),
+      "invalid_schema",
+    );
+    const oversized = productEvent({
+      app: {
+        ...productEvent().app,
+        version: "x".repeat(TELEMETRY_MAX_EVENT_BYTES),
+      },
+    });
+    expectRejected(batch([oversized]), "invalid_schema");
+  });
+
+  it("rejects free-form content in taxonomy string properties", () => {
+    expectRejected(
+      batch([
+        productEvent({
+          properties: { launch_reason: "opened my secret project" },
+        }),
+      ]),
+      "invalid_schema",
+    );
+  });
+
+  it("enforces the event count and encoded batch byte limits", () => {
+    const events = Array.from(
+      { length: TELEMETRY_MAX_BATCH_EVENTS + 1 },
+      (_, index) =>
+        productEvent({
+          event_id: `10000000-0000-4000-8000-${
+            String(index + 100).padStart(12, "0")
+          }`,
+          source_sequence: index + 1,
+          host_observed_sequence: index + 1,
+        }),
+    );
+    expectRejected(batch(events), "invalid_schema");
+    expectRejected(
+      batch([productEvent()]),
+      "invalid_schema",
+      413,
+      TELEMETRY_MAX_BATCH_BYTES + 1,
+    );
+  });
+
+  it("rejects malformed identifiers, timestamps, sequences, and safe hashes", () => {
+    for (
+      const key of [
+        "event_id",
+        "installation_id",
+        "app_launch_id",
+        "workspace_id",
+        "chat_id",
+        "operation_id",
+        "turn_id",
+        "incident_id",
+        "tool_call_id",
+      ] as const
+    ) {
+      expectRejected(
+        batch([productEvent({ [key]: "not-a-uuid" })]),
+        "invalid_schema",
+      );
+    }
+    expectRejected(
+      batch([productEvent({ occurred_at: "September 4" })]),
+      "invalid_schema",
+    );
+    expectRejected(
+      batch([productEvent({ source_sequence: -1 })]),
+      "invalid_schema",
+    );
+    expectRejected(
+      batch([
+        operationalEvent({
+          event_name: "storage_incident",
+          stage: "failed",
+          priority: 0,
+          incident_id: UUIDS.incident,
+          properties: {
+            error_domain: "storage",
+            error_code: "write_failed",
+            component: "chat_store",
+            phase: "persist",
+            severity: "error",
+            user_visible: true,
+            retryable: true,
+            transient: false,
+            error_fingerprint: "not-a-sha256",
+          },
+        }),
+      ]),
+      "invalid_schema",
+    );
+  });
+
+  it("exports every catalog entry to the canonical fixture exactly", () => {
+    expect(Object.keys(TELEMETRY_CATALOG_V1).length).toBeGreaterThan(40);
+    const fixturePath = join(
+      process.cwd(),
+      "tests/fixtures/telemetry/catalog-v1.json",
+    );
+    expect(existsSync(fixturePath)).toBe(true);
+    const expected = `${JSON.stringify(catalogFixtureV1)}\n`;
+    expect(readFileSync(fixturePath, "utf8")).toBe(expected);
+  });
+});

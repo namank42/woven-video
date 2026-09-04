@@ -388,6 +388,9 @@ verify_jwt = true
 [functions.reactivate-subscription]
 verify_jwt = true
 
+[functions.telemetry-ingest]
+verify_jwt = true
+
 [functions.stripe-webhook]
 verify_jwt = false
 

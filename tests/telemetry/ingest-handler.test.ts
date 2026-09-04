@@ -1,0 +1,203 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { handleTelemetryIngest } from "../../supabase/functions/telemetry-ingest/handler.ts";
+import type {
+  TelemetryBatchRequestV1,
+  TelemetryBatchResponseV1,
+  TelemetryEnvelopeV1,
+  TelemetryIngestDependencies,
+} from "../../supabase/functions/_shared/telemetry/types.ts";
+
+const USER_ID = "20000000-0000-4000-8000-000000000001";
+const EVENT_ID = "20000000-0000-4000-8000-000000000002";
+
+function validBatch(): TelemetryBatchRequestV1 {
+  const event: TelemetryEnvelopeV1 = {
+    event_id: EVENT_ID,
+    catalog_version: 1,
+    stream: "product",
+    event_name: "app_lifecycle",
+    occurred_at: "2026-09-04T06:03:21.125Z",
+    source: "desktop",
+    source_sequence: 1,
+    host_observed_sequence: 1,
+    installation_id: "20000000-0000-4000-8000-000000000003",
+    app_launch_id: "20000000-0000-4000-8000-000000000004",
+    stage: "foregrounded",
+    priority: 2,
+    app: {
+      version: "0.1.82",
+      build: "182",
+      environment: "production",
+      release_channel: "stable",
+    },
+    system: { macos_major_minor: "15.6", architecture: "arm64" },
+    properties: {},
+  };
+  return {
+    catalog_version: 1,
+    batch_id: "20000000-0000-4000-8000-000000000005",
+    events: [event],
+  };
+}
+
+function request(
+  body: string | TelemetryBatchRequestV1 = validBatch(),
+  authorization = "Bearer verified-token",
+) {
+  return new Request("https://example.test/functions/v1/telemetry-ingest", {
+    method: "POST",
+    headers: {
+      Authorization: authorization,
+      "Content-Type": "application/json",
+    },
+    body: typeof body === "string" ? body : JSON.stringify(body),
+  });
+}
+
+function dependencies(
+  userId: string | null = USER_ID,
+  response: TelemetryBatchResponseV1 = {
+    accepted: [EVENT_ID],
+    rejected: [],
+    retry_after_ms: null,
+  },
+): TelemetryIngestDependencies {
+  return {
+    resolveVerifiedUserId: vi.fn().mockResolvedValue(userId),
+    admitAndInsert: vi.fn().mockResolvedValue(response),
+    now: () => new Date("2026-09-04T06:04:00.000Z"),
+  };
+}
+
+describe("telemetry ingest handler", () => {
+  it("requires a bearer credential before resolving identity", async () => {
+    const deps = dependencies();
+    const response = await handleTelemetryIngest(
+      request(validBatch(), ""),
+      deps,
+    );
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "unauthorized" });
+    expect(deps.resolveVerifiedUserId).not.toHaveBeenCalled();
+    expect(deps.admitAndInsert).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the supplied JWT cannot be resolved", async () => {
+    const deps = dependencies();
+    vi.mocked(deps.resolveVerifiedUserId).mockRejectedValue(
+      new Error("jwt body"),
+    );
+    const response = await handleTelemetryIngest(request(), deps);
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "unauthorized" });
+    expect(deps.admitAndInsert).not.toHaveBeenCalled();
+  });
+
+  it("accepts signed-out installation traffic without inventing a user ID", async () => {
+    const deps = dependencies(null);
+    const response = await handleTelemetryIngest(request(), deps);
+    expect(response.status).toBe(200);
+    expect(deps.admitAndInsert).toHaveBeenCalledWith(
+      validBatch(),
+      null,
+      new Date("2026-09-04T06:04:00.000Z"),
+    );
+  });
+
+  it("passes only the server-resolved signed-in identity to admission", async () => {
+    const submitted = validBatch() as TelemetryBatchRequestV1 & {
+      user_id?: string;
+    };
+    submitted.user_id = "20000000-0000-4000-8000-000000000099";
+    const deps = dependencies(USER_ID);
+    const response = await handleTelemetryIngest(request(submitted), deps);
+    expect(response.status).toBe(400);
+    expect(deps.admitAndInsert).not.toHaveBeenCalled();
+
+    const validResponse = await handleTelemetryIngest(request(), deps);
+    expect(validResponse.status).toBe(200);
+    expect(deps.admitAndInsert).toHaveBeenCalledWith(
+      validBatch(),
+      USER_ID,
+      new Date("2026-09-04T06:04:00.000Z"),
+    );
+  });
+
+  it("returns the transaction's partial acceptance unchanged", async () => {
+    const partial: TelemetryBatchResponseV1 = {
+      accepted: [EVENT_ID],
+      rejected: [
+        {
+          event_id: "20000000-0000-4000-8000-000000000006",
+          reason: "rate_limited",
+          permanent: false,
+        },
+      ],
+      retry_after_ms: 25_000,
+    };
+    const response = await handleTelemetryIngest(
+      request(),
+      dependencies(USER_ID, partial),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(partial);
+  });
+
+  it("uses 429 plus Retry-After when admission rate-limits the entire batch", async () => {
+    const limited: TelemetryBatchResponseV1 = {
+      accepted: [],
+      rejected: [
+        { event_id: EVENT_ID, reason: "rate_limited", permanent: false },
+      ],
+      retry_after_ms: 61_001,
+    };
+    const response = await handleTelemetryIngest(
+      request(),
+      dependencies(null, limited),
+    );
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("62");
+    expect(await response.json()).toEqual(limited);
+  });
+
+  it("returns permanent schema/privacy rejections before storage", async () => {
+    const body = validBatch();
+    body.events[0].properties = { prompt: "must never be stored" };
+    const deps = dependencies();
+    const response = await handleTelemetryIngest(request(body), deps);
+    expect(response.status).toBe(400);
+    const result = await response.json();
+    expect(result.rejected).toEqual([
+      { event_id: EVENT_ID, reason: "privacy_violation", permanent: true },
+    ]);
+    expect(JSON.stringify(result)).not.toContain("must never be stored");
+    expect(deps.admitAndInsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed JSON and oversized request bodies without storage", async () => {
+    const malformedDeps = dependencies();
+    const malformed = await handleTelemetryIngest(request("{"), malformedDeps);
+    expect(malformed.status).toBe(400);
+    expect(malformedDeps.admitAndInsert).not.toHaveBeenCalled();
+
+    const oversizedDeps = dependencies();
+    const oversized = await handleTelemetryIngest(
+      request("x".repeat(65_537)),
+      oversizedDeps,
+    );
+    expect(oversized.status).toBe(413);
+    expect(oversizedDeps.resolveVerifiedUserId).not.toHaveBeenCalled();
+    expect(oversizedDeps.admitAndInsert).not.toHaveBeenCalled();
+  });
+
+  it("turns transaction failures into a content-free retryable response", async () => {
+    const deps = dependencies();
+    vi.mocked(deps.admitAndInsert).mockRejectedValue(
+      new Error("provider body with /Users/private/file.txt"),
+    );
+    const response = await handleTelemetryIngest(request(), deps);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "ingestion_unavailable" });
+  });
+});
