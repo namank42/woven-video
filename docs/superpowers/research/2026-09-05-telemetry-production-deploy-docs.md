@@ -29,3 +29,15 @@ Sources: installed CLI help and Context7 `/supabase/cli`, `/supabase/supabase`:
 
 The observed runtime/public-key mismatch is deployment evidence, not a claim
 that the docs guarantee such a mismatch. Do not print credentials or env dumps.
+
+## Website build boundary
+
+The PR preview exposed Deno globals and `.ts` imports through telemetry test
+fixtures during Next.js type checking. TypeScript `exclude` filters root-file
+discovery; imports from included files can still bring excluded files back in.
+The website config now excludes `tests` as well as `supabase/functions`, while
+Vitest continues to execute tests independently. This does not disable type
+checking of production modules, and Vitest execution is not a test type check.
+Afterward, website `tsc --noEmit --incremental false` passed and the full Vitest
+run passed 563 tests (27 skipped). Source: Context7 `/microsoft/typescript` and
+https://github.com/microsoft/TypeScript/wiki/Performance .
