@@ -31,7 +31,7 @@ export default function PrivacyPage() {
               <p>
                 {SITE_LEGAL_NAME} (&quot;we&quot;, &quot;us&quot;) operates Woven and
                 woven.video. This policy describes how we handle information when you
-                use our website, account, and billing services.
+                use our website, account, billing services, and the Woven desktop app.
               </p>
 
               <section className="flex flex-col gap-3">
@@ -42,6 +42,13 @@ export default function PrivacyPage() {
                   <li>Usage data for hosted AI models and paid features (e.g. caption jobs).</li>
                   <li>Messages you send through our contact form or email.</li>
                   <li>Basic analytics on woven.video (e.g. page views via Vercel Analytics).</li>
+                  <li>
+                    Pseudonymous, content-free product and diagnostic telemetry collected
+                    automatically by supported Woven desktop app versions. Before you sign
+                    in, this uses a persistent installation identifier; after you sign in,
+                    it may be associated with your account to help us understand product
+                    reliability and use.
+                  </li>
                 </ul>
               </section>
 
@@ -49,8 +56,22 @@ export default function PrivacyPage() {
                 <h2 className="text-xl font-semibold text-foreground">What stays local</h2>
                 <p>
                   Woven is a native Mac app. Your video projects and media files stay on
-                  your Mac unless you explicitly use a cloud feature (such as hosted model
-                  requests or caption processing uploads).
+                  your Mac. We do not include project or media contents in desktop
+                  telemetry. Content leaves your Mac only when you explicitly use a cloud
+                  feature (such as hosted model requests or caption processing uploads).
+                </p>
+              </section>
+
+              <section className="flex flex-col gap-3">
+                <h2 className="text-xl font-semibold text-foreground">Desktop telemetry</h2>
+                <p>
+                  This automatic telemetry helps us measure product features, reliability,
+                  performance, and delivery health. It uses fixed categories, coarse counts
+                  and durations, app and device-version information, and pseudonymous
+                  identifiers. It does not include message or prompt text, assistant
+                  responses, reasoning, caption text, media contents, filenames, filesystem
+                  paths, URLs, raw tool inputs or outputs, provider response bodies,
+                  passwords, or authorization tokens.
                 </p>
               </section>
 
@@ -61,6 +82,7 @@ export default function PrivacyPage() {
                   <li>Run Woven-hosted AI and caption processing you request.</li>
                   <li>Respond to support requests.</li>
                   <li>Improve the product and website.</li>
+                  <li>Measure desktop feature use, reliability, performance, and service delivery.</li>
                 </ul>
               </section>
 
