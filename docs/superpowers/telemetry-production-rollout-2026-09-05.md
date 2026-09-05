@@ -44,9 +44,10 @@ The disabled job also included short-lived rate-window and old account-link
 maintenance. That maintenance is paused too; decide it separately from event
 retention rather than silently restoring the combined deletion job.
 
-`app/privacy/page.tsx` still promises the unapproved 90-day/13-month periods.
-**Do not publish that draft.** Retention wording and policy need reconciliation
-before the client rollout; an indefinite-retention policy has not been approved.
+The original privacy draft promised the unapproved 90-day/13-month periods.
+For the telemetry-only merge, the user requested removing that paragraph
+entirely, with no replacement wording and no backend behavior changes. That
+paragraph is now removed; an indefinite-retention policy has not been approved.
 
 ## Function deployment and authentication remediation
 

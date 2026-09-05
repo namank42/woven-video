@@ -73,12 +73,6 @@ export default function PrivacyPage() {
                   paths, URLs, raw tool inputs or outputs, provider response bodies,
                   passwords, or authorization tokens.
                 </p>
-                <p>
-                  We retain product telemetry for up to 13 months and operational diagnostic
-                  telemetry for up to 90 days. These periods are separate from the retention
-                  of account, billing, project, or cloud-feature data described elsewhere in
-                  this policy.
-                </p>
               </section>
 
               <section className="flex flex-col gap-3">
