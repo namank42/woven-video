@@ -114,10 +114,10 @@ describe("desktop telemetry migration contract", () => {
     expect(sql).toContain("0 4 * * *");
   });
 
-  it("keeps JWT verification enabled for the ingestion function", () => {
+  it("routes publishable keys to explicit handler verification instead of the JWT-only gateway", () => {
     const config = readFileSync(configPath, "utf8");
     expect(config).toMatch(
-      /\[functions\.telemetry-ingest\]\s*\nverify_jwt\s*=\s*true/,
+      /\[functions\.telemetry-ingest\]\s*\nverify_jwt\s*=\s*false/,
     );
   });
 });

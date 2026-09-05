@@ -5,6 +5,7 @@ import {
 } from "../_shared/supabase.ts";
 import type { TelemetryBatchResponseV1 } from "../_shared/telemetry/types.ts";
 import { handleTelemetryIngest } from "./handler.ts";
+import { resolveTelemetryIdentity } from "./auth.ts";
 
 function parseIngestResponse(value: unknown): TelemetryBatchResponseV1 {
   if (!value || typeof value !== "object") {
@@ -24,10 +25,11 @@ function parseIngestResponse(value: unknown): TelemetryBatchResponseV1 {
 Deno.serve((request) =>
   handleTelemetryIngest(request, {
     async resolveVerifiedUserId(candidate) {
-      const authorization = candidate.headers.get("Authorization") ?? "";
-      const token = authorization.replace(/^Bearer\s+/i, "");
-      if (token === requiredEnv("SUPABASE_ANON_KEY")) return null;
-      return (await requireAuthenticatedUser(candidate)).id;
+      return await resolveTelemetryIdentity(candidate, {
+        anonKey: requiredEnv("SUPABASE_ANON_KEY"),
+        publishableKeysJSON: Deno.env.get("SUPABASE_PUBLISHABLE_KEYS"),
+        verifyUser: requireAuthenticatedUser,
+      });
     },
     async admitAndInsert(batch, userId, receivedAt) {
       const { data, error } = await createServiceClient().rpc(

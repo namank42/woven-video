@@ -73,7 +73,8 @@ export async function handleTelemetryIngest(
   }
 
   const authorization = request.headers.get("Authorization");
-  if (!authorization || !/^Bearer\s+\S+$/i.test(authorization)) {
+  if ((authorization !== null && !/^Bearer\s+\S+$/i.test(authorization)) ||
+    (!authorization && !request.headers.get("apikey"))) {
     return json({ error: "unauthorized" }, 401);
   }
 

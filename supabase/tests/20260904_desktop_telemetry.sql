@@ -1,6 +1,6 @@
 begin;
 
-select plan(37);
+select plan(42);
 
 create function pg_temp.telemetry_event(
   p_event_id uuid,
@@ -315,9 +315,54 @@ select is(
     where installation_id = '30000000-0000-4000-8000-000000000030'
       and unlinked_at is null
   ),
-  0,
-  'a signed-out sign-out event closes the active account interval'
+  1,
+  'a delayed anonymous sign-out cannot close the newer account interval'
 );
+
+do $$ begin
+  perform public.telemetry_admit_and_insert(
+    pg_temp.telemetry_batch(jsonb_build_array(pg_temp.telemetry_event(
+      '30000000-0000-4000-8000-000000001024', 'product', 'sign_out', 'attempted',
+      '30000000-0000-4000-8000-000000000030', 2))),
+    '30000000-0000-4000-8000-000000000010', now() + interval '3 seconds');
+end $$;
+select is((select count(*)::integer from public.telemetry_installation_account_links
+  where installation_id = '30000000-0000-4000-8000-000000000030'
+  and user_id = '30000000-0000-4000-8000-000000000011' and unlinked_at is null),
+  1, 'a delayed authenticated signout for A neither opens A nor closes B');
+
+select is(jsonb_array_length(public.telemetry_admit_and_insert(
+  pg_temp.telemetry_batch(jsonb_build_array(pg_temp.telemetry_event(
+    '30000000-0000-4000-8000-000000001024', 'product', 'sign_out', 'attempted',
+    '30000000-0000-4000-8000-000000000030', 2))),
+  '30000000-0000-4000-8000-000000000010', now() + interval '3.5 seconds') -> 'accepted'),
+  1, 'an authenticated duplicate signout attempt remains idempotently accepted');
+select is((select count(*)::integer from public.telemetry_installation_account_links
+  where installation_id = '30000000-0000-4000-8000-000000000030'
+  and user_id = '30000000-0000-4000-8000-000000000011' and unlinked_at is null),
+  1, 'a duplicate signout attempt for A cannot replace the newer active B link');
+
+do $$ begin
+  perform public.telemetry_admit_and_insert(
+    pg_temp.telemetry_batch(jsonb_build_array(pg_temp.telemetry_event(
+      '30000000-0000-4000-8000-000000001025', 'product', 'sign_out', 'attempted',
+      '30000000-0000-4000-8000-000000000030', 2))),
+    '30000000-0000-4000-8000-000000000011', now() + interval '4 seconds');
+end $$;
+select is((select count(*)::integer from public.telemetry_installation_account_links
+  where installation_id = '30000000-0000-4000-8000-000000000030' and unlinked_at is null),
+  0, 'a pre-clear signout attempt authenticated as B closes only B');
+
+do $$ begin
+  perform public.telemetry_admit_and_insert(
+    pg_temp.telemetry_batch(jsonb_build_array(pg_temp.telemetry_event(
+      '30000000-0000-4000-8000-000000001025', 'product', 'sign_out', 'attempted',
+      '30000000-0000-4000-8000-000000000030', 2))),
+    '30000000-0000-4000-8000-000000000011', now() + interval '5 seconds');
+end $$;
+select is((select count(*)::integer from public.telemetry_installation_account_links
+  where installation_id = '30000000-0000-4000-8000-000000000030' and unlinked_at is null),
+  0, 'a duplicate signout attempt cannot reopen the signed-out account');
 
 do $$
 begin
@@ -589,10 +634,10 @@ begin
   perform public.telemetry_admit_and_insert(
     pg_temp.telemetry_batch(jsonb_build_array(
       pg_temp.telemetry_event(
-        '30000000-0000-4000-8000-000000000045', 'product', 'sign_out', 'succeeded',
+        '30000000-0000-4000-8000-000000000045', 'product', 'sign_out', 'attempted',
         '30000000-0000-4000-8000-000000000060', 2
       )
-    )), null, now() - interval '13 months 1 day'
+    )), '30000000-0000-4000-8000-000000000010', now() - interval '13 months 1 day'
   );
 end;
 $$;

@@ -86,6 +86,16 @@ function dependencies(
 }
 
 describe("telemetry ingest handler", () => {
+  it("admits a verified publishable apikey without manufacturing a bearer JWT", async () => {
+    const deps = dependencies(null);
+    const candidate = request();
+    candidate.headers.delete("Authorization");
+    candidate.headers.set("apikey", "sb_publishable_fixture");
+    const response = await handleTelemetryIngest(candidate, deps);
+    expect(response.status).toBe(200);
+    expect(deps.resolveVerifiedUserId).toHaveBeenCalledWith(candidate);
+    expect(deps.admitAndInsert).toHaveBeenCalledWith(validBatch(), null, deps.now());
+  });
   it("wires the real index branch for anonymous and authenticated JWTs", async () => {
     vi.resetModules();
     indexMocks.requiredEnv.mockReturnValue("public-anon-key");
@@ -95,7 +105,7 @@ describe("telemetry ingest handler", () => {
       error: null,
     });
     const serve = vi.fn();
-    vi.stubGlobal("Deno", { serve });
+    vi.stubGlobal("Deno", { serve, env: { get: () => JSON.stringify({ default: "sb_publishable_fixture" }) } });
 
     try {
       await import("../../supabase/functions/telemetry-ingest/index.ts");
@@ -113,6 +123,21 @@ describe("telemetry ingest handler", () => {
         "telemetry_admit_and_insert",
         expect.objectContaining({ p_user_id: null }),
       );
+
+      const publishableRequest = request();
+      publishableRequest.headers.delete("Authorization");
+      publishableRequest.headers.set("apikey", "sb_publishable_fixture");
+      expect((await registeredHandler(publishableRequest)).status).toBe(200);
+      expect(indexMocks.requireAuthenticatedUser).not.toHaveBeenCalled();
+      expect(indexMocks.rpc).toHaveBeenLastCalledWith(
+        "telemetry_admit_and_insert", expect.objectContaining({ p_user_id: null }),
+      );
+      for (const badKey of ["sb_publishable_unknown", "sb_secret_fixture", "unknown", ""]) {
+        publishableRequest.headers.set("apikey", badKey);
+        expect((await registeredHandler(new Request(publishableRequest.url, {
+          method: "POST", headers: publishableRequest.headers, body: JSON.stringify(validBatch()),
+        }))).status).toBe(401);
+      }
 
       const authenticatedRequest = request(
         validBatch(),
@@ -134,7 +159,7 @@ describe("telemetry ingest handler", () => {
     }
   });
 
-  it("requires a bearer credential before resolving identity", async () => {
+  it("requires a credential before resolving identity", async () => {
     const deps = dependencies();
     const response = await handleTelemetryIngest(
       request(validBatch(), ""),
