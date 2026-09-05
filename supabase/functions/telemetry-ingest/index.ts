@@ -26,7 +26,10 @@ Deno.serve((request) =>
   handleTelemetryIngest(request, {
     async resolveVerifiedUserId(candidate) {
       return await resolveTelemetryIdentity(candidate, {
-        anonKey: requiredEnv("SUPABASE_ANON_KEY"),
+        // Pin legacy desktop admission to the verified public project key when
+        // the hosted runtime's reserved anon credential differs from that key.
+        anonKey: Deno.env.get("WOVEN_TELEMETRY_PUBLIC_ANON_KEY") ??
+          requiredEnv("SUPABASE_ANON_KEY"),
         publishableKeysJSON: Deno.env.get("SUPABASE_PUBLISHABLE_KEYS"),
         verifyUser: requireAuthenticatedUser,
       });

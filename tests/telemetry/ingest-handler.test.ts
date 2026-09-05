@@ -105,7 +105,7 @@ describe("telemetry ingest handler", () => {
       error: null,
     });
     const serve = vi.fn();
-    vi.stubGlobal("Deno", { serve, env: { get: () => JSON.stringify({ default: "sb_publishable_fixture" }) } });
+    vi.stubGlobal("Deno", { serve, env: { get: (name: string) => name === "SUPABASE_PUBLISHABLE_KEYS" ? JSON.stringify({ default: "sb_publishable_fixture" }) : undefined } });
 
     try {
       await import("../../supabase/functions/telemetry-ingest/index.ts");
@@ -154,6 +154,39 @@ describe("telemetry ingest handler", () => {
         "telemetry_admit_and_insert",
         expect.objectContaining({ p_user_id: USER_ID }),
       );
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("admits the explicitly configured desktop public key when the hosted reserved key differs", async () => {
+    vi.resetModules();
+    indexMocks.requiredEnv.mockReturnValue("different-hosted-anon-key");
+    indexMocks.requireAuthenticatedUser.mockRejectedValue(new Error("not a user JWT"));
+    indexMocks.rpc.mockResolvedValue({
+      data: { accepted: [EVENT_ID], rejected: [], retry_after_ms: null }, error: null,
+    });
+    const serve = vi.fn();
+    vi.stubGlobal("Deno", { serve, env: { get: (name: string) =>
+      name === "WOVEN_TELEMETRY_PUBLIC_ANON_KEY" ? "desktop-public-anon-key" : undefined,
+    } });
+    try {
+      await import("../../supabase/functions/telemetry-ingest/index.ts");
+      const handler = serve.mock.calls[0][0] as (request: Request) => Promise<Response>;
+      const bearerResponse = await handler(request(validBatch(), "Bearer desktop-public-anon-key"));
+      expect(bearerResponse.status).toBe(200);
+      expect((await bearerResponse.json()).accepted).toEqual([EVENT_ID]);
+      expect(indexMocks.rpc).toHaveBeenLastCalledWith(
+        "telemetry_admit_and_insert", expect.objectContaining({ p_user_id: null }),
+      );
+      const apikeyOnly = request();
+      apikeyOnly.headers.delete("Authorization");
+      apikeyOnly.headers.set("apikey", "desktop-public-anon-key");
+      expect((await handler(apikeyOnly)).status).toBe(200);
+      const invalidBearer = request(validBatch(), "Bearer invalid-user-token");
+      invalidBearer.headers.set("apikey", "desktop-public-anon-key");
+      expect((await handler(invalidBearer)).status).toBe(401);
+      expect((await handler(request(validBatch(), "Bearer different-hosted-anon-key"))).status).toBe(401);
     } finally {
       vi.unstubAllGlobals();
     }
