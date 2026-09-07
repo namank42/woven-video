@@ -18,7 +18,6 @@ import {
 } from "./subscription.ts";
 
 const MIN_TOP_UP_CENTS = 500;
-const MAX_TOP_UP_CENTS = 10000;
 const USD_MICROS_PER_CENT = 10_000;
 
 function parseAmountCents(value: unknown) {
@@ -357,11 +356,7 @@ Deno.serve(async (req) => {
     // ---- TOPUP checkout ----
     const topUp = getTopUpFromBody(body);
 
-    if (
-      !topUp ||
-      topUp.amountCents < MIN_TOP_UP_CENTS ||
-      topUp.amountCents > MAX_TOP_UP_CENTS
-    ) {
+    if (!topUp || topUp.amountCents < MIN_TOP_UP_CENTS) {
       throw new HttpError(400, "invalid_top_up_amount");
     }
 

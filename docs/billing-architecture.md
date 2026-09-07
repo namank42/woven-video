@@ -34,7 +34,7 @@ The account page offers quick top-ups plus a custom amount:
 - `$10.00`
 - `$20.00`
 - `$50.00`
-- Custom top-ups from `$5.00` to `$100.00`
+- Custom top-ups of `$5.00` or more (no upper limit)
 
 Stripe top-ups remain normal dollar/cents amounts. The webhook converts Stripe cents into `usd_micros` at the boundary: `$1.00 = 1,000,000 usd_micros`, `$0.01 = 10,000 usd_micros`.
 
