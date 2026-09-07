@@ -78,9 +78,7 @@ export function BalanceTopUpForm({ disabled = false }: { disabled?: boolean }) {
     () => (choice === "custom" ? customAmountCents : Number(choice)),
     [choice, customAmountCents],
   );
-  const canSubmit =
-    choice !== "custom" ||
-    (customAmountCents >= 500 && customAmountCents <= 10000);
+  const canSubmit = choice !== "custom" || customAmountCents >= 500;
 
   return (
     <Card>
@@ -172,7 +170,6 @@ export function BalanceTopUpForm({ disabled = false }: { disabled?: boolean }) {
                     type="number"
                     inputMode="decimal"
                     min="5"
-                    max="100"
                     step="1"
                     required
                     value={customAmount}
@@ -182,7 +179,7 @@ export function BalanceTopUpForm({ disabled = false }: { disabled?: boolean }) {
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Enter an amount from $5 to $100.
+                  Enter an amount of $5 or more.
                 </p>
               </div>
             ) : null}

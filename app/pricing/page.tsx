@@ -542,8 +542,8 @@ function Notes() {
       <div className="mx-auto w-full max-w-5xl px-6 py-16">
         <div className="grid gap-8 md:grid-cols-3">
           <NoteCard title="Top up from $5">
-            Top-ups available at $5, $10, $20, $50 — or any custom amount up
-            to $100. Balance is denominated in USD and never expires.
+            Top-ups available at $5, $10, $20, $50 — or any custom amount of
+            $5 or more. Balance is denominated in USD and never expires.
           </NoteCard>
           <NoteCard title="Per-request billing">
             Model requests are charged per token used; media features are

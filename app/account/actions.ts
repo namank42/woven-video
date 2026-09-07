@@ -8,7 +8,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { searchParamUrl } from "@/lib/navigation";
 
 const MIN_TOP_UP_CENTS = 500;
-const MAX_TOP_UP_CENTS = 10000;
 
 function dollarsToCents(value: FormDataEntryValue | null) {
   if (typeof value !== "string" || !/^\d+(\.\d{1,2})?$/.test(value.trim())) {
@@ -40,8 +39,7 @@ function isValidTopUpAmount(amountCents: number | null): amountCents is number {
   return (
     amountCents !== null &&
     Number.isInteger(amountCents) &&
-    amountCents >= MIN_TOP_UP_CENTS &&
-    amountCents <= MAX_TOP_UP_CENTS
+    amountCents >= MIN_TOP_UP_CENTS
   );
 }
 
@@ -59,7 +57,7 @@ export async function createCheckoutSession(formData: FormData) {
   if (!isValidTopUpAmount(amountCents)) {
     redirect(
       searchParamUrl("/account", {
-        error: "Choose a top-up amount between $5 and $100.",
+        error: "Choose a top-up amount of $5 or more.",
       }),
     );
   }
