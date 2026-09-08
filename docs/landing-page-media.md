@@ -22,8 +22,8 @@ woven-media/woven-hero-v<N>.png
 The current hero source is:
 
 ```tsx
-poster="https://media.woven.video/woven-hero-v5.png"
-<source src="https://media.woven.video/woven-hero-v5-60fps.mp4" type="video/mp4" />
+poster="https://media.woven.video/woven-hero-v6.png"
+<source src="https://media.woven.video/woven-hero-v6-60fps.mp4" type="video/mp4" />
 ```
 
 ### Encode A New Hero
@@ -67,10 +67,10 @@ so the 2160-wide web encode became `2160x1218`.
 
 ### Current asset verification (September 8, 2026)
 
-Source: `~/Desktop/hero-new.mp4`, 2000x1078, 60 fps, 32.483 seconds,
-21,786,175 bytes. The published `woven-hero-v5-60fps.mp4` preserves those
+Source: `~/Desktop/hero-2.mp4`, 2000x1078, 60 fps, 32.4 seconds,
+22,188,934 bytes. The published `woven-hero-v6-60fps.mp4` preserves those
 dimensions and frame rate, uses H.264 Main/yuv420p and fast-start MP4, and is
-2,728,286 bytes (87.5% smaller). Poster: `woven-hero-v5.png`.
+2,716,922 bytes (87.8% smaller). Poster: `woven-hero-v6.png`.
 No crop was needed (cropdetect confirmed the full source rectangle). The
 existing rounded web wrapper handles the window corners. Verified full MP4
 decoding, fast-start atom order, public 60 fps metadata, and desktop/mobile

@@ -16,8 +16,8 @@ describe.skipIf(!base)("production HTTP agent-readiness", () => {
   it("serves the replacement hero with its original aspect ratio and autoplay behavior", async () => {
     const html = await (await get("/")).text();
     const hero = html.match(/<video[^>]*aria-label="Woven app demo[^>]*>[\s\S]*?<\/video>/)![0];
-    expect(hero).toContain("https://media.woven.video/woven-hero-v5-60fps.mp4");
-    expect(hero).toContain('poster="https://media.woven.video/woven-hero-v5.png"');
+    expect(hero).toContain("https://media.woven.video/woven-hero-v6-60fps.mp4");
+    expect(hero).toContain('poster="https://media.woven.video/woven-hero-v6.png"');
     expect(hero).toContain('width="2000"');
     expect(hero).toContain('height="1078"');
     for (const attribute of ["autoPlay", "muted", "loop", "playsInline"]) expect(hero.toLowerCase()).toContain(attribute.toLowerCase());
