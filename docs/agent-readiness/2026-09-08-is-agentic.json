@@ -1,0 +1,93 @@
+{
+  "target": "https://www.woven.video",
+  "display_target": "www.woven.video",
+  "report_url": "https://is-agentic.com/scan/www.woven.video",
+  "score": 99,
+  "score_label": "Strong technical baseline",
+  "scanned_at": "2026-09-08T05:14:24.552+00:00",
+  "eligible_checks": 32,
+  "score_breakdown": {
+    "essential": {
+      "earned": 80,
+      "available": 80,
+      "passing": 11,
+      "total": 11
+    },
+    "recommended": {
+      "earned": 14.8,
+      "available": 20,
+      "passing": 13,
+      "total": 21
+    },
+    "bonus": {
+      "points": 4.1,
+      "positive_signals": 18
+    }
+  },
+  "issues": [
+    {
+      "details": "\"Woven\" search returned 9 results but domain did not appear - brand may be too generic or not indexed",
+      "id": "brand-search-accuracy",
+      "name": "Brand name discoverability",
+      "recommendation": "Make sure a clean search for your brand name returns your own domain in the top results. If it does not, your brand may be too generic, conflict with a more established term, or not yet indexed. Strengthen brand-name search by claiming consistent NAP across listings, earning press mentions that link to the canonical domain, and avoiding redirect chains that mask the apex domain in search results.",
+      "result": "failed",
+      "tier": "recommended"
+    },
+    {
+      "details": "No CLI tool found",
+      "id": "cli-tool",
+      "name": "CLI tool available",
+      "recommendation": "Publish an official CLI tool on npm, PyPI, or Homebrew. A CLI lets agents and developers script interactions with your product without building API integrations from scratch.",
+      "result": "failed",
+      "tier": "recommended"
+    },
+    {
+      "details": "No REST rate-limit headers found on probed endpoints",
+      "id": "rate-limit-headers",
+      "name": "Rate limit response headers",
+      "recommendation": "Return standard rate-limit headers on your API responses (the RFC RateLimit headers, plus Retry-After on a 429) so agents can self-throttle in real time, and document the conventions alongside your API.",
+      "result": "failed",
+      "tier": "recommended"
+    },
+    {
+      "details": "Name search surfaced no pages on woven.video, although developer resources exist on the site (API docs, OpenAPI spec) - weak search indexing or transient search noise",
+      "id": "agentic-search-specific",
+      "name": "Developer resource discoverability",
+      "recommendation": "Make your developer resources (API docs, OpenAPI spec, auth docs, developer portal, MCP server) discoverable by name. Publish them at predictable URLs, list them in llms.txt, and include your product name in page titles and headings so search engines surface them for name-based queries.",
+      "result": "partial",
+      "tier": "recommended"
+    },
+    {
+      "details": "Partial compatibility: 1/1 operationIds, 0/1 typed schemas",
+      "id": "function-calling-compat",
+      "name": "Function calling compatibility",
+      "recommendation": "Ensure API endpoints have unique operation IDs, typed schemas, and descriptions compatible with LLM function-calling formats.",
+      "result": "partial",
+      "tier": "recommended"
+    },
+    {
+      "details": "Organization schema found but missing: address",
+      "id": "org-schema-completeness",
+      "name": "Organization schema completeness",
+      "recommendation": "Add Organization JSON-LD that includes both contactPoint (with email/phone and contactType) and address (PostalAddress). This lets AI verify your business legitimacy and answer contact queries.",
+      "result": "partial",
+      "tier": "recommended"
+    },
+    {
+      "details": "Contact, Privacy pages verified - missing: About",
+      "id": "trust-anchors",
+      "name": "Trust anchor pages",
+      "recommendation": "Publish real /about, /contact, and /privacy pages with at least 500 characters of content each. These are the pages AI agents check to verify your business is legitimate before recommending you.",
+      "result": "partial",
+      "tier": "recommended"
+    },
+    {
+      "details": "API versioning found (URL versioning (servers or paths)) but no deprecation or sunset policy detected - add Sunset/Deprecation headers or a deprecation policy page",
+      "id": "api-versioning-policy",
+      "name": "REST versioning / deprecation policy",
+      "recommendation": "Declare a versioning policy agents can rely on: version your API (in the URL path or a version header) and publish how you signal deprecation (a Sunset/Deprecation header or a documented timeline). Agents avoid integrating against a surface that can change without warning.",
+      "result": "partial",
+      "tier": "recommended"
+    }
+  ]
+}

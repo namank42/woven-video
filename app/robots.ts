@@ -29,12 +29,12 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ["/"],
         disallow: DISALLOWED_PATHS,
       },
       {
         userAgent: AI_BOTS,
-        allow: "/",
+        allow: ["/"],
         disallow: DISALLOWED_PATHS,
       },
     ],

@@ -3,7 +3,26 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getOptionalSupabaseEnv } from "@/lib/supabase/env";
 
+import { docsMarkdown, homeMarkdown } from "@/lib/agent-readiness/content";
+import { markdownResponse, preferredDocumentType } from "@/lib/agent-readiness/http";
+
 export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+  if (path === "/" || path === "/docs") {
+    const next = NextResponse.next();
+    // Next 16.2 overwrites HTML Vary during page rendering. Prevent shared
+    // caching explicitly; Markdown responses retain their own Vary header.
+    next.headers.set("Vary", "Accept, Accept-Encoding");
+    next.headers.set("Cache-Control", "private, no-store");
+    next.headers.set("CDN-Cache-Control", "no-store");
+    next.headers.set("Vercel-CDN-Cache-Control", "no-store");
+    next.headers.set("Link", `</llms.txt>; rel="describedby", <${path === "/" ? "/index.md" : "/docs/index.md"}>; rel="alternate"; type="text/markdown"`);
+    if (!["GET", "HEAD"].includes(request.method) || request.headers.get("rsc") === "1") return next;
+    const type = preferredDocumentType(request.headers.get("accept"));
+    if (!type) return new Response(null, { status: 406, headers: { Vary: "Accept, Accept-Encoding", "Cache-Control": "private, no-store" } });
+    if (type.startsWith("text/markdown")) return markdownResponse(path === "/" ? homeMarkdown : docsMarkdown, request);
+    return next;
+  }
   let response = NextResponse.next({
     request,
   });
@@ -57,9 +76,7 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-// Marketing routes (/, /pricing, etc.) are static and handle auth state
-// client-side. Only run the proxy on routes that gate access or refresh
-// sessions.
+// Negotiate the two public documents; other entries preserve auth refresh.
 export const config = {
-  matcher: ["/account/:path*", "/auth/:path*", "/login", "/api/:path*"],
+  matcher: ["/", "/docs", "/account/:path*", "/auth/:path*", "/login", "/api/:path*"],
 };

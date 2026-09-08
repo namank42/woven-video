@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -33,6 +34,8 @@ import {
 import { homepageFaqs } from "@/lib/seo/faqs";
 import { homePageGraph } from "@/lib/seo/schema";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = { alternates: { canonical: "/", types: { "text/markdown": "/index.md" } } };
 
 const BOOK_DEMO_URL = "https://cal.com/naman-woven/45min";
 
@@ -541,7 +544,16 @@ function FAQ() {
             </p>
           </div>
           <div className="flex flex-col gap-3">
-            <Accordion>
+            <noscript>
+              <style>{`.homepage-faq-interactive { display: none; }`}</style>
+              {homepageFaqs.map(item => (
+                <section key={item.q} className="mb-3 rounded-2xl border border-border bg-card px-5 py-3">
+                  <h3 className="text-base font-medium md:text-lg">{item.q}</h3>
+                  <p className="mt-3 text-muted-foreground">{item.a}</p>
+                </section>
+              ))}
+            </noscript>
+            <Accordion className="homepage-faq-interactive">
               {homepageFaqs.map((item) => (
                 <AccordionItem
                   key={item.q}
@@ -551,7 +563,7 @@ function FAQ() {
                   <AccordionTrigger className="text-base hover:no-underline md:text-lg">
                     {item.q}
                   </AccordionTrigger>
-                  <AccordionContent>
+                  <AccordionContent keepMounted>
                     <p className="text-muted-foreground">{item.a}</p>
                   </AccordionContent>
                 </AccordionItem>

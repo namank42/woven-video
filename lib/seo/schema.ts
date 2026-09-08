@@ -16,6 +16,7 @@ export function organizationSchema(): JsonLd {
     "@type": "Organization",
     "@id": `${SITE_URL}/#organization`,
     name: SITE_NAME,
+    alternateName: ["Woven Video", "woven.video"],
     legalName: SITE_LEGAL_NAME,
     url: SITE_URL,
     logo: {
@@ -42,6 +43,7 @@ export function websiteSchema(): JsonLd {
     "@id": `${SITE_URL}/#website`,
     url: SITE_URL,
     name: SITE_NAME,
+    alternateName: ["Woven Video", "woven.video"],
     description: SITE_TAGLINE,
     inLanguage: "en-US",
     publisher: { "@id": `${SITE_URL}/#organization` },

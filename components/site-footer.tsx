@@ -33,9 +33,14 @@ export function SiteFooter() {
           <Link href="/ai-video-editor-mac" className="hover:text-foreground">
             Mac editor
           </Link>
+          <Link href="/docs" className="hover:text-foreground">
+            SFX docs
+          </Link>
           <Link href="/changelog" className="hover:text-foreground">
             Changelog
           </Link>
+          {/* The external SFX app needs a full document navigation. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/sfx" className="hover:text-foreground">
             Woven SFX
           </a>
