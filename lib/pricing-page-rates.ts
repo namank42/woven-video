@@ -103,15 +103,6 @@ export const chatModelRates: ChatModelRate[] = [
       cacheWrite: "$0.60/M",
     },
   },
-  {
-    name: "Kimi K3",
-    modelId: "moonshotai/kimi-k3",
-    rateLabel: "Legacy compatibility only",
-    input: "$3.60/M",
-    output: "$18.00/M",
-    cacheRead: "$0.36/M",
-    cacheWrite: "—",
-  },
 ];
 
 export const mediaModelRates: MediaModelRate[] = [

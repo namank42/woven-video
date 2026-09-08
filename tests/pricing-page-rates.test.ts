@@ -16,7 +16,6 @@ describe("pricing page rates", () => {
       "GPT-5.6 Sol",
       "GPT-5.6 Terra",
       "GPT-5.6 Luna",
-      "Kimi K3",
     ]);
 
     expect(chatModelRates.map((rate) => rate.modelId)).not.toContain(
@@ -94,15 +93,7 @@ describe("pricing page rates", () => {
         cacheWrite: "$0.60/M",
       },
     });
-    expect(chatModelRates.find((rate) => rate.name === "Kimi K3")).toEqual({
-      name: "Kimi K3",
-      modelId: "moonshotai/kimi-k3",
-      rateLabel: "Legacy compatibility only",
-      input: "$3.60/M",
-      output: "$18.00/M",
-      cacheRead: "$0.36/M",
-      cacheWrite: "—",
-    });
+    expect(chatModelRates.map((rate) => rate.modelId)).not.toContain("moonshotai/kimi-k3");
     expect(chatModelRates.map((rate) => rate.modelId)).not.toContain(
       "moonshotai/kimi-k2.6",
     );
