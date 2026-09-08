@@ -263,13 +263,13 @@ function HeroMedia() {
           loop
           playsInline
           preload="metadata"
-          poster="https://media.woven.video/woven-hero-v4.png"
-          width={2160}
-          height={1218}
+          poster="https://media.woven.video/woven-hero-v5.png"
+          width={2000}
+          height={1078}
           aria-label="Woven app demo — chat-driven reel assembly"
           className="block h-auto w-full"
         >
-          <source src="https://media.woven.video/woven-hero-v4.mp4" type="video/mp4" />
+          <source src="https://media.woven.video/woven-hero-v5-60fps.mp4" type="video/mp4" />
         </video>
       </div>
     </div>

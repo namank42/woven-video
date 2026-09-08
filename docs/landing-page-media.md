@@ -22,19 +22,20 @@ woven-media/woven-hero-v<N>.png
 The current hero source is:
 
 ```tsx
-poster="https://media.woven.video/woven-hero-v4.png"
-<source src="https://media.woven.video/woven-hero-v4.mp4" type="video/mp4" />
+poster="https://media.woven.video/woven-hero-v5.png"
+<source src="https://media.woven.video/woven-hero-v5-60fps.mp4" type="video/mp4" />
 ```
 
 ### Encode A New Hero
 
 Use the source aspect ratio. Do not force the vertical reel-tile dimensions.
-For screen recordings, force `fps=30` because recorder exports can carry very
-high nominal frame-rate metadata.
+Inspect the source frame rate first. Preserve normal 30 or 60 fps recordings;
+60 fps retains smooth UI motion. Normalize only abnormal recorder metadata or
+when an explicit size/motion tradeoff calls for it. Do not upscale smaller sources.
 
 ```bash
 ffmpeg -i /path/to/source.mp4 \
-  -vf "fps=30,scale=2160:-2:flags=lanczos" \
+  -vf "fps=60,scale='min(2160,iw)':-2:flags=lanczos" \
   -c:v libx264 -preset slow -crf 23 -profile:v main -pix_fmt yuv420p \
   -an -movflags +faststart \
   /private/tmp/woven-hero-v<N>.mp4
@@ -60,9 +61,22 @@ ffprobe -v error -select_streams v:0 \
 ls -lh /private/tmp/woven-hero-v<N>.mp4 /private/tmp/woven-hero-v<N>.png
 ```
 
-Update the `<video width={2160} height={...}>` height in `app/page.tsx` to
+Update the `<video width={...} height={...}>` dimensions in `app/page.tsx` to
 match the encoded output. Example: the `win-final.mp4` source was `4358x2456`,
 so the 2160-wide web encode became `2160x1218`.
+
+### Current asset verification (September 8, 2026)
+
+Source: `~/Desktop/hero-new.mp4`, 2000x1078, 60 fps, 32.483 seconds,
+21,786,175 bytes. The published `woven-hero-v5-60fps.mp4` preserves those
+dimensions and frame rate, uses H.264 Main/yuv420p and fast-start MP4, and is
+2,728,286 bytes (87.5% smaller). Poster: `woven-hero-v5.png`.
+No crop was needed (cropdetect confirmed the full source rectangle). The
+existing rounded web wrapper handles the window corners. Verified full MP4
+decoding, fast-start atom order, public 60 fps metadata, and desktop/mobile
+autoplay and layout. A regression check covers the hero source, poster, dimensions,
+and playback attributes. An unreferenced
+30 fps trial encode exists at `woven-hero-v5.mp4`; it is not the hero source.
 
 ### Upload Hero Assets
 

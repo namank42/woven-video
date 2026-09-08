@@ -13,6 +13,16 @@ describe.skipIf(!base)("production HTTP agent-readiness", () => {
     expect(response.headers.get("content-type")).toContain("text/html");
     expect(await response.text()).toMatch(/<h1[ >]/i);
   }, 30000);
+  it("serves the replacement hero with its original aspect ratio and autoplay behavior", async () => {
+    const html = await (await get("/")).text();
+    const hero = html.match(/<video[^>]*aria-label="Woven app demo[^>]*>[\s\S]*?<\/video>/)![0];
+    expect(hero).toContain("https://media.woven.video/woven-hero-v5-60fps.mp4");
+    expect(hero).toContain('poster="https://media.woven.video/woven-hero-v5.png"');
+    expect(hero).toContain('width="2000"');
+    expect(hero).toContain('height="1078"');
+    for (const attribute of ["autoPlay", "muted", "loop", "playsInline"]) expect(hero.toLowerCase()).toContain(attribute.toLowerCase());
+    expect(hero).toContain('preload="metadata"');
+  });
   it("serves meaningful, sequentially headed HTML without JavaScript", async () => {
     const html = await (await get("/")).text();
     const content = textOnly(html);
