@@ -14,7 +14,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "What is the best AI video editor for Mac?",
-    a: "Woven is built natively for macOS with full file system access, local projects, and chat-driven editing for short-form video. Unlike web-based editors, your assets stay on your Mac. Try it free for 3 days at woven.video.",
+    a: "Woven is built natively for macOS with local projects and chat-driven editing for short-form video. Project files are stored on your Mac; AI requests can send relevant content to your selected service. Try it free for 3 days at woven.video.",
   },
   {
     q: "Is Woven a desktop app or a web app?",

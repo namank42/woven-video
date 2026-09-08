@@ -5,7 +5,7 @@ import { proxy } from "@/proxy";
 const request = (accept?: string, path = "/", method = "GET") => new NextRequest(`https://www.woven.video${path}`, { method, headers: accept === undefined ? {} : { accept } });
 
 describe("public document negotiation", () => {
-  it.each(["/", "/docs"])("serves Markdown at %s", async (path) => {
+  it.each(["/", "/docs", "/guide"])("serves Markdown at %s", async (path) => {
     const response = await proxy(request("text/markdown", path));
     expect(response.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
     expect(await response.text()).toMatch(/^# Woven/);

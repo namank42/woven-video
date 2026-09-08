@@ -3,6 +3,8 @@ import { GET as missing, HEAD as missingHead } from "@/app/[...missing]/route";
 import { GET as llms } from "@/app/llms.txt/route";
 import { GET as home } from "@/app/index.md/route";
 import { GET as docs } from "@/app/docs/index.md/route";
+import { GET as guide } from "@/app/guide/index.md/route";
+import { productGuideSections } from "@/lib/agent-readiness/product-guide";
 import { homepageFaqs } from "@/lib/seo/faqs";
 import robots from "@/app/robots";
 import sitemap from "@/app/sitemap";
@@ -58,6 +60,23 @@ describe("agent resources", () => {
       expect(rule.disallow).toContain("/api/");
       expect(rule.disallow).toContain("/account/");
     }
+  });
+  it("links the product guide from the agent index and sitemap", async () => {
+    expect(await llms(request).text()).toContain("https://www.woven.video/guide/index.md");
+    expect(sitemap().some(entry => entry.url === "https://www.woven.video/guide")).toBe(true);
+  });
+  it("publishes the complete shared product guide with distinct section destinations", async () => {
+    const body = await guide(request).text();
+    const ids = productGuideSections.map(section => section.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const section of productGuideSections) {
+      expect(body).toContain(`## ${section.title}`);
+      for (const paragraph of section.paragraphs) expect(body).toContain(paragraph);
+    }
+    expect(body).toContain("0.1.85");
+    expect(body).toContain("macOS 15");
+    expect(body).toContain("Connected Providers");
+    expect(body).toContain("does not mean every feature is offline");
   });
   it("disambiguates the brand consistently in organization and website data", () => {
     for (const schema of [organizationSchema(), websiteSchema()]) {

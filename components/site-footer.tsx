@@ -33,6 +33,9 @@ export function SiteFooter() {
           <Link href="/ai-video-editor-mac" className="hover:text-foreground">
             Mac editor
           </Link>
+          <Link href="/guide" className="hover:text-foreground">
+            Product guide
+          </Link>
           <Link href="/docs" className="hover:text-foreground">
             SFX docs
           </Link>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { productGuideSections } from "@/lib/agent-readiness/product-guide";
 import sitemap from "@/app/sitemap";
 
 const base = process.env.AGENT_READINESS_BASE_URL;
@@ -30,7 +31,7 @@ describe.skipIf(!base)("production HTTP agent-readiness", () => {
     expect(schemas.some(schema => schema["@graph"]?.some((node: { "@type": string; alternateName?: string[] }) => node["@type"] === "WebSite" && node.alternateName?.includes("Woven Video")))).toBe(true);
     console.log(`Raw homepage: ${content.length} text characters; ${(100 * content.length / markup.length).toFixed(1)}% content ratio`);
   });
-  it.each(["/", "/docs"])("keeps HTML and Markdown variants distinct at %s", async path => {
+  it.each(["/", "/docs", "/guide"])("keeps HTML and Markdown variants distinct at %s", async path => {
     for (const accept of ["text/markdown", "text/html", "text/markdown", "*/*"]) {
       const response = await get(path, accept);
       expect(response.status).toBe(200);
@@ -59,7 +60,7 @@ describe.skipIf(!base)("production HTTP agent-readiness", () => {
     expect(body).toContain("/docs");
     expect((await get(path, "text/markdown", "HEAD")).status).toBe(404);
   });
-  it.each(["/llms.txt", "/index.md", "/docs/index.md", "/agents.md"])("validates Markdown resource and its internal links: %s", async path => {
+  it.each(["/llms.txt", "/index.md", "/docs/index.md", "/guide/index.md", "/agents.md"])("validates Markdown resource and its internal links: %s", async path => {
     const response = await get(path, "*/*");
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/markdown; charset=utf-8");
@@ -69,6 +70,16 @@ describe.skipIf(!base)("production HTTP agent-readiness", () => {
       expect((await get(match[1] || "/", "*/*")).status, match[1]).toBe(200);
     }
   }, 30000);
+  it("serves the product guide with working section navigation and source-matched content", async () => {
+    const html = await (await get("/guide")).text();
+    expect(html).toContain("Woven product guide");
+    for (const section of productGuideSections) {
+      expect(html).toContain(`id="${section.id}"`);
+      expect(html).toContain(`href="#${section.id}"`);
+      expect(textOnly(html)).toContain(section.title);
+    }
+    expect(html).toContain("/guide/index.md");
+  });
   it("validates sitemap and robots discovery", async () => {
     const map = await get("/sitemap.xml", "application/xml");
     expect(map.status).toBe(200);
