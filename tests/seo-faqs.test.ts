@@ -37,6 +37,14 @@ describe("SEO FAQs", () => {
       "Woven-hosted Claude and GPT models",
     );
   });
+
+  it("never promises BYOK keys in any FAQ answer", () => {
+    const answers = [...homepageFaqs, ...pricingFaqs].map((faq) => faq.a).join("\n");
+    expect(answers).not.toContain("your own Anthropic");
+    expect(answers).not.toContain("bring your own");
+    expect(answers).not.toContain("own OpenAI key");
+    expect(answers).not.toContain("own API keys");
+  });
 });
 
 describe("SEO answer-first copy", () => {

@@ -26,7 +26,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "Do I need a Woven account to use the app?",
-    a: "Yes. Sign in once with Google and start a 3-day free trial ($8.25/mo, billed annually — $99/yr after). Then run with your own Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
+    a: "Yes. Sign in once with Google and start a 3-day free trial ($8.25/mo, billed annually — $99/yr after). Then sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
   },
   {
     q: "Can Woven make TikTok videos or Reels?",
