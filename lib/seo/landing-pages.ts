@@ -82,7 +82,7 @@ export const capcutComparison: ComparisonPageContent = {
     "You work on a Mac and want local projects",
     "You start from a script or idea, not just existing clips",
     "You want chat-driven assembly for Reels, TikTok, or Shorts",
-    "You need Claude, GPT, or your own keys in the editor",
+    "You want ChatGPT sign-in or Woven-hosted models in the editor",
   ],
   chooseCompetitor: [
     "You need a free mobile editor today",
@@ -141,7 +141,7 @@ export const descriptComparison: ComparisonPageContent = {
     { feature: "Podcast clipping", woven: "Yes — chat-driven shorts from recordings", competitor: "Yes — export clips from transcript edits" },
     { feature: "Workflow", woven: "Chat-driven clip + create + assemble", competitor: "Text-based edit of recorded audio/video" },
     { feature: "Platform", woven: "Native macOS", competitor: "macOS and Windows" },
-    { feature: "AI models", woven: "Claude, GPT, BYOK, or hosted", competitor: "Descript's AI suite + Underlord" },
+    { feature: "AI models", woven: "GPT, ChatGPT sign-in, or Woven-hosted", competitor: "Descript's AI suite + Underlord" },
     { feature: "Generation", woven: "Script → footage + voice → timeline", competitor: "Overdub, eye contact, studio sound" },
     { feature: "Best for", woven: "Reels/TikToks/Shorts — new or from recordings", competitor: "Full-episode transcript editing" },
   ],
@@ -246,7 +246,7 @@ export const macEditorPage: FeaturePageContent = {
     },
     {
       title: "Your models, your way",
-      body: "Bring Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
+      body: "Sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
     },
     {
       title: "Built for short-form",
