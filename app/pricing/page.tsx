@@ -25,7 +25,7 @@ import { pricingPageGraph } from "@/lib/seo/schema";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Woven is a native macOS AI video editor. Try free for 3 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Includes $5 in hosted credits. Run any model your way: bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
+    "Woven is a native macOS AI video editor. Try free for 3 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Includes $5 in hosted credits. Run any model your way: sign in with ChatGPT, or top up Woven-hosted credits at published per-model rates.",
   alternates: { canonical: "/pricing" },
 };
 
@@ -114,8 +114,7 @@ function PricingHero() {
 
 function Plans() {
   const licenseBullets = [
-    "Bring your own Anthropic and OpenAI keys",
-    "Or sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan",
+    "Sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan",
     "$5 in Woven-hosted credits to start",
   ];
 
@@ -550,10 +549,10 @@ function Notes() {
             usage-based; tool calls are flat per-call. All deduct from the same
             prepaid balance.
           </NoteCard>
-          <NoteCard title="Use your own keys">
-            Your license covers the full app whether you bring your own Anthropic/
-            OpenAI keys (pay providers directly) or sign in with ChatGPT. Hosted
-            credits are only needed for Woven-hosted models.
+          <NoteCard title="Two ways to run models">
+            Your license covers the full app. Sign in with ChatGPT to use GPT-5+
+            on your existing plan, or top up Woven-hosted credits for
+            Woven-hosted models.
           </NoteCard>
         </div>
       </div>

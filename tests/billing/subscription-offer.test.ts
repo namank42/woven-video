@@ -9,7 +9,7 @@ describe("getNoAccessSubscriptionOffer", () => {
       buttonLabel: "Start your 3-day free trial",
       bullets: [
         "$5 in Woven-hosted credits to try hosted models",
-        "Bring your own Anthropic and OpenAI keys, or sign in with ChatGPT",
+        "Sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan",
       ],
       emphasizedFinePrint: "$0 due today",
       finePrint: "cancel anytime before day 3 · card required.",
@@ -23,7 +23,7 @@ describe("getNoAccessSubscriptionOffer", () => {
     expect(offer.buttonLabel).toBe("Subscribe to Woven");
     expect(offer.bullets).toEqual([
       "Start access immediately with the annual Woven plan",
-      "Bring your own Anthropic and OpenAI keys, or sign in with ChatGPT",
+      "Sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan",
     ]);
     expect(`${offer.title} ${offer.buttonLabel} ${offer.finePrint} ${offer.bullets.join(" ")}`).not.toMatch(
       /free trial|\$0 due today|\$5 in Woven-hosted credits/i,
@@ -37,7 +37,7 @@ describe("getNoAccessSubscriptionOffer", () => {
     expect(offer.buttonLabel).toBe("Continue to checkout");
     expect(offer.bullets).toEqual([
       "Checkout will show the available plan for your account",
-      "Bring your own Anthropic and OpenAI keys, or sign in with ChatGPT",
+      "Sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan",
     ]);
     expect(`${offer.title} ${offer.buttonLabel} ${offer.finePrint} ${offer.bullets.join(" ")}`).not.toMatch(
       /free trial|\$0 due today|\$5 in Woven-hosted credits/i,
