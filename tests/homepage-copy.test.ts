@@ -16,4 +16,9 @@ describe("homepage copy", () => {
   it("does not promise BYOK chat keys", () => {
     expect(homepageSource).not.toContain("Bring your own Anthropic");
   });
+
+  it("does not promise BYOK chat keys in headlines", () => {
+    expect(homepageSource).not.toContain("Your keys, or ours");
+    expect(homepageSource).not.toContain("Your keys, ChatGPT");
+  });
 });

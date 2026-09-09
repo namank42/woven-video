@@ -94,15 +94,15 @@ const featureCards: FeatureCard[] = [
   },
   {
     icon: KeyIcon,
-    eyebrow: "Your keys, or ours",
-    title: "Your keys, ChatGPT, or Woven-hosted.",
+    eyebrow: "Two ways to run",
+    title: "ChatGPT or Woven-hosted.",
     body: "Try Woven free for 3 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance.",
   },
   {
     icon: LayersIcon,
     eyebrow: "Multimodal",
     title: "Generate and reason across media.",
-    body: "Images, video, audio — pick any model, or compare across them. Then point Claude or GPT at any file in your project to analyze or transform.",
+    body: "Images, video, audio — pick any model, or compare across them. Then point GPT or a hosted model at any file in your project to analyze or transform.",
   },
   {
     icon: PencilLineIcon,
