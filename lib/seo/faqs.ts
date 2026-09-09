@@ -10,7 +10,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "How much does Woven cost?",
-    a: "Woven is a 3-day free trial, then $8.25/mo, billed annually ($99/yr) — cancel anytime, card required. It includes $5 in hosted credits. Bring your own provider keys, sign in with ChatGPT (GPT-5+ on your existing plan), or top up a prepaid balance for Woven-hosted models.",
+    a: "Woven is a 3-day free trial, then $8.25/mo, billed annually ($99/yr) — cancel anytime, card required. It includes $5 in hosted credits. Sign in with ChatGPT (GPT-5+ on your existing plan), or top up a prepaid balance for Woven-hosted models.",
   },
   {
     q: "What is the best AI video editor for Mac?",
@@ -26,7 +26,7 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "Do I need a Woven account to use the app?",
-    a: "Yes. Sign in once with Google and start a 3-day free trial ($8.25/mo, billed annually — $99/yr after). Then run with your own Anthropic and OpenAI keys, sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
+    a: "Yes. Sign in once with Google and start a 3-day free trial ($8.25/mo, billed annually — $99/yr after). Then sign in with ChatGPT, or use Woven-hosted models on a prepaid balance.",
   },
   {
     q: "Can Woven make TikTok videos or Reels?",
@@ -38,11 +38,11 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "Which models can I use?",
-    a: "Use Claude Sonnet 5, Claude Opus 4.8, GPT-5.6 Sol, GPT-5.6 Terra, and GPT-5.6 Luna with Woven-hosted credits. You can also bring your own Anthropic and OpenAI keys or sign in with ChatGPT for GPT-5+ on your existing plan. See the pricing page for per-model rates.",
+    a: "Use GPT-5.6 Sol, GPT-5.6 Terra, and GPT-5.6 Luna with Woven-hosted credits. You can also sign in with ChatGPT for GPT-5+ on your existing plan. See the pricing page for per-model rates.",
   },
   {
     q: "Can I use ChatGPT with Woven?",
-    a: "Yes. Sign in with ChatGPT to run GPT-5+ on your existing Plus, Pro, or Team plan — no separate OpenAI API key required. You can also bring your own OpenAI key or use Woven-hosted models.",
+    a: "Yes. Sign in with ChatGPT to run GPT-5+ on your existing Plus, Pro, or Team plan — no separate OpenAI API key required. You can also use Woven-hosted models.",
   },
   {
     q: "Is Woven a ChatGPT video editor?",
@@ -54,15 +54,15 @@ export const homepageFaqs: FaqItem[] = [
   },
   {
     q: "How much do hosted AI models cost?",
-    a: "Hosted models are billed per token from your prepaid balance — Claude Sonnet 5 is $2.40/M input and $12.00/M output through Aug 31, 2026, then $3.60/M input and $18.00/M output from Sep 1, 2026. Auto captions are $0.10/min. See woven.video/pricing for the full rate table.",
+    a: "Hosted models are billed per token from your prepaid balance — see woven.video/pricing for the full rate table. Auto captions are $0.10/min.",
   },
   {
-    q: "Can I bring my own provider keys?",
-    a: "Yes. On any active plan, run Woven with the keys you provide — you pay providers directly at their rates and Woven takes nothing extra for inference.",
+    q: "Do I need my own provider keys?",
+    a: "No. Sign in with ChatGPT for GPT-5+ on your existing plan, or top up a prepaid balance for Woven-hosted models — no provider keys required.",
   },
   {
     q: "What is included in the free trial?",
-    a: "The full Woven app for 3 days, plus $5 in Woven-hosted credits. Bring your own keys, sign in with ChatGPT, or use the included credits. $0 due today — cancel anytime before day 3.",
+    a: "The full Woven app for 3 days, plus $5 in Woven-hosted credits. Sign in with ChatGPT, or use the included credits. $0 due today — cancel anytime before day 3.",
   },
   {
     q: "Who makes Woven?",
@@ -77,18 +77,18 @@ export const pricingFaqs: FaqItem[] = [
   },
   {
     q: "What is included in the free trial?",
-    a: "The full Mac app for 3 days plus $5 in Woven-hosted credits. Bring your own Anthropic/OpenAI keys, sign in with ChatGPT, or use the included credits.",
+    a: "The full Mac app for 3 days plus $5 in Woven-hosted credits. Sign in with ChatGPT, or use the included credits.",
   },
   {
     q: "Do I need hosted credits?",
-    a: "No. Hosted credits are optional — only needed for Woven-hosted models. You can use your own API keys or ChatGPT sign-in without topping up.",
+    a: "No. Hosted credits are optional — only needed for Woven-hosted models. You can use ChatGPT sign-in without topping up.",
   },
   {
     q: "How do hosted model rates work?",
     a: "Each request is charged per token from your prepaid balance at the published rates on this page. Auto captions are $0.10/min. There are no surprise bills.",
   },
   {
-    q: "Can I bring my own API keys?",
-    a: "Yes. Your subscription covers the full app whether you bring your own keys (pay providers directly) or use Woven-hosted models on a prepaid balance.",
+    q: "Do I need my own API keys?",
+    a: "No. Your subscription covers the full app — sign in with ChatGPT or use Woven-hosted models on a prepaid balance.",
   },
 ];

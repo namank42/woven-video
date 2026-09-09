@@ -52,6 +52,14 @@ describe("pricing page source", () => {
     expect(pageSource).not.toMatch(/["']use client["']/);
   });
 
+  it("does not promise BYOK chat keys", async () => {
+    const pageSource = await readFile("app/pricing/page.tsx", "utf8");
+
+    expect(pageSource).not.toContain("Bring your own Anthropic");
+    expect(pageSource).not.toContain("bring your own Anthropic/OpenAI keys");
+    expect(pageSource).not.toContain("Use your own keys");
+  });
+
   it("renders optional dated rate labels on desktop and mobile", async () => {
     const pageSource = await readFile("app/pricing/page.tsx", "utf8");
     const chatModelsSource = pageSource

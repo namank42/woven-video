@@ -35,30 +35,6 @@ export type MediaModelRate = {
 // Public Woven rates after hosted markup. Keep this aligned with model_pricing_rules.
 export const chatModelRates: ChatModelRate[] = [
   {
-    name: "Claude Sonnet 5",
-    modelId: "anthropic/claude-sonnet-5",
-    rateLabel: "Intro through Aug 31, 2026",
-    input: "$2.40/M",
-    output: "$12.00/M",
-    cacheRead: "$0.24/M",
-    cacheWrite: "$3.00/M",
-    higherTier: {
-      threshold: "From Sep 1, 2026",
-      input: "$3.60/M",
-      output: "$18.00/M",
-      cacheRead: "$0.36/M",
-      cacheWrite: "$4.50/M",
-    },
-  },
-  {
-    name: "Claude Opus 4.8",
-    modelId: "anthropic/claude-opus-4.8",
-    input: "$6.00/M",
-    output: "$30.00/M",
-    cacheRead: "$0.60/M",
-    cacheWrite: "$7.50/M",
-  },
-  {
     name: "GPT-5.6 Sol",
     modelId: "openai/gpt-5.6-sol",
     input: "$6.00/M",

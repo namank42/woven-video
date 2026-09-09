@@ -8,8 +8,8 @@ export type NoAccessSubscriptionOffer = {
   finePrint: string;
 };
 
-const bringYourOwnKeysBullet =
-  "Bring your own Anthropic and OpenAI keys, or sign in with ChatGPT";
+const chatGPTBullet =
+  "Sign in with ChatGPT — GPT-5+ on your Plus, Pro, or Team plan";
 
 export function getNoAccessSubscriptionOffer(
   checkoutMode: CheckoutMode | undefined,
@@ -20,7 +20,7 @@ export function getNoAccessSubscriptionOffer(
       buttonLabel: "Start your 3-day free trial",
       bullets: [
         "$5 in Woven-hosted credits to try hosted models",
-        bringYourOwnKeysBullet,
+        chatGPTBullet,
       ],
       emphasizedFinePrint: "$0 due today",
       finePrint: "cancel anytime before day 3 · card required.",
@@ -33,7 +33,7 @@ export function getNoAccessSubscriptionOffer(
       buttonLabel: "Subscribe to Woven",
       bullets: [
         "Start access immediately with the annual Woven plan",
-        bringYourOwnKeysBullet,
+        chatGPTBullet,
       ],
       emphasizedFinePrint: "$99/year",
       finePrint: "billed annually. Checkout shows the total before you subscribe.",
@@ -45,7 +45,7 @@ export function getNoAccessSubscriptionOffer(
     buttonLabel: "Continue to checkout",
     bullets: [
       "Checkout will show the available plan for your account",
-      bringYourOwnKeysBullet,
+      chatGPTBullet,
     ],
     emphasizedFinePrint: "$99/year",
     finePrint: "checkout shows the total before you confirm.",

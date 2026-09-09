@@ -50,11 +50,10 @@ Hosted model and media pricing should produce estimated and final costs in `usd_
 
 Current hosted chat models:
 
-- `anthropic/claude-sonnet-5`
-- `anthropic/claude-opus-4.8`
 - `openai/gpt-5.6-sol`
 - `openai/gpt-5.6-terra`
-- `moonshotai/kimi-k3`
+- `openai/gpt-5.6-luna`
+- `moonshotai/kimi-k3` (legacy compatibility only)
 
 `ledger_entries` is the append-only ledger. Every balance-changing operation writes an entry with `amount_usd_micros` and `balance_after_usd_micros`. The unique `(source, source_id, kind)` constraint is the idempotency boundary for Stripe webhooks and job accounting.
 
@@ -126,7 +125,7 @@ The Woven backend exposes an OpenAI-compatible surface for desktop-hosted usage:
 - `GET /api/v1/billing/balance`
 - `POST /api/v1/chat/completions`
 
-All routes require a Woven/Supabase bearer token. The desktop app should continue to run tools, file access, and chat orchestration locally. For Woven-hosted models, the sidecar points an OpenAI-compatible client at `/api/v1` and sends model IDs like `anthropic/claude-sonnet-5`.
+All routes require a Woven/Supabase bearer token. The desktop app should continue to run tools, file access, and chat orchestration locally. For Woven-hosted models, the sidecar points an OpenAI-compatible client at `/api/v1` and sends model IDs like `openai/gpt-5.6-luna`.
 
 The chat completion route:
 
