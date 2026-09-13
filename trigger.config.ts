@@ -4,6 +4,7 @@ const project = process.env.TRIGGER_PROJECT_REF ?? "proj_vqcwqmcxkgwldwlxoutx";
 
 export default defineConfig({
   project,
+  runtime: "node-24",
   dirs: ["./trigger"],
   retries: {
     enabledInDev: true,
