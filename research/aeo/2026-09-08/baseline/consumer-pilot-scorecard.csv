@@ -1,0 +1,51 @@
+question_id,question,surface,status,woven_mentioned,woven_link_captured,captured_links
+Q001,What is the best AI video editor for making short videos?,chatgpt-search,answered,False,False,8
+Q001,What is the best AI video editor for making short videos?,perplexity-web,answered,False,False,0
+Q001,What is the best AI video editor for making short videos?,grok,answered,False,False,4
+Q001,What is the best AI video editor for making short videos?,google-overview,answered,False,False,19
+Q001,What is the best AI video editor for making short videos?,google-ai-mode,answered,False,False,13
+Q081,What is the best AI tool for making Instagram Reels?,chatgpt-search,answered,False,False,7
+Q081,What is the best AI tool for making Instagram Reels?,perplexity-web,answered,False,False,1
+Q081,What is the best AI tool for making Instagram Reels?,grok,answered,False,False,0
+Q081,What is the best AI tool for making Instagram Reels?,google-overview,answered,False,False,25
+Q081,What is the best AI tool for making Instagram Reels?,google-ai-mode,answered,False,False,19
+Q141,What is the best AI tool for turning a script into a video?,chatgpt-search,answered,False,False,9
+Q141,What is the best AI tool for turning a script into a video?,perplexity-web,answered,False,False,2
+Q141,What is the best AI tool for turning a script into a video?,grok,answered,False,False,10
+Q141,What is the best AI tool for turning a script into a video?,google-overview,answered,False,False,19
+Q141,What is the best AI tool for turning a script into a video?,google-ai-mode,answered,False,False,15
+Q121,What is the best AI tool for creating YouTube Shorts?,chatgpt-search,answered,False,False,5
+Q121,What is the best AI tool for creating YouTube Shorts?,perplexity-web,answered,False,False,4
+Q121,What is the best AI tool for creating YouTube Shorts?,grok,answered,False,False,3
+Q121,What is the best AI tool for creating YouTube Shorts?,google-overview,answered,False,False,23
+Q121,What is the best AI tool for creating YouTube Shorts?,google-ai-mode,answered,False,False,18
+Q101,Which AI video editor is best for TikTok?,chatgpt-search,answered,False,False,7
+Q101,Which AI video editor is best for TikTok?,perplexity-web,answered,False,False,3
+Q101,Which AI video editor is best for TikTok?,grok,blocked_weekly_limit,,,0
+Q101,Which AI video editor is best for TikTok?,google-overview,answered,False,False,21
+Q101,Which AI video editor is best for TikTok?,google-ai-mode,answered,False,False,15
+Q461,What is a good CapCut alternative for Mac creators?,chatgpt-search,answered,False,False,4
+Q461,What is a good CapCut alternative for Mac creators?,perplexity-web,answered,False,False,0
+Q461,What is a good CapCut alternative for Mac creators?,grok,blocked_weekly_limit,,,0
+Q461,What is a good CapCut alternative for Mac creators?,google-overview,answered,False,False,22
+Q461,What is a good CapCut alternative for Mac creators?,google-ai-mode,answered,False,False,14
+Q086,Which app makes it easiest to add captions to Reels?,chatgpt-search,answered,False,False,3
+Q086,Which app makes it easiest to add captions to Reels?,perplexity-web,answered,False,False,5
+Q086,Which app makes it easiest to add captions to Reels?,grok,blocked_weekly_limit,,,0
+Q086,Which app makes it easiest to add captions to Reels?,google-overview,answered,False,False,20
+Q086,Which app makes it easiest to add captions to Reels?,google-ai-mode,answered,False,False,14
+Q041,What is the best AI video editor for Mac?,chatgpt-search,answered,False,False,11
+Q041,What is the best AI video editor for Mac?,perplexity-web,answered,False,False,8
+Q041,What is the best AI video editor for Mac?,grok,blocked_weekly_limit,,,0
+Q041,What is the best AI video editor for Mac?,google-overview,answered,False,False,15
+Q041,What is the best AI video editor for Mac?,google-ai-mode,answered,False,False,15
+Q062,What app lets me edit videos by chatting?,chatgpt-search,answered,False,False,5
+Q062,What app lets me edit videos by chatting?,perplexity-web,answered,False,False,11
+Q062,What app lets me edit videos by chatting?,grok,blocked_weekly_limit,,,0
+Q062,What app lets me edit videos by chatting?,google-overview,answered,False,False,20
+Q062,What app lets me edit videos by chatting?,google-ai-mode,answered,False,False,16
+Q061,Can ChatGPT edit a video for me?,chatgpt-search,answered,False,False,2
+Q061,Can ChatGPT edit a video for me?,grok,blocked_weekly_limit,,,0
+Q061,Can ChatGPT edit a video for me?,google-overview,answered,False,False,30
+Q061,Can ChatGPT edit a video for me?,google-ai-mode,answered,False,False,15
+Q061,Can ChatGPT edit a video for me?,perplexity-web,blocked_free_search_limit,,,0

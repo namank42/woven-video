@@ -1,0 +1,108 @@
+{
+  "date": "2026-09-08",
+  "status": "Evidence-informed v1; exact AI prompt popularity and actual app capability not validated",
+  "source_date": "2026-09-07",
+  "latest_volume_month": "2026-07",
+  "questions": [
+    {
+      "id": "Q001",
+      "category": "Choosing an AI video editor",
+      "question": "What is the best AI video editor for making short videos?",
+      "keyword_proxy": "best ai video editor",
+      "monthly_us_google_estimate": 2400,
+      "tier": "Core",
+      "evidence_limit": "Broad benchmark; short-video qualifier volume unmeasured.",
+      "product_fit": "Supported by public positioning only; no current-app end-to-end QA performed"
+    },
+    {
+      "id": "Q081",
+      "category": "Instagram Reels",
+      "question": "What is the best AI tool for making Instagram Reels?",
+      "keyword_proxy": "ai reels generator",
+      "monthly_us_google_estimate": 880,
+      "tier": "Core",
+      "evidence_limit": "Prior live SERP showed complete Reel creation intent and related questions.",
+      "product_fit": "Supported by public positioning only; no current-app end-to-end QA performed"
+    },
+    {
+      "id": "Q141",
+      "category": "Scripts and stories",
+      "question": "What is the best AI tool for turning a script into a video?",
+      "keyword_proxy": "script to video ai",
+      "monthly_us_google_estimate": 1000,
+      "tier": "Core",
+      "evidence_limit": "Prior live SERP supported script-to-video tool selection; output types vary.",
+      "product_fit": "Supported by public positioning only; no current-app end-to-end QA performed"
+    },
+    {
+      "id": "Q121",
+      "category": "YouTube Shorts",
+      "question": "What is the best AI tool for creating YouTube Shorts?",
+      "keyword_proxy": "ai youtube shorts generator",
+      "monthly_us_google_estimate": 480,
+      "tier": "Core",
+      "evidence_limit": "Platform-specific creation demand; no dedicated intent SERP checked yet.",
+      "product_fit": "Supported by public positioning only; no current-app end-to-end QA performed"
+    },
+    {
+      "id": "Q101",
+      "category": "TikTok videos",
+      "question": "Which AI video editor is best for TikTok?",
+      "keyword_proxy": "ai tiktok editor",
+      "monthly_us_google_estimate": 90,
+      "tier": "Core",
+      "evidence_limit": "Direct AI editor term; tiktok video editor has 1600 searches but includes non-AI editing.",
+      "product_fit": "Supported by public positioning only; no current-app end-to-end QA performed"
+    },
+    {
+      "id": "Q461",
+      "category": "Alternatives and comparisons",
+      "question": "What is a good CapCut alternative for Mac creators?",
+      "keyword_proxy": "capcut alternative",
+      "monthly_us_google_estimate": 1900,
+      "tier": "Core",
+      "evidence_limit": "Switching intent; Mac-qualified prompt volume unknown. Do not claim feature parity.",
+      "product_fit": "Supported by public positioning only; no current-app end-to-end QA performed"
+    },
+    {
+      "id": "Q086",
+      "category": "Instagram Reels",
+      "question": "Which app makes it easiest to add captions to Reels?",
+      "keyword_proxy": "add captions to video",
+      "monthly_us_google_estimate": 1900,
+      "tier": "Core",
+      "evidence_limit": "Caption demand is broad; Reels qualifier volume unknown. Woven pricing lists captions from reel voiceover, not arbitrary imported-media support.",
+      "product_fit": "Supported by public positioning only; no current-app end-to-end QA performed"
+    },
+    {
+      "id": "Q041",
+      "category": "Mac and desktop workflows",
+      "question": "What is the best AI video editor for Mac?",
+      "keyword_proxy": "ai video editor for mac",
+      "monthly_us_google_estimate": 20,
+      "tier": "Strategic",
+      "evidence_limit": "Exact platform fit but low measured demand.",
+      "product_fit": "Supported by public positioning only; no current-app end-to-end QA performed"
+    },
+    {
+      "id": "Q062",
+      "category": "Chat, prompts, and video agents",
+      "question": "What app lets me edit videos by chatting?",
+      "keyword_proxy": "prompt based video editing",
+      "monthly_us_google_estimate": 10,
+      "tier": "Strategic",
+      "evidence_limit": "Direct workflow fit but weak exact-topic volume; chatgpt video editor is adjacent, not equivalent.",
+      "product_fit": "Supported by public positioning only; no current-app end-to-end QA performed"
+    },
+    {
+      "id": "Q061",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can ChatGPT edit a video for me?",
+      "keyword_proxy": "chatgpt video editor",
+      "monthly_us_google_estimate": 390,
+      "tier": "Strategic",
+      "evidence_limit": "Mixed integration/capability intent. Informational control: a valid answer need not recommend any editor.",
+      "product_fit": "Supported by public positioning only; no current-app end-to-end QA performed"
+    }
+  ]
+}

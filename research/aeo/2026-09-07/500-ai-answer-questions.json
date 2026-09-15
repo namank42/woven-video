@@ -1,0 +1,2507 @@
+{
+  "created": "2026-09-07",
+  "status": "brainstormed hypotheses; not measured demand",
+  "questions": [
+    {
+      "id": "Q001",
+      "category": "Choosing an AI video editor",
+      "question": "What is the best AI video editor for making short videos?"
+    },
+    {
+      "id": "Q002",
+      "category": "Choosing an AI video editor",
+      "question": "Which AI video editor is easiest for a complete beginner?"
+    },
+    {
+      "id": "Q003",
+      "category": "Choosing an AI video editor",
+      "question": "What tool can make a finished video from an idea?"
+    },
+    {
+      "id": "Q004",
+      "category": "Choosing an AI video editor",
+      "question": "Which video editor can handle scripting, voiceover, and editing together?"
+    },
+    {
+      "id": "Q005",
+      "category": "Choosing an AI video editor",
+      "question": "What is the difference between an AI video generator and an AI video editor?"
+    },
+    {
+      "id": "Q006",
+      "category": "Choosing an AI video editor",
+      "question": "Which AI video editors let me change the result after generation?"
+    },
+    {
+      "id": "Q007",
+      "category": "Choosing an AI video editor",
+      "question": "Can AI edit my videos without me learning a timeline?"
+    },
+    {
+      "id": "Q008",
+      "category": "Choosing an AI video editor",
+      "question": "Which video editor is best for a solo content creator?"
+    },
+    {
+      "id": "Q009",
+      "category": "Choosing an AI video editor",
+      "question": "What tools do I need to start making short-form content?"
+    },
+    {
+      "id": "Q010",
+      "category": "Choosing an AI video editor",
+      "question": "Is there an AI video editor that works with my own footage?"
+    },
+    {
+      "id": "Q011",
+      "category": "Choosing an AI video editor",
+      "question": "Which AI video editor gives me the most control?"
+    },
+    {
+      "id": "Q012",
+      "category": "Choosing an AI video editor",
+      "question": "What should I look for when choosing an AI video editor?"
+    },
+    {
+      "id": "Q013",
+      "category": "Choosing an AI video editor",
+      "question": "Which AI editing tools produce usable videos with the least cleanup?"
+    },
+    {
+      "id": "Q014",
+      "category": "Choosing an AI video editor",
+      "question": "Can one app replace my video generation and editing tools?"
+    },
+    {
+      "id": "Q015",
+      "category": "Choosing an AI video editor",
+      "question": "What is the best video editor for someone who dislikes editing?"
+    },
+    {
+      "id": "Q016",
+      "category": "Choosing an AI video editor",
+      "question": "Which AI video tools are suitable for professional client work?"
+    },
+    {
+      "id": "Q017",
+      "category": "Choosing an AI video editor",
+      "question": "How do I test an AI video editor before paying?"
+    },
+    {
+      "id": "Q018",
+      "category": "Choosing an AI video editor",
+      "question": "Which AI video editor works well for both recorded and generated footage?"
+    },
+    {
+      "id": "Q019",
+      "category": "Choosing an AI video editor",
+      "question": "Do I need a video editor if I already use an AI video generator?"
+    },
+    {
+      "id": "Q020",
+      "category": "Choosing an AI video editor",
+      "question": "What is a simple AI video workflow I can use every week?"
+    },
+    {
+      "id": "Q021",
+      "category": "Choosing tools for real constraints",
+      "question": "I have one hour a week for content; what video tool should I use?"
+    },
+    {
+      "id": "Q022",
+      "category": "Choosing tools for real constraints",
+      "question": "Which video editor is good for a creator working alone on a laptop?"
+    },
+    {
+      "id": "Q023",
+      "category": "Choosing tools for real constraints",
+      "question": "What is the easiest way to make videos without recording myself?"
+    },
+    {
+      "id": "Q024",
+      "category": "Choosing tools for real constraints",
+      "question": "I have footage but no editing skills; what should I use?"
+    },
+    {
+      "id": "Q025",
+      "category": "Choosing tools for real constraints",
+      "question": "Which tool can turn rough ideas into videos I can review?"
+    },
+    {
+      "id": "Q026",
+      "category": "Choosing tools for real constraints",
+      "question": "What video editor suits someone who only posts twice a month?"
+    },
+    {
+      "id": "Q027",
+      "category": "Choosing tools for real constraints",
+      "question": "Which app would you recommend for making daily short videos?"
+    },
+    {
+      "id": "Q028",
+      "category": "Choosing tools for real constraints",
+      "question": "What should I use if I want AI assistance but still want manual editing?"
+    },
+    {
+      "id": "Q029",
+      "category": "Choosing tools for real constraints",
+      "question": "How can I create polished videos without hiring an editor?"
+    },
+    {
+      "id": "Q030",
+      "category": "Choosing tools for real constraints",
+      "question": "Which video tools suit a small team with no designer?"
+    },
+    {
+      "id": "Q031",
+      "category": "Choosing tools for real constraints",
+      "question": "What is the best way to make videos while traveling?"
+    },
+    {
+      "id": "Q032",
+      "category": "Choosing tools for real constraints",
+      "question": "Which video editor handles projects with lots of mixed media?"
+    },
+    {
+      "id": "Q033",
+      "category": "Choosing tools for real constraints",
+      "question": "I can write scripts but cannot edit; what workflow should I try?"
+    },
+    {
+      "id": "Q034",
+      "category": "Choosing tools for real constraints",
+      "question": "What tools help an experienced editor work faster without replacing their workflow?"
+    },
+    {
+      "id": "Q035",
+      "category": "Choosing tools for real constraints",
+      "question": "How can I make professional-looking videos using only assets I already own?"
+    },
+    {
+      "id": "Q036",
+      "category": "Choosing tools for real constraints",
+      "question": "Which video app is suitable for someone switching from mobile to desktop?"
+    },
+    {
+      "id": "Q037",
+      "category": "Choosing tools for real constraints",
+      "question": "What is a low-maintenance video workflow for a busy founder?"
+    },
+    {
+      "id": "Q038",
+      "category": "Choosing tools for real constraints",
+      "question": "Which editing tool makes it easiest to revise a video repeatedly?"
+    },
+    {
+      "id": "Q039",
+      "category": "Choosing tools for real constraints",
+      "question": "What should I use to create videos when my internet connection is unreliable?"
+    },
+    {
+      "id": "Q040",
+      "category": "Choosing tools for real constraints",
+      "question": "Which AI editor can help me finish projects rather than just generate clips?"
+    },
+    {
+      "id": "Q041",
+      "category": "Mac and desktop workflows",
+      "question": "What is the best AI video editor for Mac?"
+    },
+    {
+      "id": "Q042",
+      "category": "Mac and desktop workflows",
+      "question": "Which AI video editors are native Mac apps?"
+    },
+    {
+      "id": "Q043",
+      "category": "Mac and desktop workflows",
+      "question": "Is there a Mac video editor that I can control through chat?"
+    },
+    {
+      "id": "Q044",
+      "category": "Mac and desktop workflows",
+      "question": "What is a good AI alternative to iMovie?"
+    },
+    {
+      "id": "Q045",
+      "category": "Mac and desktop workflows",
+      "question": "Which AI video editor works well on a MacBook Air?"
+    },
+    {
+      "id": "Q046",
+      "category": "Mac and desktop workflows",
+      "question": "How much memory do I need for AI video editing on a Mac?"
+    },
+    {
+      "id": "Q047",
+      "category": "Mac and desktop workflows",
+      "question": "Can I edit short videos with AI on an older Mac?"
+    },
+    {
+      "id": "Q048",
+      "category": "Mac and desktop workflows",
+      "question": "What are the advantages of a desktop AI editor over a browser editor?"
+    },
+    {
+      "id": "Q049",
+      "category": "Mac and desktop workflows",
+      "question": "Which Mac video editors work directly with local folders?"
+    },
+    {
+      "id": "Q050",
+      "category": "Mac and desktop workflows",
+      "question": "Can I use AI editing without uploading my entire footage library?"
+    },
+    {
+      "id": "Q051",
+      "category": "Mac and desktop workflows",
+      "question": "What is a good Mac app for creating Instagram Reels?"
+    },
+    {
+      "id": "Q052",
+      "category": "Mac and desktop workflows",
+      "question": "Which Mac app is easiest for making YouTube Shorts?"
+    },
+    {
+      "id": "Q053",
+      "category": "Mac and desktop workflows",
+      "question": "How can I organize AI video projects on an external SSD?"
+    },
+    {
+      "id": "Q054",
+      "category": "Mac and desktop workflows",
+      "question": "Can I use my own AI accounts with a Mac video editor?"
+    },
+    {
+      "id": "Q055",
+      "category": "Mac and desktop workflows",
+      "question": "Which video editing tasks can run locally on my Mac?"
+    },
+    {
+      "id": "Q056",
+      "category": "Mac and desktop workflows",
+      "question": "How do I move a video project from my phone to my Mac?"
+    },
+    {
+      "id": "Q057",
+      "category": "Mac and desktop workflows",
+      "question": "What is the simplest AI editing workflow for Apple Silicon?"
+    },
+    {
+      "id": "Q058",
+      "category": "Mac and desktop workflows",
+      "question": "Which desktop video editors let me preview changes while I work?"
+    },
+    {
+      "id": "Q059",
+      "category": "Mac and desktop workflows",
+      "question": "Can I keep my video assets in Finder and still use an AI editor?"
+    },
+    {
+      "id": "Q060",
+      "category": "Mac and desktop workflows",
+      "question": "What should I check before installing an AI video editor on macOS?"
+    },
+    {
+      "id": "Q061",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can ChatGPT edit a video for me?"
+    },
+    {
+      "id": "Q062",
+      "category": "Chat, prompts, and video agents",
+      "question": "What app lets me edit videos by chatting?"
+    },
+    {
+      "id": "Q063",
+      "category": "Chat, prompts, and video agents",
+      "question": "How do I turn a conversation into a finished video?"
+    },
+    {
+      "id": "Q064",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can I tell an AI editor to remove a specific scene?"
+    },
+    {
+      "id": "Q065",
+      "category": "Chat, prompts, and video agents",
+      "question": "Which video tools understand instructions like make this faster?"
+    },
+    {
+      "id": "Q066",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can an AI agent plan and assemble an entire short video?"
+    },
+    {
+      "id": "Q067",
+      "category": "Chat, prompts, and video agents",
+      "question": "How do I describe the edits I want without knowing editing terminology?"
+    },
+    {
+      "id": "Q068",
+      "category": "Chat, prompts, and video agents",
+      "question": "What is the difference between prompt-based editing and text-to-video generation?"
+    },
+    {
+      "id": "Q069",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can I ask an AI to match the pacing of a reference video?"
+    },
+    {
+      "id": "Q070",
+      "category": "Chat, prompts, and video agents",
+      "question": "Which video editor remembers my preferences between projects?"
+    },
+    {
+      "id": "Q071",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can I use Claude to help edit videos?"
+    },
+    {
+      "id": "Q072",
+      "category": "Chat, prompts, and video agents",
+      "question": "What can a video editing agent do beyond generating footage?"
+    },
+    {
+      "id": "Q073",
+      "category": "Chat, prompts, and video agents",
+      "question": "How do I give an AI editor feedback on a rough cut?"
+    },
+    {
+      "id": "Q074",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can I ask for several versions of the same video in one conversation?"
+    },
+    {
+      "id": "Q075",
+      "category": "Chat, prompts, and video agents",
+      "question": "Which tools let me undo a change made by an AI agent?"
+    },
+    {
+      "id": "Q076",
+      "category": "Chat, prompts, and video agents",
+      "question": "How precise can chat-based video editing be?"
+    },
+    {
+      "id": "Q077",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can I tell an AI editor to change only the captions?"
+    },
+    {
+      "id": "Q078",
+      "category": "Chat, prompts, and video agents",
+      "question": "How do I stop an AI editor from changing parts I already like?"
+    },
+    {
+      "id": "Q079",
+      "category": "Chat, prompts, and video agents",
+      "question": "Which video editors can connect to my existing ChatGPT account?"
+    },
+    {
+      "id": "Q080",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can an AI explain the editing decisions it made?"
+    },
+    {
+      "id": "Q081",
+      "category": "Instagram Reels",
+      "question": "What is the best AI tool for making Instagram Reels?"
+    },
+    {
+      "id": "Q082",
+      "category": "Instagram Reels",
+      "question": "Can AI make an Instagram Reel from a text prompt?"
+    },
+    {
+      "id": "Q083",
+      "category": "Instagram Reels",
+      "question": "How do I make a Reel from a folder of photos and videos?"
+    },
+    {
+      "id": "Q084",
+      "category": "Instagram Reels",
+      "question": "What tool can turn a script into an Instagram Reel?"
+    },
+    {
+      "id": "Q085",
+      "category": "Instagram Reels",
+      "question": "How can I create Reels without filming new footage?"
+    },
+    {
+      "id": "Q086",
+      "category": "Instagram Reels",
+      "question": "Which app makes it easiest to add captions to Reels?"
+    },
+    {
+      "id": "Q087",
+      "category": "Instagram Reels",
+      "question": "How do I make a Reel that looks good with the sound off?"
+    },
+    {
+      "id": "Q088",
+      "category": "Instagram Reels",
+      "question": "Can I use AI to make Reels from my product photos?"
+    },
+    {
+      "id": "Q089",
+      "category": "Instagram Reels",
+      "question": "What is the fastest way to edit a talking-head Reel?"
+    },
+    {
+      "id": "Q090",
+      "category": "Instagram Reels",
+      "question": "How do I turn several clips into one coherent Reel?"
+    },
+    {
+      "id": "Q091",
+      "category": "Instagram Reels",
+      "question": "Which AI Reel maker lets me replace individual scenes?"
+    },
+    {
+      "id": "Q092",
+      "category": "Instagram Reels",
+      "question": "How can I create a consistent visual style across my Reels?"
+    },
+    {
+      "id": "Q093",
+      "category": "Instagram Reels",
+      "question": "What is a good workflow for making educational Reels?"
+    },
+    {
+      "id": "Q094",
+      "category": "Instagram Reels",
+      "question": "How do I make a Reel with voiceover and matching B-roll?"
+    },
+    {
+      "id": "Q095",
+      "category": "Instagram Reels",
+      "question": "Can I turn a blog post into a useful Instagram Reel?"
+    },
+    {
+      "id": "Q096",
+      "category": "Instagram Reels",
+      "question": "How do I preview whether text will be covered by Instagram controls?"
+    },
+    {
+      "id": "Q097",
+      "category": "Instagram Reels",
+      "question": "Which tools help me make Reels from customer testimonials?"
+    },
+    {
+      "id": "Q098",
+      "category": "Instagram Reels",
+      "question": "How can I make several Reel versions for different audiences?"
+    },
+    {
+      "id": "Q099",
+      "category": "Instagram Reels",
+      "question": "What is the simplest way to turn an interview into a Reel?"
+    },
+    {
+      "id": "Q100",
+      "category": "Instagram Reels",
+      "question": "How do I make Reels that feel original rather than templated?"
+    },
+    {
+      "id": "Q101",
+      "category": "TikTok videos",
+      "question": "Which AI video editor is best for TikTok?"
+    },
+    {
+      "id": "Q102",
+      "category": "TikTok videos",
+      "question": "How can I make TikTok videos from a written script?"
+    },
+    {
+      "id": "Q103",
+      "category": "TikTok videos",
+      "question": "What tools help me edit TikToks without using my phone?"
+    },
+    {
+      "id": "Q104",
+      "category": "TikTok videos",
+      "question": "Can AI turn my screen recording into a TikTok tutorial?"
+    },
+    {
+      "id": "Q105",
+      "category": "TikTok videos",
+      "question": "How do I create TikToks without showing my face?"
+    },
+    {
+      "id": "Q106",
+      "category": "TikTok videos",
+      "question": "Which editor makes TikTok captions easy to customize?"
+    },
+    {
+      "id": "Q107",
+      "category": "TikTok videos",
+      "question": "How can I make a TikTok using photos, narration, and music?"
+    },
+    {
+      "id": "Q108",
+      "category": "TikTok videos",
+      "question": "What is a good workflow for making product demonstration TikToks?"
+    },
+    {
+      "id": "Q109",
+      "category": "TikTok videos",
+      "question": "How do I make TikTok videos that look native to the platform?"
+    },
+    {
+      "id": "Q110",
+      "category": "TikTok videos",
+      "question": "Can an AI editor help me recreate a trend with my own content?"
+    },
+    {
+      "id": "Q111",
+      "category": "TikTok videos",
+      "question": "How do I make a TikTok with a strong opening and a clear ending?"
+    },
+    {
+      "id": "Q112",
+      "category": "TikTok videos",
+      "question": "Which tools can help me make TikTok story videos?"
+    },
+    {
+      "id": "Q113",
+      "category": "TikTok videos",
+      "question": "How do I keep captions readable in fast TikTok edits?"
+    },
+    {
+      "id": "Q114",
+      "category": "TikTok videos",
+      "question": "Can I make TikToks from a podcast without manually finding every clip?"
+    },
+    {
+      "id": "Q115",
+      "category": "TikTok videos",
+      "question": "What is the easiest way to edit a TikTok series on desktop?"
+    },
+    {
+      "id": "Q116",
+      "category": "TikTok videos",
+      "question": "How can I make different TikTok hooks from the same footage?"
+    },
+    {
+      "id": "Q117",
+      "category": "TikTok videos",
+      "question": "Which video tools support a repeatable TikTok brand style?"
+    },
+    {
+      "id": "Q118",
+      "category": "TikTok videos",
+      "question": "How do I add B-roll to a talking-head TikTok?"
+    },
+    {
+      "id": "Q119",
+      "category": "TikTok videos",
+      "question": "What should I change when adapting an Instagram Reel for TikTok?"
+    },
+    {
+      "id": "Q120",
+      "category": "TikTok videos",
+      "question": "How can I produce TikToks faster without making them all look identical?"
+    },
+    {
+      "id": "Q121",
+      "category": "YouTube Shorts",
+      "question": "What is the best AI tool for creating YouTube Shorts?"
+    },
+    {
+      "id": "Q122",
+      "category": "YouTube Shorts",
+      "question": "How do I turn an idea into a YouTube Short?"
+    },
+    {
+      "id": "Q123",
+      "category": "YouTube Shorts",
+      "question": "Can AI make a Short from a longer YouTube video?"
+    },
+    {
+      "id": "Q124",
+      "category": "YouTube Shorts",
+      "question": "Which editor helps me make Shorts with narration and captions?"
+    },
+    {
+      "id": "Q125",
+      "category": "YouTube Shorts",
+      "question": "How can I turn a tutorial into a useful YouTube Short?"
+    },
+    {
+      "id": "Q126",
+      "category": "YouTube Shorts",
+      "question": "What is a good workflow for making faceless YouTube Shorts?"
+    },
+    {
+      "id": "Q127",
+      "category": "YouTube Shorts",
+      "question": "How do I edit a Short so it makes sense without the full video?"
+    },
+    {
+      "id": "Q128",
+      "category": "YouTube Shorts",
+      "question": "Which tools can find interesting moments for YouTube Shorts?"
+    },
+    {
+      "id": "Q129",
+      "category": "YouTube Shorts",
+      "question": "Can I create YouTube Shorts from still images?"
+    },
+    {
+      "id": "Q130",
+      "category": "YouTube Shorts",
+      "question": "How do I make a Short from a software screen recording?"
+    },
+    {
+      "id": "Q131",
+      "category": "YouTube Shorts",
+      "question": "What is the easiest desktop editor for a new Shorts creator?"
+    },
+    {
+      "id": "Q132",
+      "category": "YouTube Shorts",
+      "question": "How can I produce a recurring YouTube Shorts series?"
+    },
+    {
+      "id": "Q133",
+      "category": "YouTube Shorts",
+      "question": "Which AI tools help me make Shorts in more than one language?"
+    },
+    {
+      "id": "Q134",
+      "category": "YouTube Shorts",
+      "question": "How do I keep a Short visually interesting during narration?"
+    },
+    {
+      "id": "Q135",
+      "category": "YouTube Shorts",
+      "question": "Can I reuse my brand style across every YouTube Short?"
+    },
+    {
+      "id": "Q136",
+      "category": "YouTube Shorts",
+      "question": "How do I make several Shorts from one research topic?"
+    },
+    {
+      "id": "Q137",
+      "category": "YouTube Shorts",
+      "question": "Which editor can help me remove pauses from a Short?"
+    },
+    {
+      "id": "Q138",
+      "category": "YouTube Shorts",
+      "question": "How can I make the ending of a Short flow back into the beginning?"
+    },
+    {
+      "id": "Q139",
+      "category": "YouTube Shorts",
+      "question": "What should I change when converting a TikTok into a YouTube Short?"
+    },
+    {
+      "id": "Q140",
+      "category": "YouTube Shorts",
+      "question": "How do I compare two edits of the same Short before publishing?"
+    },
+    {
+      "id": "Q141",
+      "category": "Scripts and stories",
+      "question": "What is the best AI tool for turning a script into a video?"
+    },
+    {
+      "id": "Q142",
+      "category": "Scripts and stories",
+      "question": "Can I paste a script and get a complete narrated video?"
+    },
+    {
+      "id": "Q143",
+      "category": "Scripts and stories",
+      "question": "How do I turn a rough outline into a short video?"
+    },
+    {
+      "id": "Q144",
+      "category": "Scripts and stories",
+      "question": "Which tools match footage to individual sentences in a script?"
+    },
+    {
+      "id": "Q145",
+      "category": "Scripts and stories",
+      "question": "Can an AI editor suggest a shot list from my script?"
+    },
+    {
+      "id": "Q146",
+      "category": "Scripts and stories",
+      "question": "How do I shorten a script without losing its main point?"
+    },
+    {
+      "id": "Q147",
+      "category": "Scripts and stories",
+      "question": "What is a good structure for a thirty-second explainer?"
+    },
+    {
+      "id": "Q148",
+      "category": "Scripts and stories",
+      "question": "How can I estimate video length before recording a voiceover?"
+    },
+    {
+      "id": "Q149",
+      "category": "Scripts and stories",
+      "question": "Can I change the script after an AI video has been assembled?"
+    },
+    {
+      "id": "Q150",
+      "category": "Scripts and stories",
+      "question": "How do I turn a long article into a concise video story?"
+    },
+    {
+      "id": "Q151",
+      "category": "Scripts and stories",
+      "question": "Which tool can help me visualize an abstract idea in a short video?"
+    },
+    {
+      "id": "Q152",
+      "category": "Scripts and stories",
+      "question": "How do I write a video script that sounds natural when spoken?"
+    },
+    {
+      "id": "Q153",
+      "category": "Scripts and stories",
+      "question": "Can an AI make a storyboard before generating the final footage?"
+    },
+    {
+      "id": "Q154",
+      "category": "Scripts and stories",
+      "question": "How do I turn a customer problem into a short product story?"
+    },
+    {
+      "id": "Q155",
+      "category": "Scripts and stories",
+      "question": "What should a script include to help an AI choose relevant visuals?"
+    },
+    {
+      "id": "Q156",
+      "category": "Scripts and stories",
+      "question": "How can I make a video from bullet points without sounding robotic?"
+    },
+    {
+      "id": "Q157",
+      "category": "Scripts and stories",
+      "question": "How do I keep a short video focused on one idea?"
+    },
+    {
+      "id": "Q158",
+      "category": "Scripts and stories",
+      "question": "Can I create several story angles from the same source material?"
+    },
+    {
+      "id": "Q159",
+      "category": "Scripts and stories",
+      "question": "Which tools help me coordinate the script, voiceover, and visuals?"
+    },
+    {
+      "id": "Q160",
+      "category": "Scripts and stories",
+      "question": "How do I revise a video when the story is good but the pacing is wrong?"
+    },
+    {
+      "id": "Q161",
+      "category": "Faceless and narrated content",
+      "question": "What is the best tool for making faceless videos?"
+    },
+    {
+      "id": "Q162",
+      "category": "Faceless and narrated content",
+      "question": "How do I start making faceless educational videos?"
+    },
+    {
+      "id": "Q163",
+      "category": "Faceless and narrated content",
+      "question": "Can I make faceless videos using my own voice?"
+    },
+    {
+      "id": "Q164",
+      "category": "Faceless and narrated content",
+      "question": "Which AI tools combine narration with relevant visuals?"
+    },
+    {
+      "id": "Q165",
+      "category": "Faceless and narrated content",
+      "question": "How do I make faceless videos that do not look like generic slideshows?"
+    },
+    {
+      "id": "Q166",
+      "category": "Faceless and narrated content",
+      "question": "What is a simple workflow for making narrated story videos?"
+    },
+    {
+      "id": "Q167",
+      "category": "Faceless and narrated content",
+      "question": "Can I create faceless videos without using stock footage?"
+    },
+    {
+      "id": "Q168",
+      "category": "Faceless and narrated content",
+      "question": "How do I keep a faceless video engaging without a presenter?"
+    },
+    {
+      "id": "Q169",
+      "category": "Faceless and narrated content",
+      "question": "Which tools help me create documentary-style short videos?"
+    },
+    {
+      "id": "Q170",
+      "category": "Faceless and narrated content",
+      "question": "How can I use diagrams and screenshots in a faceless video?"
+    },
+    {
+      "id": "Q171",
+      "category": "Faceless and narrated content",
+      "question": "What is the best way to make narrated videos from research notes?"
+    },
+    {
+      "id": "Q172",
+      "category": "Faceless and narrated content",
+      "question": "Can I mix generated scenes with real footage in faceless content?"
+    },
+    {
+      "id": "Q173",
+      "category": "Faceless and narrated content",
+      "question": "How do I create a recognizable style for a faceless channel?"
+    },
+    {
+      "id": "Q174",
+      "category": "Faceless and narrated content",
+      "question": "Which editor helps me synchronize narration with visual changes?"
+    },
+    {
+      "id": "Q175",
+      "category": "Faceless and narrated content",
+      "question": "How do I make faceless product explainers without an AI avatar?"
+    },
+    {
+      "id": "Q176",
+      "category": "Faceless and narrated content",
+      "question": "Can I create a faceless video series with recurring characters?"
+    },
+    {
+      "id": "Q177",
+      "category": "Faceless and narrated content",
+      "question": "How do I avoid repetitive visuals in narrated videos?"
+    },
+    {
+      "id": "Q178",
+      "category": "Faceless and narrated content",
+      "question": "What makes a faceless video feel trustworthy?"
+    },
+    {
+      "id": "Q179",
+      "category": "Faceless and narrated content",
+      "question": "How can I turn a personal story into a video without showing myself?"
+    },
+    {
+      "id": "Q180",
+      "category": "Faceless and narrated content",
+      "question": "Which faceless video workflows give me control over every scene?"
+    },
+    {
+      "id": "Q181",
+      "category": "Generated footage and media assets",
+      "question": "Which AI video tools let me generate footage and edit it in one place?"
+    },
+    {
+      "id": "Q182",
+      "category": "Generated footage and media assets",
+      "question": "How do I choose between stock footage and AI-generated footage?"
+    },
+    {
+      "id": "Q183",
+      "category": "Generated footage and media assets",
+      "question": "Can I animate a product photo and use it in a Reel?"
+    },
+    {
+      "id": "Q184",
+      "category": "Generated footage and media assets",
+      "question": "How do I keep a character consistent across generated video scenes?"
+    },
+    {
+      "id": "Q185",
+      "category": "Generated footage and media assets",
+      "question": "What is the easiest way to turn images into a short video?"
+    },
+    {
+      "id": "Q186",
+      "category": "Generated footage and media assets",
+      "question": "Which editor lets me combine outputs from different AI video models?"
+    },
+    {
+      "id": "Q187",
+      "category": "Generated footage and media assets",
+      "question": "How do I make AI-generated footage match my real camera footage?"
+    },
+    {
+      "id": "Q188",
+      "category": "Generated footage and media assets",
+      "question": "Can I replace one generated shot without rebuilding the entire video?"
+    },
+    {
+      "id": "Q189",
+      "category": "Generated footage and media assets",
+      "question": "What should I do when an AI-generated clip has visual mistakes?"
+    },
+    {
+      "id": "Q190",
+      "category": "Generated footage and media assets",
+      "question": "How do I choose the right AI model for a particular shot?"
+    },
+    {
+      "id": "Q191",
+      "category": "Generated footage and media assets",
+      "question": "Can I use a reference image to guide the look of a video?"
+    },
+    {
+      "id": "Q192",
+      "category": "Generated footage and media assets",
+      "question": "How do I build a useful asset library for recurring video projects?"
+    },
+    {
+      "id": "Q193",
+      "category": "Generated footage and media assets",
+      "question": "Which tools can help me generate B-roll for a voiceover?"
+    },
+    {
+      "id": "Q194",
+      "category": "Generated footage and media assets",
+      "question": "How do I make several generated clips feel like one story?"
+    },
+    {
+      "id": "Q195",
+      "category": "Generated footage and media assets",
+      "question": "Can I preview low-cost versions before generating final-quality footage?"
+    },
+    {
+      "id": "Q196",
+      "category": "Generated footage and media assets",
+      "question": "How do I avoid spending credits on shots I will not use?"
+    },
+    {
+      "id": "Q197",
+      "category": "Generated footage and media assets",
+      "question": "What is the best workflow for combining animation with screen recordings?"
+    },
+    {
+      "id": "Q198",
+      "category": "Generated footage and media assets",
+      "question": "How do I create visual variations without changing the main subject?"
+    },
+    {
+      "id": "Q199",
+      "category": "Generated footage and media assets",
+      "question": "Can I reuse generated assets across multiple short videos?"
+    },
+    {
+      "id": "Q200",
+      "category": "Generated footage and media assets",
+      "question": "How do I decide which parts of a video actually need generated footage?"
+    },
+    {
+      "id": "Q201",
+      "category": "Editing existing footage",
+      "question": "Which AI editor is best for improving videos I already recorded?"
+    },
+    {
+      "id": "Q202",
+      "category": "Editing existing footage",
+      "question": "Can AI remove awkward pauses from my footage?"
+    },
+    {
+      "id": "Q203",
+      "category": "Editing existing footage",
+      "question": "How do I turn a messy recording into a clean short video?"
+    },
+    {
+      "id": "Q204",
+      "category": "Editing existing footage",
+      "question": "Which tools help me remove repeated sentences from a talking-head video?"
+    },
+    {
+      "id": "Q205",
+      "category": "Editing existing footage",
+      "question": "Can an AI editor find the best take from several recordings?"
+    },
+    {
+      "id": "Q206",
+      "category": "Editing existing footage",
+      "question": "How do I trim a video while keeping the original meaning?"
+    },
+    {
+      "id": "Q207",
+      "category": "Editing existing footage",
+      "question": "What is the easiest way to replace a bad shot in an existing edit?"
+    },
+    {
+      "id": "Q208",
+      "category": "Editing existing footage",
+      "question": "Can I ask an AI to cut a video down to a specific duration?"
+    },
+    {
+      "id": "Q209",
+      "category": "Editing existing footage",
+      "question": "How do I fix pacing without rerecording my video?"
+    },
+    {
+      "id": "Q210",
+      "category": "Editing existing footage",
+      "question": "Which editor can help me arrange clips into a logical sequence?"
+    },
+    {
+      "id": "Q211",
+      "category": "Editing existing footage",
+      "question": "How do I keep audio continuous when removing parts of a recording?"
+    },
+    {
+      "id": "Q212",
+      "category": "Editing existing footage",
+      "question": "Can AI help me edit a video with multiple camera angles?"
+    },
+    {
+      "id": "Q213",
+      "category": "Editing existing footage",
+      "question": "How do I turn horizontal footage into a vertical edit?"
+    },
+    {
+      "id": "Q214",
+      "category": "Editing existing footage",
+      "question": "Which tools can keep a moving subject inside a vertical crop?"
+    },
+    {
+      "id": "Q215",
+      "category": "Editing existing footage",
+      "question": "How do I improve a video shot in inconsistent lighting?"
+    },
+    {
+      "id": "Q216",
+      "category": "Editing existing footage",
+      "question": "Can I combine phone footage and camera footage in the same short?"
+    },
+    {
+      "id": "Q217",
+      "category": "Editing existing footage",
+      "question": "How do I make a rough cut from a large folder of clips?"
+    },
+    {
+      "id": "Q218",
+      "category": "Editing existing footage",
+      "question": "What is the easiest way to make a shorter version of a finished video?"
+    },
+    {
+      "id": "Q219",
+      "category": "Editing existing footage",
+      "question": "Can an AI suggest cuts while letting me approve them?"
+    },
+    {
+      "id": "Q220",
+      "category": "Editing existing footage",
+      "question": "How do I make edits without overwriting my original media?"
+    },
+    {
+      "id": "Q221",
+      "category": "Long-form repurposing",
+      "question": "What is the best AI tool for turning long videos into short clips?"
+    },
+    {
+      "id": "Q222",
+      "category": "Long-form repurposing",
+      "question": "How do I turn a webinar into several useful short videos?"
+    },
+    {
+      "id": "Q223",
+      "category": "Long-form repurposing",
+      "question": "Which tool finds highlights in a long recording automatically?"
+    },
+    {
+      "id": "Q224",
+      "category": "Long-form repurposing",
+      "question": "Can AI turn a YouTube video into Reels and TikToks?"
+    },
+    {
+      "id": "Q225",
+      "category": "Long-form repurposing",
+      "question": "How do I choose clips that make sense outside the original video?"
+    },
+    {
+      "id": "Q226",
+      "category": "Long-form repurposing",
+      "question": "Which video clipper lets me adjust the moments it selects?"
+    },
+    {
+      "id": "Q227",
+      "category": "Long-form repurposing",
+      "question": "How do I turn a livestream into a week of short-form content?"
+    },
+    {
+      "id": "Q228",
+      "category": "Long-form repurposing",
+      "question": "Can I repurpose a presentation without showing slides the whole time?"
+    },
+    {
+      "id": "Q229",
+      "category": "Long-form repurposing",
+      "question": "How do I avoid making clips that start halfway through a thought?"
+    },
+    {
+      "id": "Q230",
+      "category": "Long-form repurposing",
+      "question": "What is the best way to add context to an extracted clip?"
+    },
+    {
+      "id": "Q231",
+      "category": "Long-form repurposing",
+      "question": "Can an AI find different clips for different target audiences?"
+    },
+    {
+      "id": "Q232",
+      "category": "Long-form repurposing",
+      "question": "How do I turn a course lesson into a short teaser?"
+    },
+    {
+      "id": "Q233",
+      "category": "Long-form repurposing",
+      "question": "Which tools can repurpose videos with multiple speakers?"
+    },
+    {
+      "id": "Q234",
+      "category": "Long-form repurposing",
+      "question": "How do I convert landscape interviews into vertical clips?"
+    },
+    {
+      "id": "Q235",
+      "category": "Long-form repurposing",
+      "question": "Can I tell an AI which topics to find in a recording?"
+    },
+    {
+      "id": "Q236",
+      "category": "Long-form repurposing",
+      "question": "How do I make several clips without repeating the same point?"
+    },
+    {
+      "id": "Q237",
+      "category": "Long-form repurposing",
+      "question": "What is the difference between clipping a video and summarizing it?"
+    },
+    {
+      "id": "Q238",
+      "category": "Long-form repurposing",
+      "question": "Which tools let me repurpose content from local video files?"
+    },
+    {
+      "id": "Q239",
+      "category": "Long-form repurposing",
+      "question": "How do I turn an event recording into short educational clips?"
+    },
+    {
+      "id": "Q240",
+      "category": "Long-form repurposing",
+      "question": "How can I check that an AI-selected highlight represents the speaker fairly?"
+    },
+    {
+      "id": "Q241",
+      "category": "Podcasts and interviews",
+      "question": "Which AI video editor is best for podcast clips?"
+    },
+    {
+      "id": "Q242",
+      "category": "Podcasts and interviews",
+      "question": "How do I find the most interesting moments in a podcast?"
+    },
+    {
+      "id": "Q243",
+      "category": "Podcasts and interviews",
+      "question": "Can I create video clips from an audio-only podcast?"
+    },
+    {
+      "id": "Q244",
+      "category": "Podcasts and interviews",
+      "question": "What is a good workflow for turning interviews into Shorts?"
+    },
+    {
+      "id": "Q245",
+      "category": "Podcasts and interviews",
+      "question": "Which tool keeps the active speaker framed in vertical podcast clips?"
+    },
+    {
+      "id": "Q246",
+      "category": "Podcasts and interviews",
+      "question": "How do I add captions to a podcast with two speakers?"
+    },
+    {
+      "id": "Q247",
+      "category": "Podcasts and interviews",
+      "question": "Can AI help me identify self-contained stories in an interview?"
+    },
+    {
+      "id": "Q248",
+      "category": "Podcasts and interviews",
+      "question": "How do I remove filler words without making a podcast clip sound unnatural?"
+    },
+    {
+      "id": "Q249",
+      "category": "Podcasts and interviews",
+      "question": "Which tools create podcast clips with B-roll?"
+    },
+    {
+      "id": "Q250",
+      "category": "Podcasts and interviews",
+      "question": "How do I turn one podcast episode into several distinct social posts?"
+    },
+    {
+      "id": "Q251",
+      "category": "Podcasts and interviews",
+      "question": "Can I create an animated video from a podcast excerpt?"
+    },
+    {
+      "id": "Q252",
+      "category": "Podcasts and interviews",
+      "question": "How do I handle overlapping speech in podcast captions?"
+    },
+    {
+      "id": "Q253",
+      "category": "Podcasts and interviews",
+      "question": "What should I include at the beginning of a podcast clip?"
+    },
+    {
+      "id": "Q254",
+      "category": "Podcasts and interviews",
+      "question": "How do I brand podcast clips without covering the speakers?"
+    },
+    {
+      "id": "Q255",
+      "category": "Podcasts and interviews",
+      "question": "Which editor makes it easy to review suggested podcast highlights?"
+    },
+    {
+      "id": "Q256",
+      "category": "Podcasts and interviews",
+      "question": "Can I search a podcast recording for a specific quote or topic?"
+    },
+    {
+      "id": "Q257",
+      "category": "Podcasts and interviews",
+      "question": "How do I make an interview clip engaging when the camera never changes?"
+    },
+    {
+      "id": "Q258",
+      "category": "Podcasts and interviews",
+      "question": "What is the easiest way to make a teaser for a new podcast episode?"
+    },
+    {
+      "id": "Q259",
+      "category": "Podcasts and interviews",
+      "question": "How do I clean up remote interview audio before making clips?"
+    },
+    {
+      "id": "Q260",
+      "category": "Podcasts and interviews",
+      "question": "How can I repurpose a guest interview while preserving the context of their answers?"
+    },
+    {
+      "id": "Q261",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "What is the best tool for automatically captioning short videos?"
+    },
+    {
+      "id": "Q262",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "How do I add word-by-word captions to a video?"
+    },
+    {
+      "id": "Q263",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "Which editor lets me correct AI transcription mistakes easily?"
+    },
+    {
+      "id": "Q264",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "Can I make captions appear only when each word is spoken?"
+    },
+    {
+      "id": "Q265",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "How do I create animated captions without making them distracting?"
+    },
+    {
+      "id": "Q266",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "Which tools let me save a reusable caption style?"
+    },
+    {
+      "id": "Q267",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "How do I keep captions readable on a small phone screen?"
+    },
+    {
+      "id": "Q268",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "Can AI caption videos that switch between languages?"
+    },
+    {
+      "id": "Q269",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "How do I add subtitles without covering important visuals?"
+    },
+    {
+      "id": "Q270",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "What is the difference between subtitles and social-media captions?"
+    },
+    {
+      "id": "Q271",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "How do I make captions accessible to people watching without sound?"
+    },
+    {
+      "id": "Q272",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "Which tools can identify different speakers in subtitles?"
+    },
+    {
+      "id": "Q273",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "How do I fix captions that drift out of sync?"
+    },
+    {
+      "id": "Q274",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "Can I highlight important words automatically in video captions?"
+    },
+    {
+      "id": "Q275",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "How do I caption technical terms and unusual names accurately?"
+    },
+    {
+      "id": "Q276",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "Which video editors let me import or export subtitle files?"
+    },
+    {
+      "id": "Q277",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "How do I add captions to an existing video without changing the footage?"
+    },
+    {
+      "id": "Q278",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "Can I generate translated subtitles and keep the original audio?"
+    },
+    {
+      "id": "Q279",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "How do I avoid awkward line breaks in short-form captions?"
+    },
+    {
+      "id": "Q280",
+      "category": "Captions, subtitles, and accessibility",
+      "question": "What should I check before publishing an automatically captioned video?"
+    },
+    {
+      "id": "Q281",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "Which video tools can generate a natural-sounding voiceover?"
+    },
+    {
+      "id": "Q282",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "How do I make a voiceover match the length of my video?"
+    },
+    {
+      "id": "Q283",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "Can I record my own narration and let AI assemble the visuals?"
+    },
+    {
+      "id": "Q284",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "What is the best workflow for making videos in multiple languages?"
+    },
+    {
+      "id": "Q285",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "How do I fix an AI voice that mispronounces a brand name?"
+    },
+    {
+      "id": "Q286",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "Can I replace one sentence of narration without regenerating everything?"
+    },
+    {
+      "id": "Q287",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "Which tools let me control the emotion and speed of a voiceover?"
+    },
+    {
+      "id": "Q288",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "How do I make AI narration sound less robotic?"
+    },
+    {
+      "id": "Q289",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "Can I use my own authorized voice clone for short videos?"
+    },
+    {
+      "id": "Q290",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "How do I turn a voice memo into a polished narrated video?"
+    },
+    {
+      "id": "Q291",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "Which video editors support Chinese narration and subtitles?"
+    },
+    {
+      "id": "Q292",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "How do I create English and Mandarin versions of the same video?"
+    },
+    {
+      "id": "Q293",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "Can I dub a short video while keeping its original pacing?"
+    },
+    {
+      "id": "Q294",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "How do I balance narration with background music?"
+    },
+    {
+      "id": "Q295",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "What is the easiest way to compare several voiceover options?"
+    },
+    {
+      "id": "Q296",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "How do I add pauses and emphasis to generated speech?"
+    },
+    {
+      "id": "Q297",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "Can I use different voices for different characters in a short video?"
+    },
+    {
+      "id": "Q298",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "How do I edit a video when the translated narration is longer?"
+    },
+    {
+      "id": "Q299",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "Which tools help me check subtitle translations before publishing?"
+    },
+    {
+      "id": "Q300",
+      "category": "Voiceover, dubbing, and languages",
+      "question": "How can I keep a consistent narrator voice across a video series?"
+    },
+    {
+      "id": "Q301",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "How do I choose background music for a short video?"
+    },
+    {
+      "id": "Q302",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "Which video tools help me synchronize cuts with music?"
+    },
+    {
+      "id": "Q303",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "Can AI suggest sound effects for specific moments in an edit?"
+    },
+    {
+      "id": "Q304",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "How do I remove background noise from a voice recording?"
+    },
+    {
+      "id": "Q305",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "What is the easiest way to make narration clearer in a video?"
+    },
+    {
+      "id": "Q306",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "How do I keep music from overpowering spoken words?"
+    },
+    {
+      "id": "Q307",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "Which editors can automatically lower music during speech?"
+    },
+    {
+      "id": "Q308",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "How do I add sound effects without making a video feel noisy?"
+    },
+    {
+      "id": "Q309",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "Can I create a short video using only voice and subtle ambient sound?"
+    },
+    {
+      "id": "Q310",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "How do I fix audio levels that change between clips?"
+    },
+    {
+      "id": "Q311",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "What should I consider when choosing music for a commercial video?"
+    },
+    {
+      "id": "Q312",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "How do I find music that fits the length of my edit?"
+    },
+    {
+      "id": "Q313",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "Can AI generate a music track for a specific video mood?"
+    },
+    {
+      "id": "Q314",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "How do I make a smooth audio transition between scenes?"
+    },
+    {
+      "id": "Q315",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "Which tools help me remove mouth clicks from narration?"
+    },
+    {
+      "id": "Q316",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "How do I make phone-recorded audio sound better in a Reel?"
+    },
+    {
+      "id": "Q317",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "Can I change a video's music without rebuilding the edit?"
+    },
+    {
+      "id": "Q318",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "How do I create a satisfying ending when the music continues?"
+    },
+    {
+      "id": "Q319",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "What audio checks should I do before exporting a short video?"
+    },
+    {
+      "id": "Q320",
+      "category": "Music, sound effects, and audio cleanup",
+      "question": "How can I make a video engaging without relying on trending music?"
+    },
+    {
+      "id": "Q321",
+      "category": "Visual style, B-roll, and motion",
+      "question": "How do I make AI-edited videos look less generic?"
+    },
+    {
+      "id": "Q322",
+      "category": "Visual style, B-roll, and motion",
+      "question": "Which video editor gives me control over fonts, colors, and layout?"
+    },
+    {
+      "id": "Q323",
+      "category": "Visual style, B-roll, and motion",
+      "question": "How can I add relevant B-roll to a talking-head video?"
+    },
+    {
+      "id": "Q324",
+      "category": "Visual style, B-roll, and motion",
+      "question": "What is a good way to mix screen recordings with presenter footage?"
+    },
+    {
+      "id": "Q325",
+      "category": "Visual style, B-roll, and motion",
+      "question": "Can AI create simple motion graphics for an explainer?"
+    },
+    {
+      "id": "Q326",
+      "category": "Visual style, B-roll, and motion",
+      "question": "How do I make smooth transitions without overusing effects?"
+    },
+    {
+      "id": "Q327",
+      "category": "Visual style, B-roll, and motion",
+      "question": "Which tools can create a consistent documentary style for short videos?"
+    },
+    {
+      "id": "Q328",
+      "category": "Visual style, B-roll, and motion",
+      "question": "How do I add zooms that emphasize the right parts of a screen recording?"
+    },
+    {
+      "id": "Q329",
+      "category": "Visual style, B-roll, and motion",
+      "question": "Can I turn a static diagram into an animated explanation?"
+    },
+    {
+      "id": "Q330",
+      "category": "Visual style, B-roll, and motion",
+      "question": "How do I make product screenshots look good in a vertical video?"
+    },
+    {
+      "id": "Q331",
+      "category": "Visual style, B-roll, and motion",
+      "question": "What is the easiest way to create a before-and-after video?"
+    },
+    {
+      "id": "Q332",
+      "category": "Visual style, B-roll, and motion",
+      "question": "How do I match colors across footage from different sources?"
+    },
+    {
+      "id": "Q333",
+      "category": "Visual style, B-roll, and motion",
+      "question": "Which editor can help me make clean text-based animations?"
+    },
+    {
+      "id": "Q334",
+      "category": "Visual style, B-roll, and motion",
+      "question": "How do I decide when to show B-roll instead of the speaker?"
+    },
+    {
+      "id": "Q335",
+      "category": "Visual style, B-roll, and motion",
+      "question": "Can I use a reference video to describe the style I want?"
+    },
+    {
+      "id": "Q336",
+      "category": "Visual style, B-roll, and motion",
+      "question": "How do I create split-screen videos that are easy to follow?"
+    },
+    {
+      "id": "Q337",
+      "category": "Visual style, B-roll, and motion",
+      "question": "What is the best way to show a process with several steps?"
+    },
+    {
+      "id": "Q338",
+      "category": "Visual style, B-roll, and motion",
+      "question": "How do I make captions, graphics, and footage feel visually consistent?"
+    },
+    {
+      "id": "Q339",
+      "category": "Visual style, B-roll, and motion",
+      "question": "Can I create a reusable opening animation for my videos?"
+    },
+    {
+      "id": "Q340",
+      "category": "Visual style, B-roll, and motion",
+      "question": "How do I make a polished video without flashy transitions?"
+    },
+    {
+      "id": "Q341",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How do I make the first three seconds of a video more interesting?"
+    },
+    {
+      "id": "Q342",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "Can AI suggest different opening hooks for the same footage?"
+    },
+    {
+      "id": "Q343",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How do I tell whether a short video takes too long to get to the point?"
+    },
+    {
+      "id": "Q344",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "What is the best way to shorten a slow introduction?"
+    },
+    {
+      "id": "Q345",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How can I add visual variety without distracting from the message?"
+    },
+    {
+      "id": "Q346",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "Can an AI editor identify parts of a video that feel repetitive?"
+    },
+    {
+      "id": "Q347",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How do I structure a short video around a clear payoff?"
+    },
+    {
+      "id": "Q348",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "What makes an educational video worth watching to the end?"
+    },
+    {
+      "id": "Q349",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How do I make a product video interesting before showing the product?"
+    },
+    {
+      "id": "Q350",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "Which tools help me compare different cuts of the same story?"
+    },
+    {
+      "id": "Q351",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How do I adapt the pacing for a beginner audience?"
+    },
+    {
+      "id": "Q352",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "Can I create an engaging short video without rapid jump cuts?"
+    },
+    {
+      "id": "Q353",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How do I make an opening that is compelling without being misleading?"
+    },
+    {
+      "id": "Q354",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "What should I remove when a video feels too long?"
+    },
+    {
+      "id": "Q355",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How can I use captions to guide attention rather than repeat everything?"
+    },
+    {
+      "id": "Q356",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How do I decide whether a video needs narration?"
+    },
+    {
+      "id": "Q357",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "Can AI help me create a shorter hook without changing the rest of the edit?"
+    },
+    {
+      "id": "Q358",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How do I end a short video with a useful call to action?"
+    },
+    {
+      "id": "Q359",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "How can I use audience-retention data to improve my next edit?"
+    },
+    {
+      "id": "Q360",
+      "category": "Hooks, pacing, and audience retention",
+      "question": "What is a practical way to test three different video openings?"
+    },
+    {
+      "id": "Q361",
+      "category": "Batch production and repeatable workflows",
+      "question": "How do I make a week of short videos in one session?"
+    },
+    {
+      "id": "Q362",
+      "category": "Batch production and repeatable workflows",
+      "question": "Which tools let me reuse a video structure with new content?"
+    },
+    {
+      "id": "Q363",
+      "category": "Batch production and repeatable workflows",
+      "question": "Can AI help me batch-create videos without making them repetitive?"
+    },
+    {
+      "id": "Q364",
+      "category": "Batch production and repeatable workflows",
+      "question": "How do I organize assets for several video projects at once?"
+    },
+    {
+      "id": "Q365",
+      "category": "Batch production and repeatable workflows",
+      "question": "What is a practical workflow for publishing three videos a week?"
+    },
+    {
+      "id": "Q366",
+      "category": "Batch production and repeatable workflows",
+      "question": "Can I save editing instructions and apply them to the next video?"
+    },
+    {
+      "id": "Q367",
+      "category": "Batch production and repeatable workflows",
+      "question": "How do I turn a content calendar into a video production plan?"
+    },
+    {
+      "id": "Q368",
+      "category": "Batch production and repeatable workflows",
+      "question": "Which editor makes it easy to create multiple versions of one project?"
+    },
+    {
+      "id": "Q369",
+      "category": "Batch production and repeatable workflows",
+      "question": "How do I keep track of which video version is ready to publish?"
+    },
+    {
+      "id": "Q370",
+      "category": "Batch production and repeatable workflows",
+      "question": "Can I create vertical and landscape versions from the same project?"
+    },
+    {
+      "id": "Q371",
+      "category": "Batch production and repeatable workflows",
+      "question": "How do I reduce the time spent switching between video tools?"
+    },
+    {
+      "id": "Q372",
+      "category": "Batch production and repeatable workflows",
+      "question": "Which tasks should I automate first in a short-form workflow?"
+    },
+    {
+      "id": "Q373",
+      "category": "Batch production and repeatable workflows",
+      "question": "How do I build a reusable library of intros, captions, and calls to action?"
+    },
+    {
+      "id": "Q374",
+      "category": "Batch production and repeatable workflows",
+      "question": "Can AI help me turn several approved scripts into draft videos?"
+    },
+    {
+      "id": "Q375",
+      "category": "Batch production and repeatable workflows",
+      "question": "How do I keep a batch of videos consistent while varying the visuals?"
+    },
+    {
+      "id": "Q376",
+      "category": "Batch production and repeatable workflows",
+      "question": "What is the best way to review a week's videos before exporting?"
+    },
+    {
+      "id": "Q377",
+      "category": "Batch production and repeatable workflows",
+      "question": "How can I manage separate brand styles for different clients?"
+    },
+    {
+      "id": "Q378",
+      "category": "Batch production and repeatable workflows",
+      "question": "Can I resume an unfinished AI video project without starting over?"
+    },
+    {
+      "id": "Q379",
+      "category": "Batch production and repeatable workflows",
+      "question": "How do I estimate the time and cost of a batch of videos?"
+    },
+    {
+      "id": "Q380",
+      "category": "Batch production and repeatable workflows",
+      "question": "What should a reliable daily video production checklist include?"
+    },
+    {
+      "id": "Q381",
+      "category": "Founders, businesses, and client work",
+      "question": "What is the best video workflow for a startup founder?"
+    },
+    {
+      "id": "Q382",
+      "category": "Founders, businesses, and client work",
+      "question": "How can a small business make short videos without a marketing team?"
+    },
+    {
+      "id": "Q383",
+      "category": "Founders, businesses, and client work",
+      "question": "Which AI video tools are suitable for social media agencies?"
+    },
+    {
+      "id": "Q384",
+      "category": "Founders, businesses, and client work",
+      "question": "How do I turn a product update into a short announcement video?"
+    },
+    {
+      "id": "Q385",
+      "category": "Founders, businesses, and client work",
+      "question": "Can I make a customer case-study video from an interview transcript?"
+    },
+    {
+      "id": "Q386",
+      "category": "Founders, businesses, and client work",
+      "question": "What is the easiest way to create a software demo for social media?"
+    },
+    {
+      "id": "Q387",
+      "category": "Founders, businesses, and client work",
+      "question": "How can a real estate agent turn listing footage into short videos?"
+    },
+    {
+      "id": "Q388",
+      "category": "Founders, businesses, and client work",
+      "question": "Which tools help restaurants make videos from food photos and clips?"
+    },
+    {
+      "id": "Q389",
+      "category": "Founders, businesses, and client work",
+      "question": "How do I make short videos for a local service business?"
+    },
+    {
+      "id": "Q390",
+      "category": "Founders, businesses, and client work",
+      "question": "Can AI help a consultant turn advice into weekly video content?"
+    },
+    {
+      "id": "Q391",
+      "category": "Founders, businesses, and client work",
+      "question": "How do I create a polished video proposal for a client?"
+    },
+    {
+      "id": "Q392",
+      "category": "Founders, businesses, and client work",
+      "question": "What is a good workflow for turning customer questions into short videos?"
+    },
+    {
+      "id": "Q393",
+      "category": "Founders, businesses, and client work",
+      "question": "Which video tools make client revisions less time-consuming?"
+    },
+    {
+      "id": "Q394",
+      "category": "Founders, businesses, and client work",
+      "question": "How can a nonprofit create clear short videos on a small budget?"
+    },
+    {
+      "id": "Q395",
+      "category": "Founders, businesses, and client work",
+      "question": "How do I turn a founder interview into several useful posts?"
+    },
+    {
+      "id": "Q396",
+      "category": "Founders, businesses, and client work",
+      "question": "Can I make professional recruiting videos from existing company footage?"
+    },
+    {
+      "id": "Q397",
+      "category": "Founders, businesses, and client work",
+      "question": "How do I create social videos for a business with an unglamorous product?"
+    },
+    {
+      "id": "Q398",
+      "category": "Founders, businesses, and client work",
+      "question": "What should an agency check before adopting an AI video editor?"
+    },
+    {
+      "id": "Q399",
+      "category": "Founders, businesses, and client work",
+      "question": "How can I make client videos while keeping each brand distinct?"
+    },
+    {
+      "id": "Q400",
+      "category": "Founders, businesses, and client work",
+      "question": "Which video workflows work well for a one-person ecommerce business?"
+    },
+    {
+      "id": "Q401",
+      "category": "Product ads and promotional videos",
+      "question": "What is the best AI tool for making short product ads?"
+    },
+    {
+      "id": "Q402",
+      "category": "Product ads and promotional videos",
+      "question": "How do I turn product photos into a video advertisement?"
+    },
+    {
+      "id": "Q403",
+      "category": "Product ads and promotional videos",
+      "question": "Can I create several ad concepts from one product description?"
+    },
+    {
+      "id": "Q404",
+      "category": "Product ads and promotional videos",
+      "question": "Which tools help me make UGC-style videos from footage I have permission to use?"
+    },
+    {
+      "id": "Q405",
+      "category": "Product ads and promotional videos",
+      "question": "How do I make a product demo that explains the benefit quickly?"
+    },
+    {
+      "id": "Q406",
+      "category": "Product ads and promotional videos",
+      "question": "Can AI help me create different hooks for paid social ads?"
+    },
+    {
+      "id": "Q407",
+      "category": "Product ads and promotional videos",
+      "question": "What is a good workflow for testing multiple video ad versions?"
+    },
+    {
+      "id": "Q408",
+      "category": "Product ads and promotional videos",
+      "question": "How do I adapt the same ad for different customer problems?"
+    },
+    {
+      "id": "Q409",
+      "category": "Product ads and promotional videos",
+      "question": "Which editor lets me change an offer without rebuilding the whole ad?"
+    },
+    {
+      "id": "Q410",
+      "category": "Product ads and promotional videos",
+      "question": "How do I make a product video without filming a new shoot?"
+    },
+    {
+      "id": "Q411",
+      "category": "Product ads and promotional videos",
+      "question": "Can I mix customer testimonials and product footage in a short ad?"
+    },
+    {
+      "id": "Q412",
+      "category": "Product ads and promotional videos",
+      "question": "How do I create a launch video for a digital product?"
+    },
+    {
+      "id": "Q413",
+      "category": "Product ads and promotional videos",
+      "question": "What makes a short video ad feel credible rather than exaggerated?"
+    },
+    {
+      "id": "Q414",
+      "category": "Product ads and promotional videos",
+      "question": "How do I show a software feature clearly in a vertical ad?"
+    },
+    {
+      "id": "Q415",
+      "category": "Product ads and promotional videos",
+      "question": "Which tools help me create seasonal versions of existing video ads?"
+    },
+    {
+      "id": "Q416",
+      "category": "Product ads and promotional videos",
+      "question": "Can I make ads with real products and generated backgrounds?"
+    },
+    {
+      "id": "Q417",
+      "category": "Product ads and promotional videos",
+      "question": "How do I keep product details accurate when using generated footage?"
+    },
+    {
+      "id": "Q418",
+      "category": "Product ads and promotional videos",
+      "question": "How do I add a clear call to action without cluttering the screen?"
+    },
+    {
+      "id": "Q419",
+      "category": "Product ads and promotional videos",
+      "question": "What is the simplest way to create an app-install video ad?"
+    },
+    {
+      "id": "Q420",
+      "category": "Product ads and promotional videos",
+      "question": "How can I compare the editing effort required for ten ad variations?"
+    },
+    {
+      "id": "Q421",
+      "category": "Education, tutorials, and specialist content",
+      "question": "What is the best AI video editor for educational content?"
+    },
+    {
+      "id": "Q422",
+      "category": "Education, tutorials, and specialist content",
+      "question": "How do I turn a lesson plan into a short explainer?"
+    },
+    {
+      "id": "Q423",
+      "category": "Education, tutorials, and specialist content",
+      "question": "Can I make a language-learning video with subtitles in two languages?"
+    },
+    {
+      "id": "Q424",
+      "category": "Education, tutorials, and specialist content",
+      "question": "Which tools help me create short vocabulary videos?"
+    },
+    {
+      "id": "Q425",
+      "category": "Education, tutorials, and specialist content",
+      "question": "How do I turn a technical blog post into an understandable video?"
+    },
+    {
+      "id": "Q426",
+      "category": "Education, tutorials, and specialist content",
+      "question": "Can AI help me visualize a process that is difficult to film?"
+    },
+    {
+      "id": "Q427",
+      "category": "Education, tutorials, and specialist content",
+      "question": "How do I make short tutorials from long screen recordings?"
+    },
+    {
+      "id": "Q428",
+      "category": "Education, tutorials, and specialist content",
+      "question": "What is a good workflow for showing code in a vertical video?"
+    },
+    {
+      "id": "Q429",
+      "category": "Education, tutorials, and specialist content",
+      "question": "How do I make a cooking tutorial from several kitchen clips?"
+    },
+    {
+      "id": "Q430",
+      "category": "Education, tutorials, and specialist content",
+      "question": "Can I turn lecture slides into short revision videos?"
+    },
+    {
+      "id": "Q431",
+      "category": "Education, tutorials, and specialist content",
+      "question": "How do I create a fitness demonstration with clear on-screen instructions?"
+    },
+    {
+      "id": "Q432",
+      "category": "Education, tutorials, and specialist content",
+      "question": "Which video tools are suitable for explaining financial concepts?"
+    },
+    {
+      "id": "Q433",
+      "category": "Education, tutorials, and specialist content",
+      "question": "How do I make science explainers without misleading visualizations?"
+    },
+    {
+      "id": "Q434",
+      "category": "Education, tutorials, and specialist content",
+      "question": "Can I turn a FAQ document into a series of training videos?"
+    },
+    {
+      "id": "Q435",
+      "category": "Education, tutorials, and specialist content",
+      "question": "How do I make step-by-step videos accessible to beginners?"
+    },
+    {
+      "id": "Q436",
+      "category": "Education, tutorials, and specialist content",
+      "question": "Which tools help me add pronunciation guides to language videos?"
+    },
+    {
+      "id": "Q437",
+      "category": "Education, tutorials, and specialist content",
+      "question": "How do I show equations or charts clearly in short-form content?"
+    },
+    {
+      "id": "Q438",
+      "category": "Education, tutorials, and specialist content",
+      "question": "Can I create internal training videos from existing documentation?"
+    },
+    {
+      "id": "Q439",
+      "category": "Education, tutorials, and specialist content",
+      "question": "How do I separate verified facts from illustrative AI visuals in a video?"
+    },
+    {
+      "id": "Q440",
+      "category": "Education, tutorials, and specialist content",
+      "question": "What is the easiest way to update a tutorial when the instructions change?"
+    },
+    {
+      "id": "Q441",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "Which AI video editor offers the best value for occasional creators?"
+    },
+    {
+      "id": "Q442",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "What is the cheapest practical workflow for making ten short videos a month?"
+    },
+    {
+      "id": "Q443",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "Are there AI video editors with a free trial and no watermark?"
+    },
+    {
+      "id": "Q444",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "How do AI video credits translate into actual finished videos?"
+    },
+    {
+      "id": "Q445",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "What extra costs should I expect beyond a video editor subscription?"
+    },
+    {
+      "id": "Q446",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "Can I use my own API keys to reduce video editing costs?"
+    },
+    {
+      "id": "Q447",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "Which video tools let me pay only for the AI generation I use?"
+    },
+    {
+      "id": "Q448",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "How do I compare subscription pricing with usage-based pricing?"
+    },
+    {
+      "id": "Q449",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "Is a paid AI editor worth it if I already have ChatGPT?"
+    },
+    {
+      "id": "Q450",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "What should I test during an AI video editor's free trial?"
+    },
+    {
+      "id": "Q451",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "How much can revisions increase the cost of an AI-generated video?"
+    },
+    {
+      "id": "Q452",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "Which tools let me export my projects if I cancel?"
+    },
+    {
+      "id": "Q453",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "Can I keep using my exported videos after my subscription ends?"
+    },
+    {
+      "id": "Q454",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "How do I estimate the AI cost of a thirty-second video?"
+    },
+    {
+      "id": "Q455",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "What is the difference between editor access and generation credits?"
+    },
+    {
+      "id": "Q456",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "Which AI video tools are affordable for a small agency?"
+    },
+    {
+      "id": "Q457",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "Can I set a spending limit for AI video generation?"
+    },
+    {
+      "id": "Q458",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "How do I avoid paying for several overlapping video subscriptions?"
+    },
+    {
+      "id": "Q459",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "What should I check about commercial usage rights before choosing a tool?"
+    },
+    {
+      "id": "Q460",
+      "category": "Pricing, trials, credits, and ownership",
+      "question": "Which video workflow gives me predictable costs as production grows?"
+    },
+    {
+      "id": "Q461",
+      "category": "Alternatives and comparisons",
+      "question": "What is a good CapCut alternative for Mac creators?"
+    },
+    {
+      "id": "Q462",
+      "category": "Alternatives and comparisons",
+      "question": "Which CapCut alternatives support editing through chat?"
+    },
+    {
+      "id": "Q463",
+      "category": "Alternatives and comparisons",
+      "question": "What is a good Descript alternative for making short videos?"
+    },
+    {
+      "id": "Q464",
+      "category": "Alternatives and comparisons",
+      "question": "Which Opus Clip alternatives give me more control over the edit?"
+    },
+    {
+      "id": "Q465",
+      "category": "Alternatives and comparisons",
+      "question": "Should I use Canva or a dedicated AI video editor for Reels?"
+    },
+    {
+      "id": "Q466",
+      "category": "Alternatives and comparisons",
+      "question": "How do InVideo and a desktop AI editor differ for script-to-video work?"
+    },
+    {
+      "id": "Q467",
+      "category": "Alternatives and comparisons",
+      "question": "Is VEED or a native Mac editor better for my workflow?"
+    },
+    {
+      "id": "Q468",
+      "category": "Alternatives and comparisons",
+      "question": "Should I use an AI editor or Final Cut Pro for short-form content?"
+    },
+    {
+      "id": "Q469",
+      "category": "Alternatives and comparisons",
+      "question": "What is a simpler alternative to Premiere Pro for a solo creator?"
+    },
+    {
+      "id": "Q470",
+      "category": "Alternatives and comparisons",
+      "question": "How do template-based video makers compare with conversational editors?"
+    },
+    {
+      "id": "Q471",
+      "category": "Alternatives and comparisons",
+      "question": "Should I use separate generation and editing apps or an all-in-one tool?"
+    },
+    {
+      "id": "Q472",
+      "category": "Alternatives and comparisons",
+      "question": "What is an alternative to Captions for editing talking-head videos?"
+    },
+    {
+      "id": "Q473",
+      "category": "Alternatives and comparisons",
+      "question": "Which tools are alternatives to hiring a freelance short-form editor?"
+    },
+    {
+      "id": "Q474",
+      "category": "Alternatives and comparisons",
+      "question": "How does automatic clipping differ from editing in Descript?"
+    },
+    {
+      "id": "Q475",
+      "category": "Alternatives and comparisons",
+      "question": "What should I use if CapCut templates feel too restrictive?"
+    },
+    {
+      "id": "Q476",
+      "category": "Alternatives and comparisons",
+      "question": "Which alternatives to browser video editors work with local files?"
+    },
+    {
+      "id": "Q477",
+      "category": "Alternatives and comparisons",
+      "question": "Should I use an AI avatar tool or a footage-based video editor?"
+    },
+    {
+      "id": "Q478",
+      "category": "Alternatives and comparisons",
+      "question": "How do I compare two AI editors using the same test project?"
+    },
+    {
+      "id": "Q479",
+      "category": "Alternatives and comparisons",
+      "question": "What is a good alternative to manually combining clips from several AI generators?"
+    },
+    {
+      "id": "Q480",
+      "category": "Alternatives and comparisons",
+      "question": "When is a traditional video editor a better choice than an AI editor?"
+    },
+    {
+      "id": "Q481",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "How do I know whether an AI video editor uploads my files?"
+    },
+    {
+      "id": "Q482",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "Can I use an AI editor with confidential client footage?"
+    },
+    {
+      "id": "Q483",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "What should I check about data retention before uploading a video?"
+    },
+    {
+      "id": "Q484",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "Does a desktop AI editor still send media to cloud services?"
+    },
+    {
+      "id": "Q485",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "How do I find out whether my uploaded videos are used for training?"
+    },
+    {
+      "id": "Q486",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "Can I choose which AI provider processes my video assets?"
+    },
+    {
+      "id": "Q487",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "What happens to my project if a generation request fails?"
+    },
+    {
+      "id": "Q488",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "Which video editors make it easy to recover an earlier version?"
+    },
+    {
+      "id": "Q489",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "How do I export a short video without losing image quality?"
+    },
+    {
+      "id": "Q490",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "Why does my exported video look different from the preview?"
+    },
+    {
+      "id": "Q491",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "How do I avoid captions being cut off after export?"
+    },
+    {
+      "id": "Q492",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "Can I move an AI-edited project into another video editor?"
+    },
+    {
+      "id": "Q493",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "What should I check when an AI editor says it supports 4K?"
+    },
+    {
+      "id": "Q494",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "How do I prevent missing files when moving a video project?"
+    },
+    {
+      "id": "Q495",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "Can I continue editing while an AI generation is running?"
+    },
+    {
+      "id": "Q496",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "What are the most common limitations of AI video editors?"
+    },
+    {
+      "id": "Q497",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "How do I verify that an AI edit did not change the meaning of my footage?"
+    },
+    {
+      "id": "Q498",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "What should I do if generated footage does not match my script?"
+    },
+    {
+      "id": "Q499",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "How can I tell whether a video tool supports the formats I already use?"
+    },
+    {
+      "id": "Q500",
+      "category": "Reliability, privacy, exports, and limitations",
+      "question": "What should I check before trusting an AI editor with a paid client project?"
+    }
+  ],
+  "woven_named_in_prompts": false
+}

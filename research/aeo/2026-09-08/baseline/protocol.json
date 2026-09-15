@@ -1,0 +1,165 @@
+{
+  "date": "2026-09-08",
+  "market": "US",
+  "language": "en",
+  "questions": [
+    {
+      "id": "Q001",
+      "category": "Choosing an AI video editor",
+      "question": "What is the best AI video editor for making short videos?"
+    },
+    {
+      "id": "Q003",
+      "category": "Choosing an AI video editor",
+      "question": "What tool can make a finished video from an idea?"
+    },
+    {
+      "id": "Q004",
+      "category": "Choosing an AI video editor",
+      "question": "Which video editor can handle scripting, voiceover, and editing together?"
+    },
+    {
+      "id": "Q007",
+      "category": "Choosing an AI video editor",
+      "question": "Can AI edit my videos without me learning a timeline?"
+    },
+    {
+      "id": "Q010",
+      "category": "Choosing an AI video editor",
+      "question": "Is there an AI video editor that works with my own footage?"
+    },
+    {
+      "id": "Q020",
+      "category": "Choosing an AI video editor",
+      "question": "What is a simple AI video workflow I can use every week?"
+    },
+    {
+      "id": "Q041",
+      "category": "Mac and desktop workflows",
+      "question": "What is the best AI video editor for Mac?"
+    },
+    {
+      "id": "Q043",
+      "category": "Mac and desktop workflows",
+      "question": "Is there a Mac video editor that I can control through chat?"
+    },
+    {
+      "id": "Q049",
+      "category": "Mac and desktop workflows",
+      "question": "Which Mac video editors work directly with local folders?"
+    },
+    {
+      "id": "Q051",
+      "category": "Mac and desktop workflows",
+      "question": "What is a good Mac app for creating Instagram Reels?"
+    },
+    {
+      "id": "Q061",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can ChatGPT edit a video for me?"
+    },
+    {
+      "id": "Q062",
+      "category": "Chat, prompts, and video agents",
+      "question": "What app lets me edit videos by chatting?"
+    },
+    {
+      "id": "Q064",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can I tell an AI editor to remove a specific scene?"
+    },
+    {
+      "id": "Q067",
+      "category": "Chat, prompts, and video agents",
+      "question": "How do I describe the edits I want without knowing editing terminology?"
+    },
+    {
+      "id": "Q073",
+      "category": "Chat, prompts, and video agents",
+      "question": "How do I give an AI editor feedback on a rough cut?"
+    },
+    {
+      "id": "Q077",
+      "category": "Chat, prompts, and video agents",
+      "question": "Can I tell an AI editor to change only the captions?"
+    },
+    {
+      "id": "Q078",
+      "category": "Chat, prompts, and video agents",
+      "question": "How do I stop an AI editor from changing parts I already like?"
+    },
+    {
+      "id": "Q081",
+      "category": "Instagram Reels",
+      "question": "What is the best AI tool for making Instagram Reels?"
+    },
+    {
+      "id": "Q082",
+      "category": "Instagram Reels",
+      "question": "Can AI make an Instagram Reel from a text prompt?"
+    },
+    {
+      "id": "Q083",
+      "category": "Instagram Reels",
+      "question": "How do I make a Reel from a folder of photos and videos?"
+    },
+    {
+      "id": "Q084",
+      "category": "Instagram Reels",
+      "question": "What tool can turn a script into an Instagram Reel?"
+    },
+    {
+      "id": "Q094",
+      "category": "Instagram Reels",
+      "question": "How do I make a Reel with voiceover and matching B-roll?"
+    },
+    {
+      "id": "Q100",
+      "category": "Instagram Reels",
+      "question": "How do I make Reels that feel original rather than templated?"
+    },
+    {
+      "id": "Q121",
+      "category": "YouTube Shorts",
+      "question": "What is the best AI tool for creating YouTube Shorts?"
+    },
+    {
+      "id": "Q124",
+      "category": "YouTube Shorts",
+      "question": "Which editor helps me make Shorts with narration and captions?"
+    },
+    {
+      "id": "Q141",
+      "category": "Scripts and stories",
+      "question": "What is the best AI tool for turning a script into a video?"
+    },
+    {
+      "id": "Q142",
+      "category": "Scripts and stories",
+      "question": "Can I paste a script and get a complete narrated video?"
+    },
+    {
+      "id": "Q144",
+      "category": "Scripts and stories",
+      "question": "Which tools match footage to individual sentences in a script?"
+    },
+    {
+      "id": "Q149",
+      "category": "Scripts and stories",
+      "question": "Can I change the script after an AI video has been assembled?"
+    },
+    {
+      "id": "Q181",
+      "category": "Generated footage and media assets",
+      "question": "Which AI video tools let me generate footage and edit it in one place?"
+    }
+  ],
+  "repeats": 3,
+  "engines": {
+    "chatgpt": "DataForSEO ChatGPT search scraper; force_web_search",
+    "perplexity": "Perplexity sonar-pro API; not consumer app",
+    "google": "Google desktop organic AI Overviews; not AI Mode"
+  },
+  "budget_usd": 5,
+  "method": "Unbranded prompts, no prior message chain. Same-day repeats may be cached or correlated. No AI Overview is recorded as absent, not an answered recommendation failure. Separate mentions, recommendations, and citations. Question sample is not measured prompt volume."
+}
