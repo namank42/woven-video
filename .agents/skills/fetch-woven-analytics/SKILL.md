@@ -1,6 +1,8 @@
 ---
 name: "fetch-woven-analytics"
 description: "Fetch and summarize Woven product analytics from the prod Supabase DB. Use when asked to \"fetch analytics\", \"what have users been doing\", \"summarize prod analytics\", \"analytics by user\", \"did <user> create a reel\", or any read of the prod analytics_events stream. Resolves user_id to email and cross-references billing tables."
+user-invocable: true
+allowed-tools: Bash, Read
 ---
 
 # Fetch Woven Analytics
