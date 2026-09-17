@@ -410,6 +410,74 @@ describe("desktop telemetry v1 validation", () => {
     expect(validate(value)).toEqual({ ok: true, batch: value });
   });
 
+  it("accepts every failure_category value on reel_export and export_incident", () => {
+    for (
+      const failureCategory of [
+        "staging",
+        "source_resolution",
+        "source_decoding",
+        "composition",
+        "video_writing",
+        "audio_rendering",
+        "muxing",
+        "cancellation",
+        "finder_reveal",
+      ]
+    ) {
+      const value = batch([
+        productEvent({
+          event_name: "reel_export",
+          stage: "failed",
+          priority: 1,
+          properties: {
+            quality: "maximum",
+            invocation_source: "menu",
+            reason_code: "failed",
+            failure_category: failureCategory,
+          },
+        }),
+        operationalEvent({
+          event_name: "export_incident",
+          stage: "failed",
+          priority: 0,
+          incident_id: UUIDS.incident,
+          properties: {
+            error_domain: "export",
+            error_code: "failed",
+            component: "export",
+            phase: "render",
+            severity: "error",
+            user_visible: true,
+            retryable: true,
+            transient: true,
+            error_fingerprint: "e".repeat(64),
+            preset: "default",
+            quality: "maximum",
+            failure_category: failureCategory,
+          },
+        }),
+      ]);
+
+      expect(validate(value)).toEqual({ ok: true, batch: value });
+    }
+  });
+
+  it("rejects unknown failure_category values", () => {
+    for (const failureCategory of ["melted", "sourceResolution"]) {
+      expectRejected(
+        batch([
+          productEvent({
+            event_name: "reel_export",
+            stage: "failed",
+            priority: 1,
+            properties: { failure_category: failureCategory },
+          }),
+        ]),
+        "invalid_schema",
+      );
+    }
+  });
+
   it("enforces the event count and encoded batch byte limits", () => {
     const events = Array.from(
       { length: TELEMETRY_MAX_BATCH_EVENTS + 1 },
