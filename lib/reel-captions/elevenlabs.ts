@@ -57,11 +57,13 @@ export async function transcribeWithElevenLabs({
 
   if (!response.ok) {
     const detail = await response.text().catch(() => "");
-    throw new Error(
+    const failure = new Error(
       `ElevenLabs transcription failed: ${response.status} ${response.statusText}${
         detail ? ` - ${detail.slice(0, 500)}` : ""
       }`,
-    );
+    ) as Error & { status: number };
+    failure.status = response.status;
+    throw failure;
   }
 
   const raw = (await response.json()) as Record<string, unknown>;

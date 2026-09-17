@@ -1,6 +1,7 @@
 import { requireApiAuth } from "@/lib/api/auth";
 import { apiError } from "@/lib/api/responses";
 import { getMediaEnv } from "@/lib/media/env";
+import { extensionFor } from "@/lib/media/storage-keys";
 import { signMediaToken } from "@/lib/media/tokens";
 import { transcribeWithElevenLabs } from "@/lib/reel-captions/elevenlabs";
 import {
@@ -37,8 +38,30 @@ type CaptionInputAsset = {
   kind: string;
   status: string;
   content_type: string | null;
+  size_bytes: number | string | null;
   storage_key: string | null;
 };
+
+type CaptionFailureStage =
+  | "gate"
+  | "pricing"
+  | "download"
+  | "transcribe"
+  | "empty_result"
+  | "settle";
+
+const CAPTION_FAILURE_CODES: Record<CaptionFailureStage, string> = {
+  gate: "caption_audio_empty",
+  pricing: "caption_pricing_unavailable",
+  download: "caption_download_failed",
+  transcribe: "caption_transcribe_failed",
+  empty_result: "caption_transcribe_empty_result",
+  settle: "caption_settle_failed",
+};
+
+// Below ~8 kbps effective, no speech audio survives: our own extraction emits
+// 128k CBR, and even 32k voice memos clear this floor with margin.
+const EMPTY_AUDIO_MIN_EFFECTIVE_BPS = 8_000;
 
 export async function POST(request: Request, context: RouteContext) {
   const authResult = await requireApiAuth(request);
@@ -132,25 +155,54 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
+  const assetSizeBytes = parseSizeBytes(asset.size_bytes);
+  const gateTrip = emptyAudioGateTrip({
+    contentType: asset.content_type,
+    sizeBytes: assetSizeBytes,
+    durationSeconds,
+  });
+  if (gateTrip) {
+    await releaseReservation(admin, job.id, CAPTION_FAILURE_CODES.gate);
+    await recordFailureOutput({
+      admin,
+      jobId: job.id,
+      stage: "gate",
+      providerStatus: null,
+      sizeBytes: assetSizeBytes,
+      durationSeconds,
+    });
+    await markInputAssetCleanupClaimable(admin, asset.id, job.id, "caption_job_failed");
+    return apiError(
+      "Caption audio is empty. Check the source file and try again.",
+      400,
+      CAPTION_FAILURE_CODES.gate,
+    );
+  }
+
+  let failureStage: Exclude<CaptionFailureStage, "gate"> = "pricing";
   try {
     const rule = await getReelCaptionPricing();
     if (!rule) {
       throw new Error("caption_generation_not_enabled");
     }
 
+    failureStage = "download";
     const signedAudioUrl = await signedMediaDownloadUrl({
       asset,
       jobId: job.id,
       userId: job.user_id,
     });
+    failureStage = "transcribe";
     const transcription = await transcribeWithElevenLabs({
       cloudStorageUrl: signedAudioUrl,
       signal: request.signal,
     });
 
+    failureStage = "empty_result";
     if (transcription.captions.length === 0) {
       throw new Error("No caption tokens were returned for this voiceover.");
     }
+    failureStage = "settle";
 
     const chargedAmountUsdMicros = chargeUsdMicrosForDuration(
       durationSeconds,
@@ -221,14 +273,102 @@ export async function POST(request: Request, context: RouteContext) {
       },
     });
   } catch (err) {
+    const code = CAPTION_FAILURE_CODES[failureStage];
     console.error("Caption generation failed", { jobId: job.id }, err);
-    await releaseReservation(admin, job.id, "caption_generation_failed");
+    await releaseReservation(admin, job.id, code);
+    await recordFailureOutput({
+      admin,
+      jobId: job.id,
+      stage: failureStage,
+      providerStatus:
+        failureStage === "transcribe" ? providerStatusOf(err) : null,
+      sizeBytes: assetSizeBytes,
+      durationSeconds,
+    });
     await markInputAssetCleanupClaimable(admin, asset.id, job.id, "caption_job_failed");
     return apiError(
       "Caption generation failed. Try again later.",
       502,
       "caption_generation_failed",
     );
+  }
+}
+
+function parseSizeBytes(value: unknown): number | null {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  const size = typeof value === "number" ? value : Number(value);
+  return Number.isInteger(size) && size >= 0 ? size : null;
+}
+
+function effectiveBps(
+  sizeBytes: number | null,
+  durationSeconds: number,
+): number | null {
+  if (sizeBytes === null || sizeBytes <= 0) return null;
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return null;
+  return Math.floor((sizeBytes * 8) / durationSeconds);
+}
+
+function emptyAudioGateTrip({
+  contentType,
+  sizeBytes,
+  durationSeconds,
+}: {
+  contentType: string;
+  sizeBytes: number | null;
+  durationSeconds: number;
+}): boolean {
+  const normalized = (contentType.split(";")[0] ?? "").trim().toLowerCase();
+  if (extensionFor("", normalized) !== ".m4a") return false;
+  const bps = effectiveBps(sizeBytes, durationSeconds);
+  if (bps === null) return false;
+  return bps < EMPTY_AUDIO_MIN_EFFECTIVE_BPS;
+}
+
+function providerStatusOf(error: unknown): number | null {
+  if (typeof error !== "object" || error === null) return null;
+  const status = (error as { status?: unknown }).status;
+  return typeof status === "number" && Number.isInteger(status)
+    ? status
+    : null;
+}
+
+async function recordFailureOutput({
+  admin,
+  jobId,
+  stage,
+  providerStatus,
+  sizeBytes,
+  durationSeconds,
+}: {
+  admin: ReturnType<typeof createSupabaseAdminClient>;
+  jobId: string;
+  stage: CaptionFailureStage;
+  providerStatus: number | null;
+  sizeBytes: number | null;
+  durationSeconds: number;
+}): Promise<void> {
+  try {
+    const { error } = await admin
+      .from("generation_jobs")
+      .update({
+        output: {
+          failure_stage: stage,
+          provider_status: providerStatus,
+          declared_duration_s:
+            Number.isFinite(durationSeconds) && durationSeconds > 0
+              ? durationSeconds
+              : null,
+          received_bytes: sizeBytes,
+          effective_bps: effectiveBps(sizeBytes, durationSeconds),
+        },
+      })
+      .eq("id", jobId);
+    if (error) {
+      console.error("Failed to record caption failure output", error);
+    }
+  } catch (error) {
+    console.error("Failed to record caption failure output", error);
   }
 }
 
@@ -288,7 +428,7 @@ async function loadInputAsset(
 ): Promise<CaptionInputAsset | null> {
   const { data, error } = await admin
     .from("media_assets")
-    .select("id, user_id, kind, status, content_type, storage_key")
+    .select("id, user_id, kind, status, content_type, size_bytes, storage_key")
     .eq("id", assetId)
     .eq("user_id", userId)
     .eq("kind", "input")
