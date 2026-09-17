@@ -297,6 +297,17 @@ const exportPreset = string([
   "custom",
   "unknown",
 ]);
+const failureCategory = string([
+  "staging",
+  "source_resolution",
+  "source_decoding",
+  "composition",
+  "video_writing",
+  "audio_rendering",
+  "muxing",
+  "cancellation",
+  "finder_reveal",
+]);
 const quality = string([
   "draft",
   "standard",
@@ -830,6 +841,7 @@ export const TELEMETRY_CATALOG_V1: Readonly<
       result_size_bucket: bucket,
       invocation_source: invocationSource,
       reason_code: reasonCode,
+      failure_category: failureCategory,
     },
   ),
   setting_change: product(["committed", "reported"], 3, {
@@ -958,6 +970,7 @@ export const TELEMETRY_CATALOG_V1: Readonly<
     ...optionalIncidentProperties,
     preset: exportPreset,
     quality,
+    failure_category: failureCategory,
   }, requiredIncidentProperties),
   telemetry_delivery_summary: operational(["reported"], 3, {
     recorded_count: integer(),
