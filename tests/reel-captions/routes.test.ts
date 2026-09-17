@@ -694,8 +694,8 @@ describe("reel captions routes", () => {
     expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
       p_job_id: JOB_ID,
       p_status: "failed",
-      p_error: "caption_generation_failed",
-      p_metadata: { reason: "caption_generation_failed" },
+      p_error: "caption_transcribe_failed",
+      p_metadata: { reason: "caption_transcribe_failed" },
     });
     expect(consoleError).toHaveBeenCalledWith(
       "Caption generation failed",
@@ -747,8 +747,8 @@ describe("reel captions routes", () => {
     expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
       p_job_id: JOB_ID,
       p_status: "failed",
-      p_error: "caption_generation_failed",
-      p_metadata: { reason: "caption_generation_failed" },
+      p_error: "caption_pricing_unavailable",
+      p_metadata: { reason: "caption_pricing_unavailable" },
     });
     expect(admin.cleanupAssetUpdate).toMatchObject({
       status: "attached",
@@ -763,6 +763,488 @@ describe("reel captions routes", () => {
       "Caption generation failed",
       expect.objectContaining({ jobId: JOB_ID }),
       expect.any(Error),
+    );
+  });
+
+  it("fails fast with caption_audio_empty when an m4a upload is far below its declared duration", async () => {
+    const transcribeWithElevenLabs = vi.fn();
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/mp4",
+        size_bytes: 6_000,
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.m4a`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_audio_empty" },
+    });
+    expect(transcribeWithElevenLabs).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
+      p_job_id: JOB_ID,
+      p_status: "failed",
+      p_error: "caption_audio_empty",
+      p_metadata: { reason: "caption_audio_empty" },
+    });
+    expect(admin.failureOutputUpdate).toMatchObject({
+      output: {
+        failure_stage: "gate",
+        provider_status: null,
+        declared_duration_s: 12,
+        received_bytes: 6_000,
+        effective_bps: 4_000,
+      },
+    });
+    expect(admin.failureOutputFilters).toEqual([["id", JOB_ID]]);
+    expect(admin.cleanupAssetUpdate).toMatchObject({
+      metadata: expect.objectContaining({
+        deletion_reason: "caption_job_failed",
+        caption_job_id: JOB_ID,
+      }),
+    });
+  });
+
+  it("processes m4a uploads at plausible bitrates without tripping the empty-audio gate", async () => {
+    const transcribeWithElevenLabs = vi.fn(async () => ({
+      text: "Hello",
+      languageCode: "en",
+      languageProbability: 0.98,
+      captions: [{
+        text: "Hello",
+        startMs: 0,
+        endMs: 400,
+        timestampMs: 0,
+        confidence: 0.99,
+      }],
+      raw: {},
+    }));
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/mp4",
+        size_bytes: 48_000,
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.m4a`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(transcribeWithElevenLabs).toHaveBeenCalledTimes(1);
+    expect(admin.rpc).toHaveBeenCalledWith(
+      "record_and_settle_reel_caption_job",
+      expect.objectContaining({ p_job_id: JOB_ID }),
+    );
+    expect(admin.rpc).not.toHaveBeenCalledWith(
+      "release_balance_reservation",
+      expect.anything(),
+    );
+    expect(admin.failureOutputUpdate).toBeNull();
+  });
+
+  it("skips the empty-audio gate for non-m4a uploads regardless of size", async () => {
+    const transcribeWithElevenLabs = vi.fn(async () => ({
+      text: "Hello",
+      languageCode: "en",
+      languageProbability: 0.98,
+      captions: [{
+        text: "Hello",
+        startMs: 0,
+        endMs: 400,
+        timestampMs: 0,
+        confidence: 0.99,
+      }],
+      raw: {},
+    }));
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/wav",
+        size_bytes: 100,
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(transcribeWithElevenLabs).toHaveBeenCalledTimes(1);
+    expect(admin.rpc).not.toHaveBeenCalledWith(
+      "release_balance_reservation",
+      expect.anything(),
+    );
+  });
+
+  it("stores the provider status with classified transcribe failures while keeping the public error stable", async () => {
+    const transcribeWithElevenLabs = vi.fn(async () => {
+      throw Object.assign(new Error("ElevenLabs transcription failed: 500"), {
+        status: 500,
+      });
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/wav",
+        size_bytes: 48_000,
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_generation_failed" },
+    });
+    expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
+      p_job_id: JOB_ID,
+      p_status: "failed",
+      p_error: "caption_transcribe_failed",
+      p_metadata: { reason: "caption_transcribe_failed" },
+    });
+    expect(admin.failureOutputUpdate).toMatchObject({
+      output: {
+        failure_stage: "transcribe",
+        provider_status: 500,
+        declared_duration_s: 12,
+        received_bytes: 48_000,
+        effective_bps: 32_000,
+      },
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "Caption generation failed",
+      expect.objectContaining({ jobId: JOB_ID }),
+      expect.any(Error),
+    );
+  });
+
+  it("stores caption_transcribe_empty_result when transcription returns no words", async () => {
+    const transcribeWithElevenLabs = vi.fn(async () => ({
+      text: "",
+      languageCode: null,
+      languageProbability: null,
+      captions: [],
+      raw: {},
+    }));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/mp4",
+        size_bytes: 48_000,
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.m4a`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_generation_failed" },
+    });
+    expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
+      p_job_id: JOB_ID,
+      p_status: "failed",
+      p_error: "caption_transcribe_empty_result",
+      p_metadata: { reason: "caption_transcribe_empty_result" },
+    });
+    expect(admin.failureOutputUpdate).toMatchObject({
+      output: {
+        failure_stage: "empty_result",
+        provider_status: null,
+        declared_duration_s: 12,
+        received_bytes: 48_000,
+        effective_bps: 32_000,
+      },
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "Caption generation failed",
+      expect.objectContaining({ jobId: JOB_ID }),
+      expect.any(Error),
+    );
+  });
+
+  it("stores caption_download_failed when the media download URL cannot be signed", async () => {
+    const transcribeWithElevenLabs = vi.fn();
+    const signMediaToken = vi.fn(async () => {
+      throw new Error("token service unavailable");
+    });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/wav",
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, signMediaToken, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_generation_failed" },
+    });
+    expect(transcribeWithElevenLabs).not.toHaveBeenCalled();
+    expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
+      p_job_id: JOB_ID,
+      p_status: "failed",
+      p_error: "caption_download_failed",
+      p_metadata: { reason: "caption_download_failed" },
+    });
+    expect(admin.failureOutputUpdate).toMatchObject({
+      output: {
+        failure_stage: "download",
+        provider_status: null,
+      },
+    });
+  });
+
+  it("stores caption_settle_failed when the settlement RPC fails", async () => {
+    const transcribeWithElevenLabs = vi.fn(async () => ({
+      text: "Hello",
+      languageCode: "en",
+      languageProbability: 0.98,
+      captions: [{
+        text: "Hello",
+        startMs: 0,
+        endMs: 400,
+        timestampMs: 0,
+        confidence: 0.99,
+      }],
+      raw: {},
+    }));
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/wav",
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.wav`,
+      },
+    });
+    admin.rpc.mockImplementation(async (fn: string) =>
+      fn === "record_and_settle_reel_caption_job"
+        ? { data: null, error: { message: "settle boom" } }
+        : { data: null, error: null },
+    );
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_generation_failed" },
+    });
+    expect(admin.rpc).toHaveBeenCalledWith("release_balance_reservation", {
+      p_job_id: JOB_ID,
+      p_status: "failed",
+      p_error: "caption_settle_failed",
+      p_metadata: { reason: "caption_settle_failed" },
+    });
+    expect(admin.failureOutputUpdate).toMatchObject({
+      output: {
+        failure_stage: "settle",
+        provider_status: null,
+      },
+    });
+  });
+
+  it("skips the empty-audio gate when the upload size is unknown", async () => {
+    const transcribeWithElevenLabs = vi.fn(async () => ({
+      text: "Hello",
+      languageCode: "en",
+      languageProbability: 0.98,
+      captions: [{
+        text: "Hello",
+        startMs: 0,
+        endMs: 400,
+        timestampMs: 0,
+        confidence: 0.99,
+      }],
+      raw: {},
+    }));
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/mp4",
+        size_bytes: null,
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.m4a`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(transcribeWithElevenLabs).toHaveBeenCalledTimes(1);
+    expect(admin.rpc).not.toHaveBeenCalledWith(
+      "release_balance_reservation",
+      expect.anything(),
+    );
+  });
+
+  it("trips the empty-audio gate for parameterized m4a content types", async () => {
+    const transcribeWithElevenLabs = vi.fn();
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/mp4; codecs=mp4a.40.2",
+        size_bytes: 6_000,
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.m4a`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "caption_audio_empty" },
+    });
+    expect(transcribeWithElevenLabs).not.toHaveBeenCalled();
+  });
+
+  it("passes m4a uploads at exactly the empty-audio floor", async () => {
+    const transcribeWithElevenLabs = vi.fn(async () => ({
+      text: "Hello",
+      languageCode: "en",
+      languageProbability: 0.98,
+      captions: [{
+        text: "Hello",
+        startMs: 0,
+        endMs: 400,
+        timestampMs: 0,
+        confidence: 0.99,
+      }],
+      raw: {},
+    }));
+    const admin = mockProcessAdmin({
+      asset: {
+        id: ASSET_ID,
+        user_id: USER_ID,
+        kind: "input",
+        status: "uploaded",
+        content_type: "audio/mp4",
+        size_bytes: 12_000,
+        storage_key: `users/${USER_ID}/media/tmp/${ASSET_ID}/input.m4a`,
+      },
+    });
+
+    mockCaptionRouteDependencies({ admin, transcribeWithElevenLabs });
+
+    const { POST } = await import("@/app/api/v1/reel-captions/jobs/[jobId]/process/route");
+    const response = await POST(
+      new Request(`https://example.test/api/v1/reel-captions/jobs/${JOB_ID}/process`, {
+        method: "POST",
+      }),
+      { params: Promise.resolve({ jobId: JOB_ID }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(transcribeWithElevenLabs).toHaveBeenCalledTimes(1);
+    expect(admin.rpc).not.toHaveBeenCalledWith(
+      "release_balance_reservation",
+      expect.anything(),
     );
   });
 });
@@ -919,6 +1401,8 @@ function mockProcessAdmin({
     jobFilters: [] as Array<[string, unknown]>,
     claimFilters: [] as Array<[string, unknown]>,
     claimUpdate: vi.fn(),
+    failureOutputUpdate: null as unknown,
+    failureOutputFilters: [] as Array<[string, unknown]>,
     usageInsert: vi.fn(),
     from: vi.fn((table: string) => {
       if (table === "generation_jobs") {
@@ -937,6 +1421,20 @@ function mockProcessAdmin({
             return chain;
           }),
           update: vi.fn((values: unknown) => {
+            if (
+              typeof values === "object" &&
+              values !== null &&
+              "output" in values
+            ) {
+              admin.failureOutputUpdate = values;
+              const chain = {
+                eq: vi.fn((column: string, value: unknown) => {
+                  admin.failureOutputFilters.push([column, value]);
+                  return chain;
+                }),
+              };
+              return chain;
+            }
             admin.claimUpdate(values);
             const chain = {
               eq: vi.fn((column: string, value: unknown) => {
