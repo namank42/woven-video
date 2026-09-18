@@ -6,12 +6,6 @@ import {
   BadgeCheckIcon,
   CalendarIcon,
   CheckIcon,
-  KeyIcon,
-  LaptopIcon,
-  LayersIcon,
-  PencilLineIcon,
-  PuzzleIcon,
-  SparklesIcon,
   WalletIcon,
 } from "lucide-react";
 
@@ -23,6 +17,11 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ReelTile } from "@/components/reel-tile";
+import { CaptionSwitcher } from "@/components/caption-switcher";
+import { TransitionSwitcher } from "@/components/transition-switcher";
+import { TextAnimationSwitcher } from "@/components/text-animation-switcher";
+import { AgentEditPreview } from "@/components/agent-edit-preview";
+import { SfxSoundboard } from "@/components/sfx-soundboard";
 import { JsonLd } from "@/components/seo/json-ld";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { SiteFooter } from "@/components/site-footer";
@@ -69,52 +68,6 @@ const reels = [
     gradient: "from-stone-900 via-stone-700 to-stone-400",
     videoUrl: "https://media.wovenlabs.net/woven-reels/drift-demo-v31-full.mp4",
     posterUrl: "https://media.wovenlabs.net/woven-reels/drift-demo-v31-poster.jpg",
-  },
-];
-
-type FeatureCard = {
-  icon: React.ComponentType<{ className?: string }>;
-  eyebrow: string;
-  title: string;
-  body: string;
-};
-
-const featureCards: FeatureCard[] = [
-  {
-    icon: SparklesIcon,
-    eyebrow: "Chat-driven",
-    title: "Make a reel by chatting.",
-    body: "Describe the cut you want. Woven writes the script, generates the footage and voice, and assembles the timeline. You review and revise like a conversation — not a timeline.",
-  },
-  {
-    icon: LaptopIcon,
-    eyebrow: "macOS-native",
-    title: "Built for your Mac.",
-    body: "Full file system access. Drop folders in, work on local projects, no uploads.",
-  },
-  {
-    icon: KeyIcon,
-    eyebrow: "Two ways to run",
-    title: "ChatGPT or Woven-hosted.",
-    body: "Try Woven free for 3 days, then $8.25/mo, billed annually ($99/yr) — cancel anytime. Sign in with ChatGPT for GPT-5+ on your existing plan, or run Woven-hosted models on a prepaid balance.",
-  },
-  {
-    icon: LayersIcon,
-    eyebrow: "Multimodal",
-    title: "Generate and reason across media.",
-    body: "Images, video, audio — pick any model, or compare across them. Then point GPT or a hosted model at any file in your project to analyze or transform.",
-  },
-  {
-    icon: PencilLineIcon,
-    eyebrow: "Preview + edit",
-    title: "See your files. Shape them by chatting.",
-    body: "Open any video, image, or audio file directly in Woven. Trim, adjust, or replace by asking — no bouncing between apps.",
-  },
-  {
-    icon: PuzzleIcon,
-    eyebrow: "Skills + memory",
-    title: "Works with your Claude setup.",
-    body: "Woven respects your existing Claude skills and memory. Workflows you've built elsewhere carry into the app.",
   },
 ];
 
@@ -337,7 +290,6 @@ function Features() {
       id="features"
       className="relative scroll-mt-20 overflow-hidden border-y border-border/60 bg-card/40"
     >
-      {/* diagonal hatching */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
@@ -346,36 +298,124 @@ function Features() {
             "repeating-linear-gradient(-45deg, color-mix(in oklch, var(--foreground) 4%, transparent) 0 1px, transparent 1px 14px)",
         }}
       />
-      <div className="relative mx-auto w-full max-w-6xl px-6 py-24 md:py-28">
+      <div className="relative mx-auto w-full max-w-6xl px-6 py-16 md:py-28">
         <div className="flex flex-col items-center gap-4 text-center">
           <SectionLabel>Features</SectionLabel>
-          <h2 className="max-w-3xl text-4xl font-semibold tracking-[-0.025em] leading-[1.05] md:text-5xl">
-            Built for the way you work.
+          <h2 className="max-w-3xl text-4xl font-semibold tracking-[-0.025em] leading-[1.05] text-balance md:text-5xl">
+            The details that make the edit.
           </h2>
-          <p className="max-w-2xl text-base text-muted-foreground md:text-lg">
-            Native, multimodal, chat-driven — with the model and key setup you
-            choose.
-          </p>
         </div>
-        <div className="mt-16 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {featureCards.map((f) => (
-            <Feature key={f.title} {...f} />
-          ))}
+        <div className="mt-12 flex flex-col gap-12">
+          <AgentEditShowcase />
+          <SectionDivider />
+          <div className="grid grid-cols-1 gap-x-12 gap-y-6 lg:grid-cols-2">
+            <CaptionShowcase />
+            <TransitionShowcase />
+          </div>
+          <SectionDivider />
+          <div className="grid grid-cols-1 gap-x-12 gap-y-6 lg:grid-cols-2">
+            <TextAnimationShowcase />
+            <SfxShowcase />
+          </div>
+        </div>
+        <div className="mt-12 flex flex-col items-center gap-2 text-center md:mt-16">
+          <p className="text-base text-muted-foreground">
+            And more to make it yours.
+          </p>
         </div>
       </div>
     </section>
   );
 }
 
-function Feature({ icon: Icon, eyebrow, title, body }: FeatureCard) {
+function SectionDivider() {
   return (
-    <div className="group flex flex-col gap-3 rounded-3xl bg-card p-7 ring-1 ring-border transition-all hover:-translate-y-0.5 hover:ring-foreground/30 md:p-8">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-        <Icon className="size-4 text-foreground" />
-        {eyebrow}
-      </div>
-      <h3 className="text-xl font-semibold tracking-tight md:text-2xl">{title}</h3>
-      <p className="text-sm leading-relaxed text-muted-foreground">{body}</p>
+    <div
+      aria-hidden="true"
+      className="h-px"
+      style={{
+        background:
+          "linear-gradient(to right, transparent, color-mix(in oklch, var(--foreground) 12%, transparent) 20%, color-mix(in oklch, var(--foreground) 12%, transparent) 80%, transparent)",
+      }}
+    />
+  );
+}
+
+function ShowcaseHeader({ label, title, body }: { label: string; title: string; body: string }) {
+  return (
+    <div className="flex flex-col items-start gap-2 text-left">
+      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <h3 className="text-2xl font-semibold tracking-tight text-balance">
+        {title}
+      </h3>
+      <p className="max-w-[45ch] text-base leading-relaxed text-muted-foreground text-pretty">
+        {body}
+      </p>
+    </div>
+  );
+}
+
+function AgentEditShowcase() {
+  return (
+    <div className="flex flex-col gap-6">
+      <ShowcaseHeader
+        label="AI editing"
+        title="Describe the edit. Watch it happen."
+        body="Tell Woven what you want. Keep refining in chat or make adjustments on the timeline."
+      />
+      <AgentEditPreview />
+    </div>
+  );
+}
+
+function CaptionShowcase() {
+  return (
+    <div className="grid grid-cols-1 gap-6 max-lg:mb-8 lg:row-span-3 lg:grid-rows-subgrid">
+      <ShowcaseHeader
+        label="Captions"
+        title="Your words. Your style."
+        body="Highlight each word, build a line as you speak, or keep it simple with classic subtitles."
+      />
+      <CaptionSwitcher />
+    </div>
+  );
+}
+
+function TransitionShowcase() {
+  return (
+    <div className="grid grid-cols-1 gap-6 max-lg:mb-8 lg:row-span-3 lg:grid-rows-subgrid">
+      <ShowcaseHeader
+        label="Transitions"
+        title="Set the pace between shots."
+        body="Go subtle with a fade or make the cut with a whip, flash, or glitch."
+      />
+      <TransitionSwitcher />
+    </div>
+  );
+}
+
+function TextAnimationShowcase() {
+  return (
+    <div className="grid grid-cols-1 gap-6 max-lg:mb-8 lg:row-span-3 lg:grid-rows-subgrid">
+      <ShowcaseHeader
+        label="Text animation"
+        title="Give your text an entrance."
+        body="Pop it in, reveal it word by word, or keep it moving with a loop."
+      />
+      <TextAnimationSwitcher />
+    </div>
+  );
+}
+
+function SfxShowcase() {
+  return (
+    <div className="grid grid-cols-1 gap-6 max-lg:mb-8 lg:row-span-3 lg:grid-rows-subgrid">
+      <ShowcaseHeader
+        label="Sound effects"
+        title="Make the moment land."
+        body="Add a whoosh to a transition, a pop to a reveal, or an impact to the punchline."
+      />
+      <SfxSoundboard />
     </div>
   );
 }
