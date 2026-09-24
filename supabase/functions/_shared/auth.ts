@@ -1,4 +1,11 @@
-/** Public-key admission is not user identity. Only Auth can resolve a user JWT. */
+/**
+ * Public-key admission is not user identity. Only Auth can resolve a user JWT.
+ *
+ * Shared by every Edge Function that admits either an authenticated user JWT
+ * or an anonymous/publishable-key-only installation: telemetry-ingest and
+ * diagnostic-report both resolve identity this same way. Do not fork this
+ * logic per function; import it from here.
+ */
 export async function resolveTelemetryIdentity(
   request: Request,
   options: {

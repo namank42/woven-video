@@ -22,3 +22,10 @@ export const ANSWER_FIRST_CONTACT =
 
 /** Bump when marketing copy or pricing changes materially. */
 export const SITE_CONTENT_UPDATED = "2026-09-09";
+
+/**
+ * Separate from SITE_CONTENT_UPDATED (which also drives /terms, the sitemap,
+ * and schema.org dateModified) so a privacy-policy-only change doesn't
+ * misrepresent those unrelated surfaces as having changed too.
+ */
+export const PRIVACY_POLICY_UPDATED = "2026-09-24";

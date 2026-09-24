@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { resolveTelemetryIdentity } from "../../supabase/functions/telemetry-ingest/auth.ts";
+import { resolveTelemetryIdentity } from "../../supabase/functions/_shared/auth.ts";
 
 describe("telemetry identity verification", () => {
   const options = () => ({

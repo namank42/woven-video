@@ -27,6 +27,43 @@ const UUIDS = {
   launch: "10000000-0000-4000-8000-000000000005",
   operation: "10000000-0000-4000-8000-000000000006",
   incident: "10000000-0000-4000-8000-000000000007",
+  wovenJob: "10000000-0000-4000-8000-000000000008",
+};
+
+// Minimal valid values for the required properties every incident event
+// (turn_incident, export_incident, etc.) shares.
+const baseIncidentProperties = {
+  error_domain: "model.provider",
+  error_code: "provider",
+  component: "model",
+  phase: "response",
+  severity: "error",
+  user_visible: true,
+  retryable: true,
+  transient: true,
+  error_fingerprint: "f".repeat(64),
+};
+
+// One valid value for every Stage 1 diagnostics property added to
+// optionalIncidentProperties (docs/superpowers/plans/2026-09-24-automatic-error-diagnostics.md).
+// Originally specified as `hosted_job_id`, renamed to `woven_job_id` because
+// "hosted_job_id" collided with the "host" forbidden-token privacy check;
+// "woven_job_id" does not collide with any forbidden token (verified
+// programmatically against forbiddenKeyTokens).
+const diagnosticsProperties = {
+  error_class: "native",
+  http_status: 503,
+  failure_site: "export_render",
+  native_error_domain: "avfoundation",
+  native_error_code: -11829,
+  code_site: "compaction/summarizer.ts:228",
+  woven_job_id: UUIDS.wovenJob,
+  consecutive_failures: 3,
+  summarizer_failure_kind: "timeout",
+  compaction_mode: "fallback",
+  frames_completed: 12,
+  frames_total: 30,
+  location_class: "icloud",
 };
 
 function productEvent(
@@ -629,5 +666,152 @@ describe("desktop telemetry v1 validation", () => {
     expect(
       [...new Set(hashedRules.map(({ propertyName }) => propertyName))].sort(),
     ).toEqual([...approvedHashedProperties].sort());
+  });
+
+  it.each(["turn_incident", "export_incident"] as const)(
+    "accepts every Stage 1 diagnostics property on %s and stays under the per-event byte limit",
+    (eventName) => {
+      const event = operationalEvent({
+        event_name: eventName,
+        stage: "failed",
+        priority: 0,
+        incident_id: UUIDS.incident,
+        properties: { ...baseIncidentProperties, ...diagnosticsProperties },
+      });
+      const eventBytes = new TextEncoder().encode(JSON.stringify(event))
+        .byteLength;
+      expect(eventBytes).toBeLessThan(TELEMETRY_MAX_EVENT_BYTES);
+
+      const value = batch([event]);
+      expect(validate(value)).toEqual({ ok: true, batch: value });
+    },
+  );
+
+  it.each([
+    ["code_site containing a space", { code_site: "compaction/summarizer.ts: 228" }],
+    [
+      "code_site with a /Users/ home path longer than 96 characters",
+      { code_site: `/Users/${"a".repeat(100)}:10` },
+    ],
+    ["code_site with a leading /Users/ absolute path", { code_site: "/Users/x/f.ts:1" }],
+    ["code_site with a .. segment", { code_site: "../a.ts:1" }],
+    ["code_site with a . segment", { code_site: "a/./b.ts:1" }],
+    [
+      "code_site with more than 4 path segments",
+      { code_site: "Users/n/projects/w/f.ts:1" },
+    ],
+    ["code_site with no line number", { code_site: "a.ts" }],
+    ["code_site with a non-source extension", { code_site: "a.txt:1" }],
+    ["http_status outside 100-599", { http_status: 900 }],
+    ["unknown error_class value", { error_class: "mystery_failure" }],
+  ] as const)(
+    "rejects an incident event with %s",
+    (_label, overrides) => {
+      expectRejected(
+        batch([
+          operationalEvent({
+            event_name: "turn_incident",
+            stage: "failed",
+            priority: 0,
+            incident_id: UUIDS.incident,
+            properties: { ...baseIncidentProperties, ...overrides },
+          }),
+        ]),
+        "invalid_schema",
+      );
+    },
+  );
+
+  it.each([
+    ["compaction/summarizer.ts:278"],
+    ["WovenHarness/NativeReelExporter.swift:412"],
+  ] as const)(
+    "accepts a valid code_site value %s",
+    (codeSite) => {
+      const value = batch([
+        operationalEvent({
+          event_name: "turn_incident",
+          stage: "failed",
+          priority: 0,
+          incident_id: UUIDS.incident,
+          properties: { ...baseIncidentProperties, code_site: codeSite },
+        }),
+      ]);
+      expect(validate(value)).toEqual({ ok: true, batch: value });
+    },
+  );
+
+  it("accepts a valid UUID woven_job_id", () => {
+    const value = batch([
+      operationalEvent({
+        event_name: "export_incident",
+        stage: "failed",
+        priority: 0,
+        incident_id: UUIDS.incident,
+        properties: {
+          ...baseIncidentProperties,
+          woven_job_id: UUIDS.wovenJob,
+        },
+      }),
+    ]);
+    expect(validate(value)).toEqual({ ok: true, batch: value });
+  });
+
+  it("rejects a non-UUID woven_job_id", () => {
+    expectRejected(
+      batch([
+        operationalEvent({
+          event_name: "turn_incident",
+          stage: "failed",
+          priority: 0,
+          incident_id: UUIDS.incident,
+          properties: {
+            ...baseIncidentProperties,
+            woven_job_id: "job-12345",
+          },
+        }),
+      ]),
+      "invalid_schema",
+    );
+  });
+
+  it("keeps the 'host' privacy-blocklist token enforced for a key like hosted_job_id", () => {
+    // woven_job_id was chosen specifically to avoid this: "hosted_job_id"
+    // collides with the forbidden-key-token check (contains "host" as a
+    // substring) and is rejected as privacy_violation for every value, even
+    // though it is not part of the catalog. This test pins that the
+    // blocklist itself is untouched by the rename.
+    expectRejected(
+      batch([
+        operationalEvent({
+          event_name: "turn_incident",
+          stage: "failed",
+          priority: 0,
+          incident_id: UUIDS.incident,
+          properties: {
+            ...baseIncidentProperties,
+            hosted_job_id: UUIDS.wovenJob,
+          },
+        }),
+      ]),
+      "privacy_violation",
+    );
+  });
+
+  it("accepts a native_error_code below zero, such as -11829", () => {
+    const value = batch([
+      operationalEvent({
+        event_name: "turn_incident",
+        stage: "failed",
+        priority: 0,
+        incident_id: UUIDS.incident,
+        properties: {
+          ...baseIncidentProperties,
+          native_error_domain: "avfoundation",
+          native_error_code: -11829,
+        },
+      }),
+    ]);
+    expect(validate(value)).toEqual({ ok: true, batch: value });
   });
 });
