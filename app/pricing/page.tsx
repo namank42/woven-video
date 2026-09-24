@@ -5,6 +5,7 @@ import {
   AppleIcon,
   BadgeCheckIcon,
   CheckIcon,
+  TimerIcon,
   WalletIcon,
 } from "lucide-react";
 
@@ -133,6 +134,10 @@ function Plans() {
             </span>
           </div>
           <div className="flex flex-col gap-1">
+            <span className="mb-2 inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+              <TimerIcon className="size-3.5" />
+              Limited-time pricing
+            </span>
             <div className="flex items-baseline gap-2">
               <span className="text-5xl font-semibold tracking-tight">$8.25</span>
               <span className="text-sm text-muted-foreground">/mo</span>
