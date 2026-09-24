@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { MarketingSiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { CONTACT_EMAIL, SITE_CONTENT_UPDATED, SITE_LEGAL_NAME } from "@/lib/seo/constants";
+import { CONTACT_EMAIL, PRIVACY_POLICY_UPDATED, SITE_LEGAL_NAME } from "@/lib/seo/constants";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -23,7 +23,7 @@ export default function PrivacyPage() {
                 Privacy Policy
               </h1>
               <p className="text-sm text-muted-foreground">
-                Last updated {SITE_CONTENT_UPDATED}
+                Last updated {PRIVACY_POLICY_UPDATED}
               </p>
             </div>
 
@@ -57,8 +57,10 @@ export default function PrivacyPage() {
                 <p>
                   Woven is a native Mac app. Your video projects and media files stay on
                   your Mac. We do not include project or media contents in desktop
-                  telemetry. Content leaves your Mac only when you explicitly use a cloud
-                  feature (such as hosted model requests or caption processing uploads).
+                  telemetry. Content leaves your Mac only when you use a cloud feature
+                  (such as hosted model requests or caption processing uploads) or,
+                  unless you turn it off, when the app sends an automatic error report
+                  (see below).
                 </p>
               </section>
 
@@ -76,6 +78,45 @@ export default function PrivacyPage() {
               </section>
 
               <section className="flex flex-col gap-3">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Automatic error reports
+                </h2>
+                <p>
+                  When something fails in the Woven desktop app, such as an export or an
+                  AI request, the app automatically sends us an error report so we can
+                  find and fix the problem.
+                </p>
+                <p>An error report includes:</p>
+                <ul className="list-disc space-y-2 pl-5">
+                  <li>
+                    the error messages and codes produced by the app, its components and
+                    the services it uses;
+                  </li>
+                  <li>which part of the app failed;</li>
+                  <li>the app and model versions involved;</li>
+                  <li>the pseudonymous identifiers described above.</li>
+                </ul>
+                <p>Before a report leaves your Mac, the app:</p>
+                <ul className="list-disc space-y-2 pl-5">
+                  <li>removes passwords, access tokens, API keys and similar secrets;</li>
+                  <li>replaces your home folder and project folder with placeholders.</li>
+                </ul>
+                <p>
+                  Error messages can occasionally include short fragments of the content
+                  involved in the failure, such as part of a model&apos;s reply or a file
+                  name.
+                </p>
+                <p>
+                  We use error reports only to diagnose and fix problems. We never use
+                  them to train AI models, and we delete them after 90 days.
+                </p>
+                <p>
+                  You can turn automatic error reports off at any time in Settings ›
+                  Privacy. To have your reports deleted, email us.
+                </p>
+              </section>
+
+              <section className="flex flex-col gap-3">
                 <h2 className="text-xl font-semibold text-foreground">How we use data</h2>
                 <ul className="list-disc space-y-2 pl-5">
                   <li>Provide sign-in, licensing, and billing.</li>
@@ -83,6 +124,7 @@ export default function PrivacyPage() {
                   <li>Respond to support requests.</li>
                   <li>Improve the product and website.</li>
                   <li>Measure desktop feature use, reliability, performance, and service delivery.</li>
+                  <li>Diagnose and fix errors reported automatically by the desktop app.</li>
                 </ul>
               </section>
 
