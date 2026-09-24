@@ -1,3 +1,4 @@
+import { resolveTelemetryIdentity } from "../_shared/auth.ts";
 import { requiredEnv } from "../_shared/http.ts";
 import {
   createServiceClient,
@@ -5,7 +6,6 @@ import {
 } from "../_shared/supabase.ts";
 import type { TelemetryBatchResponseV1 } from "../_shared/telemetry/types.ts";
 import { handleTelemetryIngest } from "./handler.ts";
-import { resolveTelemetryIdentity } from "./auth.ts";
 
 function parseIngestResponse(value: unknown): TelemetryBatchResponseV1 {
   if (!value || typeof value !== "object") {

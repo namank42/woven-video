@@ -11,8 +11,27 @@ export const TELEMETRY_MAX_BATCH_EVENTS = 50;
 export const TELEMETRY_MAX_ARRAY_ITEMS = 32;
 export const TELEMETRY_MAX_STRING_LENGTH = 128;
 
-const uuidPattern =
+// Exported so other backend surfaces (e.g. the diagnostic-report Stage 2
+// validator) can reuse the same uuid/site rules instead of redeclaring them.
+export const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// Group 1 is the path portion (everything before the trailing ":<line>"), so
+// callers can enforce its 96-char cap separately -- the pattern itself has no
+// lookahead to bound total prefix length. At most 4 path segments (0-3
+// directory segments plus the file segment), no leading "/", no "." or ".."
+// segments (a segment can't start with "."), and a source-file extension is
+// required.
+export const sitePattern =
+  /^((?:[A-Za-z0-9_-][A-Za-z0-9_.-]*\/){0,3}[A-Za-z0-9_-][A-Za-z0-9_.-]*\.(?:swift|ts|mts|js|mjs)):[0-9]{1,6}$/;
+const SITE_PATH_MAX_LENGTH = 96;
+
+// Single source of truth for the `site` rule so no caller has to reimplement
+// the 96-char path-length check the regex itself can't express.
+export function isValidSite(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const match = sitePattern.exec(value);
+  return match !== null && match[1].length <= SITE_PATH_MAX_LENGTH;
+}
 const timestampPattern =
   /^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?Z$/;
 const hashPattern = /^[0-9a-f]{64}$/;
@@ -76,12 +95,14 @@ const forbiddenKeyTokens = [
   "video",
 ];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+// Exported alongside the pattern/rule constants above for reuse by other
+// backend validators that share the same envelope shapes.
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value) &&
     Object.getPrototypeOf(value) === Object.prototype;
 }
 
-function hasExactKeys(
+export function hasExactKeys(
   value: Record<string, unknown>,
   required: readonly string[],
   optional: readonly string[] = [],
@@ -131,7 +152,7 @@ function isBoundedString(
     safeTextPattern.test(value);
 }
 
-function isValidTimestamp(value: string) {
+export function isValidTimestamp(value: string) {
   const match = timestampPattern.exec(value);
   if (!match) return false;
   const year = Number(match[1]);
@@ -166,6 +187,14 @@ function propertyRejection(
       return hashPattern.test(value as string) ? null : "invalid_schema";
     }
     return rule.enum?.includes(value as string) ? null : "invalid_schema";
+  }
+  if (rule.type === "site") {
+    return isValidSite(value) ? null : "invalid_schema";
+  }
+  if (rule.type === "uuid") {
+    return typeof value === "string" && uuidPattern.test(value)
+      ? null
+      : "invalid_schema";
   }
   if (rule.type === "boolean") {
     return typeof value === "boolean" ? null : "invalid_schema";

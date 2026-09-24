@@ -3,7 +3,9 @@ export type TelemetryPropertyType =
   | "number"
   | "boolean"
   | "string_array"
-  | "number_array";
+  | "number_array"
+  | "site"
+  | "uuid";
 
 export type TelemetryPropertyRule = {
   type: TelemetryPropertyType;
@@ -44,6 +46,8 @@ const strings = (values: readonly string[]): TelemetryPropertyRule => ({
   enum: values,
 });
 const numbers = (): TelemetryPropertyRule => ({ type: "number_array" });
+const site = (): TelemetryPropertyRule => ({ type: "site" });
+const uuid = (): TelemetryPropertyRule => ({ type: "uuid" });
 
 const reasonCode = string([
   "none",
@@ -329,6 +333,74 @@ const toolFamilyValues = [
 ] as const;
 const toolFamily = string(toolFamilyValues);
 
+// Exported so other backend surfaces (e.g. the diagnostic-report Stage 2
+// validator) can reuse the exact Stage 1 enum values instead of redeclaring
+// them.
+export const ERROR_CLASS_VALUES = [
+  "api_call",
+  "retry_exhausted",
+  "no_object_generated",
+  "type_validation",
+  "json_parse",
+  "invalid_response_data",
+  "no_content_generated",
+  "summarizer_output",
+  "summarizer_timeout",
+  "aborted",
+  "network",
+  "timeout",
+  "native",
+  "other",
+] as const;
+const errorClass = string(ERROR_CLASS_VALUES);
+export const FAILURE_SITE_VALUES = [
+  "pre_turn_compaction",
+  "mid_turn_compaction",
+  "turn_setup",
+  "model_request",
+  "model_stream",
+  "tool_call",
+  "persistence",
+  "export_preflight",
+  "export_audio",
+  "export_render",
+  "export_finalize",
+  "export_mux",
+  "export_publish",
+  "other",
+] as const;
+const failureSite = string(FAILURE_SITE_VALUES);
+export const NATIVE_ERROR_DOMAIN_VALUES = [
+  "avfoundation",
+  "cocoa",
+  "posix",
+  "osstatus",
+  "core_media",
+  "video_toolbox",
+  "metal",
+  "url",
+  "other",
+] as const;
+const nativeErrorDomain = string(NATIVE_ERROR_DOMAIN_VALUES);
+const summarizerFailureKind = string([
+  "schema_mismatch",
+  "parse_failure",
+  "empty_response",
+  "truncated",
+  "api_error",
+  "timeout",
+  "other",
+]);
+const compactionMode = string(["summary", "fallback"]);
+const locationClass = string([
+  "local",
+  "icloud",
+  "cloud",
+  "network",
+  "external",
+  "unknown",
+]);
+
 const invocationSource = string([
   "button",
   "keyboard_shortcut",
@@ -354,6 +426,7 @@ const incidentProperties = {
     "sidecar.transport",
     "agent.validation",
     "agent.persistence",
+    "agent.unknown",
     "model.configuration",
     "model.provider",
     "tool.execution",
@@ -408,6 +481,19 @@ const optionalIncidentProperties = {
   recovery_action: incidentProperties.recovery_action,
   recovery_outcome: incidentProperties.recovery_outcome,
   duration_ms: incidentProperties.duration_ms,
+  error_class: errorClass,
+  http_status: integer(100, 599),
+  failure_site: failureSite,
+  native_error_domain: nativeErrorDomain,
+  native_error_code: integer(-2_147_483_648, 2_147_483_647),
+  code_site: site(),
+  woven_job_id: uuid(),
+  consecutive_failures: integer(0, 1000),
+  summarizer_failure_kind: summarizerFailureKind,
+  compaction_mode: compactionMode,
+  frames_completed: integer(),
+  frames_total: integer(),
+  location_class: locationClass,
 };
 const modelProperties = {
   model_id: hash(),
